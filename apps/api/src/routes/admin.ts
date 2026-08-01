@@ -31,7 +31,7 @@ adminRouter.post("/auth/login", async (req, res) => {
   res.cookie("admin_session", token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.ADMIN_COOKIE_SECURE === "true",
     maxAge: 12 * 60 * 60 * 1000
   });
   res.json({ id: admin.id, email: admin.email });
