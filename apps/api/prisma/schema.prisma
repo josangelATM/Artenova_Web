@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  nuevo
+  en_proceso
+  completado
+  cancelado
+}
+
+enum CustomFieldType {
+  text
+  date
+  select
+  image
+  note
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  accentColor String?
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  description  String
+  basePrice    Decimal       @db.Decimal(10, 2)
+  material     String?
+  size         String?
+  technique    String?
+  isPublished  Boolean       @default(true)
+  isFeatured   Boolean       @default(false)
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images       ProductImage[]
+  priceTiers   PriceTier[]
+  extras       ProductExtra[]
+  customFields CustomField[]
+  orderItems   OrderItem[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model PriceTier {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  label       String?
+  createdAt   DateTime @default(now())
+}
+
+model ProductExtra {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  type       String
+  priceDelta Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+}
+
+model CustomField {
+  id        String          @id @default(cuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  type      CustomFieldType
+  required  Boolean         @default(false)
+  options   Json            @default("[]")
+  helpText  String?
+  position  Int             @default(0)
+  createdAt DateTime        @default(now())
+}
+
+model Order {
+  id               String        @id @default(cuid())
+  code             String        @unique
+  status           OrderStatus   @default(nuevo)
+  customerName     String
+  customerWhatsapp String
+  customerNote     String?
+  estimatedTotal   Decimal       @db.Decimal(10, 2)
+  finalPrice       Decimal?      @db.Decimal(10, 2)
+  adminNote        String?
+  items            OrderItem[]
+  uploads          OrderUpload[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model OrderItem {
+  id               String        @id @default(cuid())
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productName      String
+  quantity         Int
+  unitPrice        Decimal       @db.Decimal(10, 2)
+  extrasTotal      Decimal       @db.Decimal(10, 2)
+  lineTotal        Decimal       @db.Decimal(10, 2)
+  selectedExtraIds Json          @default("[]")
+  personalization  Json          @default("{}")
+  uploads          OrderUpload[]
+}
+
+model OrderUpload {
+  id           String     @id @default(cuid())
+  orderId      String
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId       String?
+  item         OrderItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  url          String
+  thumbnailUrl String?
+  key          String
+  thumbnailKey String?
+  originalName String
+  mimeType     String
+  size         Int
+  createdAt    DateTime   @default(now())
+}
+
+model SiteSettings {
+  id          String   @id @default("site")
+  brandName   String   @default("Artenova")
+  heroTitle   String
+  heroSubtitle String
+  whatsapp    String
+  email       String?
+  address     String
+  bannerText  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

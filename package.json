@@ -1,0 +1,22 @@
+{
+  "name": "artenova-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @artenova/api --filter @artenova/web dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "db:generate": "pnpm --filter @artenova/api db:generate",
+    "db:migrate": "pnpm --filter @artenova/api db:migrate",
+    "db:seed": "pnpm --filter @artenova/api db:seed"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
