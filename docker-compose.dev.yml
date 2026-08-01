@@ -24,18 +24,25 @@ services:
       - .env
     environment:
       CI: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
       DATABASE_URL: postgresql://${POSTGRES_USER:-artenova}:${POSTGRES_PASSWORD:-artenova_dev}@postgres:5432/${POSTGRES_DB:-artenova}?schema=public
-      APP_BASE_URL: http://localhost:5173
+      APP_BASE_URL: http://localhost:5174
       API_BASE_URL: http://localhost:4000
-      UPLOAD_DRIVER: local
-      LOCAL_UPLOAD_DIR: /app/uploads
+      UPLOAD_DRIVER: s3
+    command: >
+      sh -c "pnpm --filter @artenova/api db:generate &&
+      pnpm --filter @artenova/api db:deploy &&
+      pnpm --filter @artenova/api db:seed &&
+      pnpm --filter @artenova/api dev"
     ports:
       - "4000:4000"
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./apps/api/prisma:/app/apps/api/prisma
+      - ./apps/api/package.json:/app/apps/api/package.json
+      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json
       - ./packages/shared/src:/app/packages/shared/src
-      - ./uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,15 +54,21 @@ services:
       target: dev
     environment:
       CI: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+      VITE_USE_POLLING: "true"
       VITE_DEV_API_PROXY_TARGET: http://api:4000
     ports:
-      - "5173:5173"
+      - "5174:5174"
     volumes:
       - ./apps/web/src:/app/apps/web/src
       - ./apps/web/public:/app/apps/web/public
       - ./apps/web/index.html:/app/apps/web/index.html
+      - ./apps/web/package.json:/app/apps/web/package.json
+      - ./apps/web/tsconfig.json:/app/apps/web/tsconfig.json
       - ./apps/web/vite.config.ts:/app/apps/web/vite.config.ts
       - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/shared/package.json:/app/packages/shared/package.json
     depends_on:
       - api
 

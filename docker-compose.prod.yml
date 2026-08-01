@@ -22,9 +22,10 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-artenova}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-artenova}?schema=public
-      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
-      API_BASE_URL: ${API_BASE_URL:-http://localhost/api}
+      APP_BASE_URL: ${PROD_APP_BASE_URL:-http://localhost:90}
+      API_BASE_URL: ${PROD_API_BASE_URL:-http://localhost:90/api}
       NODE_ENV: production
+      UPLOAD_DRIVER: s3
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,10 +36,11 @@ services:
       dockerfile: apps/web/Dockerfile
       target: prod
     ports:
-      - "80:80"
+      - "90:80"
     depends_on:
       - api
 
 volumes:
   postgres_prod_data:
+    name: artenova_web_postgres_dev_data
 

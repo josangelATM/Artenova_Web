@@ -35,14 +35,15 @@ export function assertImageUpload(file: Express.Multer.File) {
   }
 }
 
-export async function uploadOrderImage(file: Express.Multer.File, orderCode: string) {
+export async function uploadProductImage(file: Express.Multer.File, productSlugOrId: string) {
   assertImageUpload(file);
 
   const extension = file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg";
   const safeBase = path.basename(file.originalname, path.extname(file.originalname)).replace(/[^a-z0-9_-]+/gi, "-").slice(0, 60);
+  const safeProduct = productSlugOrId.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "product";
   const id = randomUUID();
-  const key = `orders/${orderCode}/${id}-${safeBase}${extension}`;
-  const thumbnailKey = `orders/${orderCode}/${id}-${safeBase}-thumb.webp`;
+  const key = `products/${safeProduct}/${id}-${safeBase}${extension}`;
+  const thumbnailKey = `products/${safeProduct}/${id}-${safeBase}-thumb.webp`;
   const thumbnail = await sharp(file.buffer).rotate().resize({ width: 480, height: 480, fit: "inside" }).webp({ quality: 78 }).toBuffer();
 
   if (env.UPLOAD_DRIVER === "local") {

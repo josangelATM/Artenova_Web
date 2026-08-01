@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Box, Button, Container, Divider, IconButton, List, ListItem, ListItemText, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Container, Divider, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { calculateLineTotal, formatCurrency } from "@artenova/shared";
@@ -12,7 +12,6 @@ export function CartPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsapp, setCustomerWhatsapp] = useState("");
   const [customerNote, setCustomerNote] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,12 +27,9 @@ export function CartPage() {
           productId: item.product.id,
           quantity: item.quantity,
           selectedExtraIds: item.selectedExtraIds,
-          personalization: item.personalization
-        }))
+          personalization: item.personalization,
+        })),
       });
-      if (files.length > 0) {
-        await api.uploadOrderFiles(order.code, files);
-      }
       cart.clear();
       navigate(`/pedido/${order.code}`);
     } catch (err) {
@@ -44,35 +40,47 @@ export function CartPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 5 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 5 } }}>
       <Stack spacing={3}>
         <Box>
-          <Typography variant="h2" sx={{ fontSize: { xs: 36, md: 54 } }}>Tu pedido</Typography>
-          <Typography color="text.secondary">Artenova revisara los detalles y te contactara para confirmar precio final y entrega.</Typography>
+          <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 54 } }}>Tu pedido</Typography>
+          <Typography color="text.secondary">Revisa las piezas y completa tus datos.</Typography>
         </Box>
         {error && <Alert severity="error">{error}</Alert>}
         {cart.items.length === 0 ? (
-          <Paper sx={{ p: 4 }}>
-            <Typography fontWeight={900}>Tu pedido esta vacio.</Typography>
+          <Paper sx={{ p: { xs: 3, md: 4 } }}>
+            <Typography fontWeight={900}>Tu pedido está vacío.</Typography>
             <Button href="/catalogo" sx={{ mt: 2 }} variant="contained">Ver catálogo</Button>
           </Paper>
         ) : (
           <Paper sx={{ p: { xs: 2, md: 3 } }}>
-            <List>
+            <Stack spacing={1.5}>
               {cart.items.map((item) => {
                 const price = calculateLineTotal(item.product, item.quantity, item.selectedExtraIds);
+                const image = item.product.images[0];
                 return (
-                  <ListItem key={item.id} secondaryAction={<IconButton onClick={() => cart.removeItem(item.id)}><Trash2 size={18} /></IconButton>}>
-                    <ListItemText
-                      primary={<Typography fontWeight={900}>{item.product.name}</Typography>}
-                      secondary={`${item.quantity} unidad(es) - ${formatCurrency(price.lineTotal)}`}
-                    />
-                  </ListItem>
+                  <Stack key={item.id} direction="row" spacing={1.5} alignItems="center">
+                    {image && (
+                      <Box component="img" src={image.url} alt={image.alt || item.product.name} sx={{ width: 58, height: 58, objectFit: "cover", borderRadius: 1.5, flexShrink: 0 }} />
+                    )}
+                    <Box flex={1} minWidth={0}>
+                      <Typography fontWeight={900} noWrap>{item.product.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {item.quantity} unidad(es) · {formatCurrency(price.lineTotal)}
+                      </Typography>
+                    </Box>
+                    <IconButton aria-label="Eliminar producto" onClick={() => cart.removeItem(item.id)} sx={{ width: 44, height: 44 }}>
+                      <Trash2 size={18} />
+                    </IconButton>
+                  </Stack>
                 );
               })}
-            </List>
+            </Stack>
             <Divider sx={{ my: 2 }} />
-            <Typography variant="h5" fontWeight={900}>Total estimado: {formatCurrency(cart.total)}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+              <Typography variant="body2" color="text.secondary">Total estimado</Typography>
+              <Typography variant="h5" fontWeight={900}>{formatCurrency(cart.total)}</Typography>
+            </Stack>
           </Paper>
         )}
 
@@ -82,19 +90,8 @@ export function CartPage() {
             <TextField label="Nombre" required value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
             <TextField label="WhatsApp" required value={customerWhatsapp} onChange={(event) => setCustomerWhatsapp(event.target.value)} />
             <TextField label="Nota para Artenova" multiline minRows={3} value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} />
-            <Button component="label" variant="outlined">
-              Subir fotos del pedido
-              <input
-                hidden
-                multiple
-                accept="image/png,image/jpeg,image/webp"
-                type="file"
-                onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 5))}
-              />
-            </Button>
-            <Typography variant="body2" color="text.secondary">{files.length} imagen(es) seleccionada(s). Maximo 5, 10 MB cada una.</Typography>
-            <Button disabled={submitting || cart.items.length === 0} variant="contained" size="large" onClick={submit}>
-              Enviar pedido
+            <Button disabled={submitting || cart.items.length === 0} variant="contained" size="large" onClick={submit} sx={{ minHeight: 48 }}>
+              {submitting ? "Enviando pedido..." : "Enviar pedido"}
             </Button>
           </Stack>
         </Paper>
@@ -102,4 +99,3 @@ export function CartPage() {
     </Container>
   );
 }
-

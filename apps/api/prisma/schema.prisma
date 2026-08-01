@@ -41,10 +41,23 @@ model Category {
   updatedAt   DateTime  @updatedAt
 }
 
+model Tag {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  accentColor String?
+  isActive    Boolean      @default(true)
+  products    ProductTag[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
 model Product {
   id           String        @id @default(cuid())
   name         String
   slug         String        @unique
+  sku          String?       @unique
   description  String
   basePrice    Decimal       @db.Decimal(10, 2)
   material     String?
@@ -52,15 +65,28 @@ model Product {
   technique    String?
   isPublished  Boolean       @default(true)
   isFeatured   Boolean       @default(false)
+  isHero        Boolean       @default(false)
+  heroSlot      String?
   categoryId   String
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images       ProductImage[]
   priceTiers   PriceTier[]
   extras       ProductExtra[]
   customFields CustomField[]
+  tags         ProductTag[]
   orderItems   OrderItem[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+model ProductTag {
+  productId String
+  tagId     String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([productId, tagId])
 }
 
 model ProductImage {
@@ -79,6 +105,7 @@ model PriceTier {
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   minQuantity Int
   unitPrice   Decimal  @db.Decimal(10, 2)
+  totalPrice  Decimal? @db.Decimal(10, 2)
   label       String?
   createdAt   DateTime @default(now())
 }
@@ -117,7 +144,6 @@ model Order {
   finalPrice       Decimal?      @db.Decimal(10, 2)
   adminNote        String?
   items            OrderItem[]
-  uploads          OrderUpload[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }
@@ -135,23 +161,6 @@ model OrderItem {
   lineTotal        Decimal       @db.Decimal(10, 2)
   selectedExtraIds Json          @default("[]")
   personalization  Json          @default("{}")
-  uploads          OrderUpload[]
-}
-
-model OrderUpload {
-  id           String     @id @default(cuid())
-  orderId      String
-  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  itemId       String?
-  item         OrderItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
-  url          String
-  thumbnailUrl String?
-  key          String
-  thumbnailKey String?
-  originalName String
-  mimeType     String
-  size         Int
-  createdAt    DateTime   @default(now())
 }
 
 model SiteSettings {
@@ -162,6 +171,9 @@ model SiteSettings {
   whatsapp    String
   email       String?
   address     String
+  businessHours String?
+  mapsUrl     String?
+  personalizationNotice String?
   bannerText  String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

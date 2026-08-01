@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
-import { Alert, Box, Button, Container, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Box, Button, Container, Paper, Stack, Typography } from "@mui/material";
+import { Boxes, Eye, FolderTree, Home, Tags } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import { adminSurfaceSx } from "./adminUi";
 
 const tabs = [
-  { label: "Resumen", to: "/admin" },
-  { label: "Pedidos", to: "/admin/pedidos" },
-  { label: "Categorías", to: "/admin/categorias" },
-  { label: "Productos", to: "/admin/productos" },
-  { label: "Ajustes", to: "/admin/ajustes" }
+  { label: "Inicio", to: "/admin", icon: Home },
+  { label: "Productos", to: "/admin/productos", icon: Boxes },
+  { label: "Categorías", to: "/admin/categorias", icon: FolderTree },
+  { label: "Etiquetas", to: "/admin/tags", icon: Tags },
 ];
 
 export function AdminLayout() {
@@ -23,28 +24,74 @@ export function AdminLayout() {
       .catch(() => navigate("/admin/login"));
   }, [navigate]);
 
+  const activeTab = useMemo(() => {
+    return tabs.find((tab) => tab.to === location.pathname) ?? tabs.find((tab) => tab.to !== "/admin" && location.pathname.startsWith(tab.to)) ?? tabs[0];
+  }, [location.pathname]);
+
   if (!ready) return null;
 
-  const current = tabs.findIndex((tab) => tab.to === location.pathname);
-
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Stack spacing={3}>
-        <Box display="flex" justifyContent="space-between" gap={2} alignItems="center">
-          <Box>
-            <Typography variant="h3">Panel Artenova</Typography>
-            <Typography color="text.secondary">Catálogo, pedidos y contenido de la tienda.</Typography>
-          </Box>
-          <Button href="/" variant="outlined">Ver tienda</Button>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: { xs: 2, md: 3 } }}>
+      <Container maxWidth="xl">
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "244px minmax(0,1fr)" }, gap: 3 }}>
+          <Paper
+            sx={{
+              ...adminSurfaceSx,
+              p: 2,
+              alignSelf: "start",
+              position: "sticky",
+              top: { xs: 0, md: 12 },
+              zIndex: (theme) => theme.zIndex.appBar + 1,
+            }}
+          >
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h5" fontWeight={900}>
+                  Artenova
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Panel del catálogo
+                </Typography>
+              </Box>
+              <Stack direction={{ xs: "row", md: "column" }} spacing={1} sx={{ overflowX: { xs: "auto", md: "visible" }, pb: { xs: 0.5, md: 0 } }}>
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const active = tab.to === activeTab?.to;
+                  return (
+                    <Button
+                      key={tab.to}
+                      component={Link}
+                      to={tab.to}
+                      startIcon={<Icon size={18} />}
+                      variant={active ? "contained" : "text"}
+                      color={active ? "primary" : "inherit"}
+                      sx={{
+                        justifyContent: "flex-start",
+                        minWidth: { xs: "max-content", md: "auto" },
+                        borderRadius: 2,
+                        px: 1.5,
+                      }}
+                    >
+                      {tab.label}
+                    </Button>
+                  );
+                })}
+              </Stack>
+              <Button component={Link} to="/" variant="outlined" startIcon={<Eye size={18} />}>
+                Ver tienda
+              </Button>
+            </Stack>
+          </Paper>
+          <Stack spacing={3} minWidth={0}>
+            {error && (
+              <Alert severity="error" onClose={() => setError("")}>
+                {error}
+              </Alert>
+            )}
+            <Outlet context={{ setError }} />
+          </Stack>
         </Box>
-        {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-        <Tabs value={current >= 0 ? current : 0} variant="scrollable">
-          {tabs.map((tab) => (
-            <Tab key={tab.to} component={Link} to={tab.to} label={tab.label} />
-          ))}
-        </Tabs>
-        <Outlet context={{ setError }} />
-      </Stack>
-    </Container>
+      </Container>
+    </Box>
   );
 }

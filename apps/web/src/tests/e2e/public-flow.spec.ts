@@ -1,81 +1,140 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-test("public store exposes the core purchase path", async ({ page }) => {
+const adminPassword = process.env.ADMIN_PASSWORD ?? "artenova-dev-2026";
+
+async function loginAdmin(page: import("@playwright/test").Page) {
+  await page.goto("/admin/login");
+  await page.getByLabel("Email").fill("admin@artenova.local");
+  await page.getByLabel("Password").fill(adminPassword);
+  await page.getByRole("button", { name: /^entrar$/i }).click();
+  await page.waitForURL("**/admin");
+}
+
+test("public site exposes the informative product path", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator('a[href="/catalogo"]').first()).toBeVisible();
-  await page.locator('a[href="/catalogo"]').first().click();
-  await expect(page).toHaveURL(/\/catalogo$/);
+  await expect(page.getByRole("link", { name: /contacto/i })).toBeVisible();
   await expect(page.getByText("Desde").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /consultar/i }).first()).toBeVisible();
 });
 
-test("guest creates an order with an image and admin can see it", async ({ page }) => {
+test("guest opens a product and can consult by WhatsApp", async ({ page }) => {
   await page.goto("/catalogo");
   await page.locator('a[href^="/producto/"]').first().click();
   await page.waitForLoadState("networkidle");
 
-  await page.locator('input[type="number"]').first().fill("6");
-  const textInputs = page.locator('input[type="text"]');
-  if (await textInputs.count()) {
-    await textInputs.first().fill("QA Playwright");
-  }
-  const dateInputs = page.locator('input[type="date"]');
-  if (await dateInputs.count()) {
-    await dateInputs.first().fill("2026-08-24");
-  }
-  const textAreas = page.locator("textarea");
-  if (await textAreas.count()) {
-    await textAreas.first().fill("Pedido validado por E2E.");
-  }
-
-  await page.getByRole("button", { name: /agregar al pedido/i }).click();
-  await page.waitForURL("**/carrito");
-  await page.getByLabel("Nombre").fill("Cliente E2E");
-  await page.getByLabel("WhatsApp").fill("+50763333333");
-  await page.getByLabel("Nota para Artenova").fill("Flujo E2E con imagen.");
-  await page.setInputFiles('input[type="file"]', path.resolve("public/seed/mascotas/mascotas-2.jpg"));
-  await page.getByRole("button", { name: /enviar pedido/i }).click();
-
-  await page.waitForURL(/\/pedido\/ART-/);
-  const orderCode = new URL(page.url()).pathname.split("/").pop();
-  expect(orderCode).toBeTruthy();
-  await expect(page.getByText(/pedido recibido/i)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(orderCode!)).toBeVisible();
-  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("artenova-cart") ?? "[]").length)).toBe(0);
-
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@artenova.local");
-  await page.getByLabel("Password").fill("change-me-now");
-  await page.getByRole("button", { name: /^entrar$/i }).click();
-  await page.waitForURL("**/admin");
-  await page.goto("/admin/pedidos");
-  await expect(page.getByText(orderCode!)).toBeVisible();
+  await expect(page.getByText("Desde")).toBeVisible();
+  await expect(page.getByLabel(/Cantidad/i)).toHaveCount(0);
+  await expect(page.getByText(/datos personalizados/i)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /agregar/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /consultar por whatsapp|contactar/i })).toBeVisible();
 });
 
 test("admin can create and pause a category", async ({ page }, testInfo) => {
   const suffix = `${testInfo.project.name}-${Date.now()}`;
-  const name = `Categoria E2E ${suffix}`;
+  const name = `Categoría E2E ${suffix}`;
   const slug = `e2e-categoria-${suffix}`;
 
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@artenova.local");
-  await page.getByLabel("Password").fill("change-me-now");
-  await page.getByRole("button", { name: /^entrar$/i }).click();
-  await page.waitForURL("**/admin");
-
+  await loginAdmin(page);
   await page.goto("/admin/categorias");
   await page.getByRole("button", { name: /nueva categoria|nueva categoría/i }).click();
   await page.getByLabel("Nombre").fill(name);
-  await page.getByLabel("Slug").fill(slug);
+  await page.getByLabel("Enlace corto").fill(slug);
   await page.getByLabel(/descripcion|descripción/i).fill("Creada desde prueba E2E.");
-  await page.getByLabel(/color/i).fill("#00897b");
   await page.getByRole("button", { name: /guardar categoria|guardar categoría/i }).click();
 
   await expect(page.getByText(/categoria guardada|categoría guardada/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`${name}.*activa`, "i") })).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`${name}.*activ[ao]`, "i") })).toBeVisible();
 
-  await page.getByRole("button", { name: new RegExp(`${name}.*activa`, "i") }).click();
+  await page.getByRole("button", { name: new RegExp(`${name}.*activ[ao]`, "i") }).click();
   await page.getByRole("button", { name: /pausar/i }).click();
   await expect(page.getByText(/categoria pausada|categoría pausada/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`${name}.*pausada`, "i") })).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`${name}.*pausad[ao]`, "i") })).toBeVisible();
+});
+
+test("admin can create and pause a tag", async ({ page }, testInfo) => {
+  const suffix = `${testInfo.project.name}-${Date.now()}`;
+  const name = `Tag E2E ${suffix}`;
+  const slug = `e2e-tag-${suffix}`;
+
+  await loginAdmin(page);
+  await page.goto("/admin/tags");
+  await page.getByRole("button", { name: /nueva etiqueta/i }).click();
+  await page.getByLabel("Nombre").fill(name);
+  await page.getByLabel("Enlace corto").fill(slug);
+  await page.getByLabel(/descripción|descripcion/i).fill("Creado desde prueba E2E.");
+  await page.getByRole("button", { name: /guardar etiqueta/i }).click();
+
+  await expect(page.getByText(/etiqueta guardada/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`${name}.*activo`, "i") })).toBeVisible();
+
+  await page.goto("/admin/tags");
+  await page.getByRole("button", { name: new RegExp(`${name}.*activo`, "i") }).click();
+  await page.getByRole("button", { name: /pausar/i }).click();
+  await expect(page.getByText(/etiqueta pausada/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`${name}.*pausado`, "i") })).toBeVisible();
+});
+
+test("admin can create a product with tag, image and price tiers", async ({ page }, testInfo) => {
+  const suffix = `${testInfo.project.name}-${Date.now()}`;
+  const categoryName = `Cat Producto E2E ${suffix}`;
+  const categorySlug = `cat-producto-e2e-${suffix}`;
+  const tagName = `Tag Producto E2E ${suffix}`;
+  const tagSlug = `tag-producto-e2e-${suffix}`;
+  const productName = `Producto E2E ${suffix}`;
+  const productSlug = `producto-e2e-${suffix}`;
+
+  await loginAdmin(page);
+
+  await page.goto("/admin/categorias");
+  await page.getByRole("button", { name: /nueva categoria|nueva categoría/i }).click();
+  await page.getByLabel("Nombre").fill(categoryName);
+  await page.getByLabel("Enlace corto").fill(categorySlug);
+  await page.getByLabel(/descripcion|descripción/i).fill("Categoría para probar productos.");
+  await page.getByRole("button", { name: /guardar categoria|guardar categoría/i }).click();
+  await expect(page.getByText(/categoria guardada|categoría guardada/i)).toBeVisible();
+
+  await page.goto("/admin/tags");
+  await page.getByRole("button", { name: /nueva etiqueta/i }).click();
+  await page.getByLabel("Nombre").fill(tagName);
+  await page.getByLabel("Enlace corto").fill(tagSlug);
+  await page.getByLabel(/descripción|descripcion/i).fill("Tag para probar productos.");
+  await page.getByRole("button", { name: /guardar etiqueta/i }).click();
+  await expect(page.getByText(/etiqueta guardada/i)).toBeVisible();
+
+  await page.goto("/admin/productos");
+  await page.getByRole("button", { name: /nuevo producto/i }).click();
+  await page.getByLabel("Nombre").fill(productName);
+  await page.getByLabel("Enlace corto").fill(productSlug);
+  await page.getByLabel(/descripción|descripcion/i).fill("Producto creado desde el flujo admin E2E.");
+  await page.getByLabel("Categoría").click();
+  await page.getByRole("option", { name: categoryName }).click({ force: true });
+  await page.getByLabel("Precio base").fill("12.50");
+  await page.getByLabel("Etiquetas").click();
+  await page.getByRole("option", { name: tagName }).click({ force: true });
+  await page.keyboard.press("Escape");
+  await page.getByLabel("Material").fill("MDF");
+  await page.getByLabel("Tamaño").fill("10 cm");
+  await page.getByLabel("Técnica").fill("Grabado láser");
+
+  await page.setInputFiles('input[type="file"]', path.resolve("public/seed/mascotas/mascotas-1.jpg"));
+  await expect(page.getByRole("img", { name: productName })).toHaveAttribute("src", /artenova-uploads-002863053504\.s3\.us-east-1\.amazonaws\.com\/products\//);
+
+  await page.getByRole("button", { name: /agregar precio/i }).click();
+  await page.getByLabel("Cantidad mínima").nth(0).fill("6");
+  await page.getByLabel("Precio unitario").nth(0).fill("10");
+  await page.getByLabel("Texto visible").nth(0).fill("6 unidades - $60.00");
+  await page.getByRole("button", { name: /agregar precio/i }).click();
+  await page.getByLabel("Cantidad mínima").nth(1).fill("12");
+  await page.getByLabel("Precio unitario").nth(1).fill("9");
+  await page.getByLabel("Texto visible").nth(1).fill("12 unidades - $108.00");
+  await page.getByRole("button", { name: /guardar producto/i }).click();
+
+  await page.goto(`/producto/${productSlug}`);
+  await expect(page.getByRole("heading", { name: productName })).toBeVisible();
+  await expect(page.getByText("Precios por cantidad")).toBeVisible();
+  await expect(page.getByText("6 unidades - $60.00")).toBeVisible();
+  await expect(page.getByText("12 unidades - $108.00")).toBeVisible();
+  await expect(page.getByRole("link", { name: /consultar por whatsapp|contactar/i })).toBeVisible();
+  await expect(page.getByRole("img", { name: productName })).toHaveAttribute("src", /artenova-uploads-002863053504\.s3\.us-east-1\.amazonaws\.com\/products\//);
 });

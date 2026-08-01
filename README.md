@@ -1,6 +1,6 @@
 # Artenova Web
 
-Tienda administrable para Artenova, taller creativo de corte y grabado laser. El flujo v1 permite publicar productos personalizados, mostrar precios base y escalas por cantidad, recibir pedidos de clientes invitados y gestionar el contacto desde un panel admin.
+Tienda administrable para Artenova, taller creativo de corte y grabado láser. El flujo v1 permite publicar productos personalizados, mostrar precios desde y escalas por cantidad, recibir pedidos de clientes invitados y gestionar el contacto desde un panel admin.
 
 ## Stack
 
@@ -9,8 +9,7 @@ Tienda administrable para Artenova, taller creativo de corte y grabado laser. El
 - `apps/api`: Express + TypeScript + Prisma.
 - `packages/shared`: tipos, schemas Zod y calculo de precios.
 - PostgreSQL.
-- S3 compatible remoto para imagenes subidas.
-- Upload local en desarrollo para poder probar sin credenciales externas.
+- S3 compatible remoto para imagenes de producto.
 - Docker Compose para desarrollo y produccion.
 
 ## Configuracion
@@ -19,7 +18,7 @@ Tienda administrable para Artenova, taller creativo de corte y grabado laser. El
 2. Completa credenciales S3 reales: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`.
 3. Cambia `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `SESSION_SECRET`.
 
-En desarrollo, `.env.example` usa `UPLOAD_DRIVER=local` y guarda archivos en `uploads/`. Para produccion usa `UPLOAD_DRIVER=s3` con credenciales reales.
+Los compose de desarrollo y produccion fuerzan `UPLOAD_DRIVER=s3`; las imagenes de producto se guardan bajo `products/*` en S3 y no se montan ni se sirven desde `uploads/` locales.
 
 ## Desarrollo con Docker
 
@@ -29,13 +28,15 @@ docker compose --env-file .env -f docker-compose.dev.yml up --build
 
 Luego abre:
 
-- Web: `http://localhost:5173`
+- Web: `http://localhost:5174`
 - API health: `http://localhost:4000/api/health`
 
-En una terminal separada, despues de que PostgreSQL este listo:
+El servicio `api` espera a PostgreSQL, aplica las migraciones versionadas con Prisma y ejecuta el seed antes de arrancar el servidor dev. En volumenes ya inicializados, Prisma no reaplica migraciones existentes; el seed vuelve a sincronizar el admin y los datos demo.
+
+Si necesitas correrlos manualmente:
 
 ```powershell
-docker compose --env-file .env -f docker-compose.dev.yml exec api pnpm --filter @artenova/api db:migrate
+docker compose --env-file .env -f docker-compose.dev.yml exec api pnpm --filter @artenova/api db:deploy
 docker compose --env-file .env -f docker-compose.dev.yml exec api pnpm --filter @artenova/api db:seed
 ```
 
@@ -47,7 +48,8 @@ docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter
 docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter @artenova/api db:seed
 ```
 
-El compose de produccion expone HTTP en el puerto `80`; HTTPS queda fuera de v1.
+El compose de produccion expone HTTP en el puerto `90`; por ahora se accede con `http://IP_DEL_SERVIDOR:90`.
+Si quieres fijar la IP en el entorno de produccion, define `PROD_APP_BASE_URL=http://IP_DEL_SERVIDOR:90` y `PROD_API_BASE_URL=http://IP_DEL_SERVIDOR:90/api`.
 
 ## Pruebas
 

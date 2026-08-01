@@ -7,9 +7,11 @@ export function productPayload(product: any) {
   return {
     ...product,
     basePrice: toNumber(product.basePrice),
+    tags: product.tags?.map((item: any) => item.tag ?? item) ?? [],
     priceTiers: product.priceTiers?.map((tier: any) => ({
       ...tier,
-      unitPrice: toNumber(tier.unitPrice)
+      unitPrice: toNumber(tier.unitPrice),
+      totalPrice: toNumber(tier.totalPrice)
     })) ?? [],
     extras: product.extras?.map((extra: any) => ({
       ...extra,

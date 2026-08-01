@@ -1,10 +1,23 @@
 import { z } from "zod";
 
-export const orderStatusValues = ["nuevo", "en_proceso", "completado", "cancelado"] as const;
-export const customFieldTypes = ["text", "date", "select", "image", "note"] as const;
+export const orderStatusValues = [
+  "nuevo",
+  "en_proceso",
+  "completado",
+  "cancelado",
+] as const;
+export const customFieldTypes = [
+  "text",
+  "date",
+  "select",
+  "image",
+  "note",
+] as const;
+export const heroSlotValues = ["primary", "secondary"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
+export type HeroSlot = (typeof heroSlotValues)[number];
 
 export const moneySchema = z.coerce.number().nonnegative().finite();
 
@@ -14,36 +27,52 @@ export const categorySchema = z.object({
   slug: z.string(),
   description: z.string().nullable(),
   accentColor: z.string().nullable(),
-  isActive: z.boolean()
+  isActive: z.boolean(),
+});
+
+export const tagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  accentColor: z.string().nullable(),
+  isActive: z.boolean(),
 });
 
 export const adminCategoryInputSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
   description: z.string().optional().nullable(),
-  accentColor: z.string().optional().nullable(),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+});
+
+export const adminTagInputSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().min(2),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
 });
 
 export const productImageSchema = z.object({
   id: z.string(),
   url: z.string(),
   alt: z.string(),
-  position: z.number().int()
+  position: z.number().int(),
 });
 
 export const priceTierSchema = z.object({
   id: z.string().optional(),
   minQuantity: z.number().int().positive(),
   unitPrice: moneySchema,
-  label: z.string().optional().nullable()
+  totalPrice: moneySchema.optional().nullable(),
+  label: z.string().optional().nullable(),
 });
 
 export const productExtraSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2),
   type: z.string().min(2),
-  priceDelta: moneySchema.default(0)
+  priceDelta: moneySchema.default(0),
 });
 
 export const customFieldSchema = z.object({
@@ -52,13 +81,14 @@ export const customFieldSchema = z.object({
   type: z.enum(customFieldTypes),
   required: z.boolean().default(false),
   options: z.array(z.string()).default([]),
-  helpText: z.string().optional().nullable()
+  helpText: z.string().optional().nullable(),
 });
 
 export const productSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
+  sku: z.string().nullable().optional(),
   description: z.string(),
   categoryId: z.string(),
   basePrice: moneySchema,
@@ -67,40 +97,46 @@ export const productSchema = z.object({
   technique: z.string().nullable(),
   isPublished: z.boolean(),
   isFeatured: z.boolean(),
+  isHero: z.boolean(),
+  heroSlot: z.enum(heroSlotValues).nullable().optional(),
   images: z.array(productImageSchema),
   priceTiers: z.array(priceTierSchema),
   extras: z.array(productExtraSchema),
-  customFields: z.array(customFieldSchema)
+  customFields: z.array(customFieldSchema),
+  tags: z.array(tagSchema).default([]),
 });
 
 export const orderItemInputSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().int().positive(),
   selectedExtraIds: z.array(z.string()).default([]),
-  personalization: z.record(z.string(), z.union([z.string(), z.array(z.string())])).default({})
+  personalization: z
+    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .default({}),
 });
 
 export const createOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerWhatsapp: z.string().min(6).max(40),
   customerNote: z.string().max(1200).optional().default(""),
-  items: z.array(orderItemInputSchema).min(1)
+  items: z.array(orderItemInputSchema).min(1),
 });
 
 export const updateOrderSchema = z.object({
   status: z.enum(orderStatusValues).optional(),
   finalPrice: moneySchema.optional().nullable(),
-  adminNote: z.string().max(1200).optional().nullable()
+  adminNote: z.string().max(1200).optional().nullable(),
 });
 
 export const adminLoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8)
+  password: z.string().min(8),
 });
 
 export const adminProductInputSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
+  sku: z.string().trim().optional().nullable(),
   description: z.string().min(2),
   categoryId: z.string().min(1),
   basePrice: moneySchema,
@@ -109,24 +145,38 @@ export const adminProductInputSchema = z.object({
   technique: z.string().optional().nullable(),
   isPublished: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
+  isHero: z.boolean().default(false),
+  heroSlot: z.enum(heroSlotValues).optional().nullable(),
   images: z.array(productImageSchema.omit({ id: true })).default([]),
   priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   extras: z.array(productExtraSchema.omit({ id: true })).default([]),
-  customFields: z.array(customFieldSchema.omit({ id: true })).default([])
+  customFields: z.array(customFieldSchema.omit({ id: true })).default([]),
+  tagIds: z.array(z.string()).default([]),
 });
 
 export const siteSettingsSchema = z.object({
   brandName: z.string().default("Artenova"),
   heroTitle: z.string().default("Regalos personalizados que guardan historias"),
-  heroSubtitle: z.string().default("Corte y grabado laser para mascotas, bodas y detalles hechos con carino."),
+  heroSubtitle: z
+    .string()
+    .default(
+      "Taller creativo de corte y grabado láser para mascotas, bodas y detalles hechos con cariño.",
+    ),
   whatsapp: z.string().default(""),
   email: z.string().email().optional().or(z.literal("")).default(""),
-  address: z.string().default("Panama"),
-  bannerText: z.string().default("Pedidos personalizados con precio base y confirmacion por WhatsApp.")
+  address: z.string().default("Panamá"),
+  businessHours: z.string().optional().nullable().default(""),
+  mapsUrl: z.string().url().optional().or(z.literal("")).nullable().default(""),
+  personalizationNotice: z.string().optional().nullable().default(""),
+  bannerText: z
+    .string()
+    .default("Piezas personalizadas para recuerdos y regalos especiales."),
 });
 
 export type Category = z.infer<typeof categorySchema>;
+export type Tag = z.infer<typeof tagSchema>;
 export type AdminCategoryInput = z.infer<typeof adminCategoryInputSchema>;
+export type AdminTagInput = z.infer<typeof adminTagInputSchema>;
 export type Product = z.infer<typeof productSchema>;
 export type ProductImage = z.infer<typeof productImageSchema>;
 export type PriceTier = z.infer<typeof priceTierSchema>;
@@ -147,17 +197,6 @@ export type OrderItem = {
   personalization: Record<string, string | string[]>;
 };
 
-export type OrderUpload = {
-  id: string;
-  orderId: string;
-  itemId?: string | null;
-  url: string;
-  thumbnailUrl?: string | null;
-  originalName: string;
-  mimeType: string;
-  size: number;
-};
-
 export type Order = {
   id: string;
   code: string;
@@ -170,7 +209,6 @@ export type Order = {
   adminNote?: string | null;
   createdAt: string;
   items: OrderItem[];
-  uploads: OrderUpload[];
 };
 
 export function formatCurrency(value: number): string {

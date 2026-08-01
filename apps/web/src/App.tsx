@@ -1,12 +1,11 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
-import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminTagsPage } from "./pages/admin/AdminTagsPage";
 import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { ConfirmationPage } from "./pages/ConfirmationPage";
@@ -31,9 +30,9 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboardPage /> },
           { path: "categorias", element: <AdminCategoriesPage /> },
+          { path: "tags", element: <AdminTagsPage /> },
           { path: "productos", element: <AdminProductsPage /> },
-          { path: "pedidos", element: <AdminOrdersPage /> },
-          { path: "ajustes", element: <AdminSettingsPage /> }
+          { path: "pedidos", element: <Navigate to="/admin" replace /> }
         ]
       }
     ]

@@ -1,0 +1,2 @@
+ALTER TABLE "Product" ADD COLUMN "isHero" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Product" ADD COLUMN "heroSlot" TEXT;

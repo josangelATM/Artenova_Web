@@ -15,17 +15,23 @@ const product: Product = {
   basePrice: 16,
   material: "MDF",
   size: "20 cm",
-  technique: "Grabado laser",
+  technique: "Grabado láser",
   isPublished: true,
   isFeatured: true,
+  isHero: false,
+  heroSlot: null,
   images: [{ id: "i1", url: "/seed/mascotas/mascotas-2.jpg", alt: "Retrato", position: 0 }],
   priceTiers: [],
   extras: [],
-  customFields: []
+  customFields: [],
+  tags: [
+    { id: "t1", name: "Regalo", slug: "regalo", description: null, accentColor: "#ef798a", isActive: true },
+    { id: "t2", name: "Mascotas", slug: "mascotas", description: null, accentColor: "#8ac6d1", isActive: true }
+  ]
 };
 
 describe("ProductCard", () => {
-  it("shows product name and base price", () => {
+  it("shows product name, base price, and useful tags only", () => {
     render(
       <ThemeProvider theme={theme}>
         <BrowserRouter>
@@ -36,6 +42,11 @@ describe("ProductCard", () => {
 
     expect(screen.getByText("Retrato grabado")).toBeInTheDocument();
     expect(screen.getByText("$16.00")).toBeInTheDocument();
+    expect(screen.getByText("Mascotas")).toBeInTheDocument();
+    expect(screen.queryByText("Regalo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Destacado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Consultar")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Retrato grabado/i })).toHaveAttribute("href", "/producto/retrato-grabado");
   });
 });
 

@@ -1,148 +1,157 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Checkbox, Container, Divider, FormControlLabel, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
-import { ShoppingBag } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
-import { formatCurrency, type Product } from "@artenova/shared";
-import { calculateLineTotal } from "@artenova/shared";
-import { LoadingState } from "../components/LoadingState";
+import { Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from "@mui/material";
+import { MessageCircle } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { formatCurrency, type Product, type SiteSettings } from "@artenova/shared";
+import { ProductGallery } from "../components/ProductGallery";
+import { ProductPageSkeleton } from "../components/SkeletonStates";
 import { api } from "../lib/api";
-import { useCart } from "../store/cart";
+import { whatsappHref } from "../lib/contact";
+import { visiblePublicTags } from "../lib/tags";
 
 export function ProductPage() {
   const { slug } = useParams();
-  const navigate = useNavigate();
-  const cart = useCart();
   const [product, setProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
-  const [personalization, setPersonalization] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    if (slug) void api.product(slug).then(setProduct);
+    if (!slug) return;
+
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    void Promise.all([api.product(slug), api.settings()])
+      .then(([nextProduct, nextSettings]) => {
+        if (!active) return;
+        setProduct(nextProduct);
+        setSettings(nextSettings);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setLoadError(err instanceof Error ? err.message : "No se pudo encontrar el producto");
+        setProduct(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
-  if (!product) return <LoadingState label="Cargando producto" />;
+  if (loading) return <ProductPageSkeleton />;
 
-  const price = calculateLineTotal(product, quantity, selectedExtraIds);
-
-  function addToCart() {
-    if (!product) return;
-    cart.addItem({ product, quantity, selectedExtraIds, personalization });
-    navigate("/carrito");
+  if (!product) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: "center" }}>
+          <Stack spacing={2} alignItems="center">
+            <Typography variant="h3">Producto no disponible</Typography>
+            <Typography color="text.secondary">{loadError || "Este enlace ya no está publicado."}</Typography>
+            <Button component={Link} to="/" variant="contained">
+              Ver catálogo
+            </Button>
+          </Stack>
+        </Paper>
+      </Container>
+    );
   }
 
+  const tags = visiblePublicTags(product.tags);
+  const consultUrl = whatsappHref(settings?.whatsapp, `Hola, estoy interesado en ${product.name}${product.sku ? ` (REF ${product.sku})` : ""}.`);
+
   return (
-    <Container maxWidth="xl" sx={{ py: 5 }}>
-      <Grid container spacing={4}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 5 } }}>
+      <Grid container spacing={{ xs: 3, md: 4 }}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box component="img" src={product.images[0]?.url} alt={product.name} sx={{ width: "100%", borderRadius: 3, boxShadow: "0 24px 70px rgba(64,44,37,.18)" }} />
+          <ProductGallery product={product} />
         </Grid>
+
         <Grid size={{ xs: 12, md: 6 }}>
-          <Stack spacing={3}>
+          <Stack spacing={{ xs: 2.5, md: 3 }}>
             <Box>
-              <Typography variant="h2" sx={{ fontSize: { xs: 36, md: 56 } }}>
+              <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 56 }, overflowWrap: "anywhere" }}>
                 {product.name}
               </Typography>
-              <Typography color="text.secondary" mt={1}>{product.description}</Typography>
+              {product.sku && (
+                <Typography variant="overline" color="text.secondary" fontWeight={900}>
+                  REF {product.sku}
+                </Typography>
+              )}
+              <Typography color="text.secondary" mt={1}>
+                {product.description}
+              </Typography>
+              {tags.length > 0 && (
+                <Stack direction="row" gap={0.75} flexWrap="wrap" mt={2}>
+                  {tags.map((tag) => (
+                    <Chip key={tag.id} label={tag.name} size="small" variant="outlined" />
+                  ))}
+                </Stack>
+              )}
             </Box>
+
             <Paper className="soft-panel" sx={{ p: 3 }}>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">Material</Typography>
-                  <Typography fontWeight={900}>{product.material ?? "Personalizable"}</Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">Tamano</Typography>
-                  <Typography fontWeight={900}>{product.size ?? "A confirmar"}</Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">Tecnica</Typography>
-                  <Typography fontWeight={900}>{product.technique ?? "Laser"}</Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">Precio base</Typography>
-                  <Typography fontWeight={900}>{formatCurrency(product.basePrice)}</Typography>
-                </Grid>
+                <ProductInfo label="Material" value={product.material ?? "A confirmar"} />
+                <ProductInfo label="Tamaño" value={product.size ?? "A confirmar"} />
+                <ProductInfo label="Técnica" value={product.technique ?? "A confirmar"} />
+                <ProductInfo label="Desde" value={formatCurrency(product.basePrice)} />
               </Grid>
             </Paper>
 
             {product.priceTiers.length > 0 && (
               <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Ofertas por cantidad</Typography>
-                <Stack spacing={1} mt={1}>
+                <Typography variant="h6" fontWeight={900}>
+                  Precios por cantidad
+                </Typography>
+                <Stack spacing={1} mt={1.25}>
                   {product.priceTiers.map((tier) => (
-                    <Stack key={tier.id ?? tier.minQuantity} direction="row" justifyContent="space-between">
+                    <Stack key={tier.id ?? tier.minQuantity} direction="row" justifyContent="space-between" gap={2}>
                       <Typography>{tier.label ?? `${tier.minQuantity}+ unidades`}</Typography>
-                      <Typography fontWeight={900}>{formatCurrency(tier.unitPrice)} c/u</Typography>
+                      <Typography fontWeight={900} textAlign="right">
+                        {tier.totalPrice != null ? formatCurrency(tier.totalPrice) : `${formatCurrency(tier.unitPrice)} c/u`}
+                      </Typography>
                     </Stack>
                   ))}
                 </Stack>
               </Paper>
             )}
 
-            <Stack spacing={2}>
-              <TextField type="number" label="Cantidad" value={quantity} inputProps={{ min: 1 }} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value)))} />
-              {product.extras.map((extra) => (
-                <FormControlLabel
-                  key={extra.id}
-                  control={
-                    <Checkbox
-                      checked={selectedExtraIds.includes(extra.id ?? "")}
-                      onChange={(event) =>
-                        setSelectedExtraIds((current) =>
-                          event.target.checked ? [...current, extra.id ?? ""] : current.filter((id) => id !== extra.id)
-                        )
-                      }
-                    />
-                  }
-                  label={`${extra.name} (+${formatCurrency(extra.priceDelta)})`}
-                />
-              ))}
-            </Stack>
+            {product.extras.length > 0 && (
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={900}>
+                  Opciones disponibles
+                </Typography>
+                <Stack spacing={1} mt={1.25}>
+                  {product.extras.map((extra) => (
+                    <Stack key={extra.id ?? extra.name} direction="row" justifyContent="space-between" gap={2}>
+                      <Typography>{extra.name}</Typography>
+                      <Typography fontWeight={900} textAlign="right">
+                        {extra.priceDelta > 0 ? `+${formatCurrency(extra.priceDelta)}` : "Incluido"}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Paper>
+            )}
 
-            <Divider />
-
-            <Stack spacing={2}>
-              <Typography variant="h6" fontWeight={900}>Datos personalizados</Typography>
-              {product.customFields.map((field) => {
-                if (field.type === "image") {
-                  return <Typography key={field.id} color="text.secondary">Las fotos se suben al finalizar el pedido.</Typography>;
-                }
-                if (field.type === "select") {
-                  return (
-                    <TextField key={field.id} select label={field.label} required={field.required} helperText={field.helpText} value={personalization[field.id ?? field.label] ?? ""} onChange={(event) => setPersonalization((current) => ({ ...current, [field.id ?? field.label]: event.target.value }))}>
-                      {field.options.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-                    </TextField>
-                  );
-                }
-                return (
-                  <TextField
-                    key={field.id}
-                    label={field.label}
-                    required={field.required}
-                    type={field.type === "date" ? "date" : "text"}
-                    multiline={field.type === "note"}
-                    minRows={field.type === "note" ? 3 : undefined}
-                    helperText={field.helpText}
-                    InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
-                    value={personalization[field.id ?? field.label] ?? ""}
-                    onChange={(event) => setPersonalization((current) => ({ ...current, [field.id ?? field.label]: event.target.value }))}
-                  />
-                );
-              })}
-            </Stack>
-
-            <Paper sx={{ p: 3, background: "#fff0f3" }}>
-              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} gap={2}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Total estimado</Typography>
-                  <Typography variant="h4" fontWeight={900}>{formatCurrency(price.lineTotal)}</Typography>
-                </Box>
-                <Button size="large" variant="contained" startIcon={<ShoppingBag size={20} />} onClick={addToCart}>
-                  Agregar al pedido
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+              {consultUrl ? (
+                <Button href={consultUrl} target="_blank" rel="noreferrer" size="large" variant="contained" startIcon={<MessageCircle size={20} />}>
+                  Consultar por WhatsApp
                 </Button>
-              </Stack>
-            </Paper>
+              ) : (
+                <Button component={Link} to="/contacto" size="large" variant="contained">
+                  Contactar
+                </Button>
+              )}
+              <Button component={Link} to="/" size="large" variant="outlined">
+                Ver más productos
+              </Button>
+            </Stack>
           </Stack>
         </Grid>
       </Grid>
@@ -150,3 +159,13 @@ export function ProductPage() {
   );
 }
 
+function ProductInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <Grid size={{ xs: 6 }}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography fontWeight={900}>{value}</Typography>
+    </Grid>
+  );
+}

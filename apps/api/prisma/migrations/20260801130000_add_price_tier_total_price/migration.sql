@@ -1,0 +1,1 @@
+ALTER TABLE "PriceTier" ADD COLUMN "totalPrice" DECIMAL(10,2);
