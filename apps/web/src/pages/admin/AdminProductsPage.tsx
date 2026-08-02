@@ -113,8 +113,7 @@ export function AdminProductsPage() {
     }
   }
 
-  async function uploadImages(fileList: FileList | null) {
-    const files = Array.from(fileList ?? []);
+  async function uploadImages(files: File[]) {
     if (files.length === 0) return;
     try {
       setUploadingImage(true);
@@ -301,7 +300,7 @@ export function AdminProductsPage() {
                     multiple
                     type="file"
                     onChange={(event) => {
-                      const files = event.target.files;
+                      const files = Array.from(event.target.files ?? []);
                       event.target.value = "";
                       void uploadImages(files);
                     }}
