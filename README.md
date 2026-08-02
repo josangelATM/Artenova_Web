@@ -50,6 +50,7 @@ docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter
 
 El compose de produccion expone HTTP en el puerto `90`; por ahora se accede con `http://IP_DEL_SERVIDOR:90`.
 Si quieres fijar la IP en el entorno de produccion, define `PROD_APP_BASE_URL=http://IP_DEL_SERVIDOR:90` y `PROD_API_BASE_URL=http://IP_DEL_SERVIDOR:90/api`.
+El API usa `WEB_INTERNAL_BASE_URL` para leer el `index.html` del servicio web e inyectar Open Graph en URLs de producto; en Docker Compose queda como `http://web`.
 
 ## Pruebas
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/material";
 import { ImageIcon, Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency, type Product } from "@artenova/shared";
@@ -78,6 +78,14 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           <Typography variant="h6" fontWeight={900} lineHeight={1.08} sx={{ overflowWrap: "anywhere", fontSize: { xs: 19, md: 20 } }}>
             {product.name}
           </Typography>
+          {product.reviewSummary.reviewCount > 0 && (
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Rating value={product.reviewSummary.averageRating} precision={0.5} readOnly size="small" />
+              <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                {product.reviewSummary.averageRating.toFixed(1)} ({product.reviewSummary.reviewCount})
+              </Typography>
+            </Stack>
+          )}
           <Typography
             variant="body2"
             color="text.secondary"

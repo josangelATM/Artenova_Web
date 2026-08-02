@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
 import { MessageCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { formatCurrency, type Product, type SiteSettings } from "@artenova/shared";
 import { ProductGallery } from "../components/ProductGallery";
+import { ProductReviews } from "../components/ProductReviews";
 import { ProductPageSkeleton } from "../components/SkeletonStates";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
+import { applySeo, productSeoDescription } from "../lib/seo";
 import { visiblePublicTags } from "../lib/tags";
 
 export function ProductPage() {
@@ -41,6 +43,17 @@ export function ProductPage() {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (!product) return;
+    applySeo({
+      title: product.name,
+      description: productSeoDescription(product),
+      path: `/producto/${product.slug}`,
+      image: product.images[0]?.url,
+      type: "product",
+    });
+  }, [product]);
 
   if (loading) return <ProductPageSkeleton />;
 
@@ -80,6 +93,14 @@ export function ProductPage() {
                 <Typography variant="overline" color="text.secondary" fontWeight={900}>
                   REF {product.sku}
                 </Typography>
+              )}
+              {product.reviewSummary.reviewCount > 0 && (
+                <Stack direction="row" spacing={1} alignItems="center" mt={1}>
+                  <Rating value={product.reviewSummary.averageRating} precision={0.5} readOnly size="small" />
+                  <Typography variant="body2" color="text.secondary" fontWeight={800}>
+                    {product.reviewSummary.averageRating.toFixed(1)} ({product.reviewSummary.reviewCount})
+                  </Typography>
+                </Stack>
               )}
               <Typography color="text.secondary" mt={1}>
                 {product.description}
@@ -137,6 +158,18 @@ export function ProductPage() {
                 </Stack>
               </Paper>
             )}
+
+            <ProductReviews
+              product={product}
+              onReviewCreated={(review) =>
+                setProduct((current) => {
+                  if (!current) return current;
+                  const reviews = [review, ...current.reviews];
+                  const averageRating = Number((reviews.reduce((total, item) => total + item.rating, 0) / reviews.length).toFixed(1));
+                  return { ...current, reviews, reviewSummary: { averageRating, reviewCount: reviews.length } };
+                })
+              }
+            />
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
               {consultUrl ? (

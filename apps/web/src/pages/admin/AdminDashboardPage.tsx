@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Grid, Paper, Stack, Typography } from "@mui/material";
-import { Boxes, FolderPlus, Plus, Tags } from "lucide-react";
+import { Boxes, FolderPlus, MessageSquareText, Plus, Tags } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminStat, adminSurfaceSx } from "./adminUi";
 
-type Dashboard = { counts: { products: number; categories: number; tags?: number } };
+type Dashboard = { counts: { products: number; categories: number; tags?: number; reviews?: number } };
 
 export function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -28,14 +28,17 @@ export function AdminDashboardPage() {
         }
       />
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <AdminStat label="Productos" value={dashboard.counts.products} detail="Piezas visibles o guardadas" />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <AdminStat label="Categorías" value={dashboard.counts.categories} detail="Colecciones principales" />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <AdminStat label="Etiquetas" value={dashboard.counts.tags ?? 0} detail="Filtros y temas" />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <AdminStat label="Reseñas" value={dashboard.counts.reviews ?? 0} detail="Opiniones publicadas u ocultas" />
         </Grid>
       </Grid>
       <Paper sx={{ ...adminSurfaceSx, p: 2.5 }}>
@@ -44,17 +47,22 @@ export function AdminDashboardPage() {
             Accesos rápidos
           </Typography>
           <Grid container spacing={1.25}>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/productos" variant="outlined" startIcon={<Boxes size={18} />}>
                 Nuevo producto
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Button fullWidth component={Link} to="/admin/resenas" variant="outlined" startIcon={<MessageSquareText size={18} />}>
+                Nueva reseña
+              </Button>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/categorias" variant="outlined" startIcon={<FolderPlus size={18} />}>
                 Nueva categoría
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/tags" variant="outlined" startIcon={<Tags size={18} />}>
                 Nueva etiqueta
               </Button>

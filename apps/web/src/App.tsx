@@ -5,6 +5,7 @@ import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
+import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
 import { AdminTagsPage } from "./pages/admin/AdminTagsPage";
 import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
           { index: true, element: <AdminDashboardPage /> },
           { path: "categorias", element: <AdminCategoriesPage /> },
           { path: "tags", element: <AdminTagsPage /> },
+          { path: "resenas", element: <AdminReviewsPage /> },
           { path: "productos", element: <AdminProductsPage /> },
           { path: "pedidos", element: <Navigate to="/admin" replace /> }
         ]

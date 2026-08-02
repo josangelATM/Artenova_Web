@@ -6,6 +6,7 @@ import type { Order } from "@artenova/shared";
 import { formatCurrency } from "@artenova/shared";
 import { api } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
+import { applySeo } from "../lib/seo";
 
 export function ConfirmationPage() {
   const { code } = useParams();
@@ -14,6 +15,16 @@ export function ConfirmationPage() {
   useEffect(() => {
     if (code) void api.getOrder(code).then(setOrder);
   }, [code]);
+
+  useEffect(() => {
+    if (!order) return;
+    applySeo({
+      title: `Pedido ${order.code}`,
+      description: `Pedido recibido por Artenova para ${order.customerName}. Total estimado: ${formatCurrency(order.estimatedTotal)}.`,
+      path: `/pedido/${order.code}`,
+      type: "website",
+    });
+  }, [order]);
 
   if (!order) return <LoadingState label="Buscando pedido" />;
 

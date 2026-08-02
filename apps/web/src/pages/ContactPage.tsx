@@ -5,12 +5,22 @@ import { CheckCircle2, Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-
 import type { SiteSettings } from "@artenova/shared";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
+import { applySeo } from "../lib/seo";
 
 export function ContactPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
 
   useEffect(() => {
     void api.settings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    applySeo({
+      title: "Contacto",
+      description: "Contacta a Artenova por WhatsApp para consultar regalos personalizados, diseño, disponibilidad y entregas.",
+      path: "/contacto",
+      type: "website",
+    });
   }, []);
 
   const whatsappUrl = whatsappHref(settings?.whatsapp, "Hola, quiero consultar una pieza personalizada con Artenova.");

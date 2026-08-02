@@ -89,7 +89,9 @@ const statusMeta: Record<string, { label: string; color: "default" | "primary" |
   active: { label: "Activo", color: "success" },
   paused: { label: "Pausado", color: "default" },
   published: { label: "Publicado", color: "success" },
-  draft: { label: "Oculto", color: "default" }
+  draft: { label: "Oculto", color: "default" },
+  approved: { label: "Publicada", color: "success" },
+  hidden: { label: "Oculta", color: "default" }
 };
 
 export function StatusChip({ status }: { status: string }) {

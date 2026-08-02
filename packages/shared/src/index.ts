@@ -14,10 +14,12 @@ export const customFieldTypes = [
   "note",
 ] as const;
 export const heroSlotValues = ["primary", "secondary"] as const;
+export const productReviewSourceValues = ["customer", "admin"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
+export type ProductReviewSource = (typeof productReviewSourceValues)[number];
 
 export const moneySchema = z.coerce.number().nonnegative().finite();
 
@@ -68,6 +70,35 @@ export const priceTierSchema = z.object({
   label: z.string().optional().nullable(),
 });
 
+export const productReviewSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  productName: z.string().optional(),
+  productSlug: z.string().optional(),
+  rating: z.number().int().min(1).max(5),
+  customerName: z.string(),
+  comment: z.string(),
+  isApproved: z.boolean(),
+  source: z.enum(productReviewSourceValues),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+});
+
+export const createProductReviewSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  customerName: z.string().trim().min(2).max(80),
+  comment: z.string().trim().min(3).max(800),
+});
+
+export const adminProductReviewInputSchema = createProductReviewSchema.extend({
+  productId: z.string().min(1),
+  isApproved: z.boolean().default(true),
+});
+
+export const updateReviewApprovalSchema = z.object({
+  isApproved: z.boolean(),
+});
+
 export const productExtraSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2),
@@ -104,6 +135,11 @@ export const productSchema = z.object({
   extras: z.array(productExtraSchema),
   customFields: z.array(customFieldSchema),
   tags: z.array(tagSchema).default([]),
+  reviews: z.array(productReviewSchema).default([]),
+  reviewSummary: z.object({
+    averageRating: z.number(),
+    reviewCount: z.number().int().nonnegative(),
+  }).default({ averageRating: 0, reviewCount: 0 }),
 });
 
 export const orderItemInputSchema = z.object({
@@ -178,6 +214,9 @@ export type Tag = z.infer<typeof tagSchema>;
 export type AdminCategoryInput = z.infer<typeof adminCategoryInputSchema>;
 export type AdminTagInput = z.infer<typeof adminTagInputSchema>;
 export type Product = z.infer<typeof productSchema>;
+export type ProductReview = z.infer<typeof productReviewSchema>;
+export type CreateProductReviewInput = z.infer<typeof createProductReviewSchema>;
+export type AdminProductReviewInput = z.infer<typeof adminProductReviewInputSchema>;
 export type ProductImage = z.infer<typeof productImageSchema>;
 export type PriceTier = z.infer<typeof priceTierSchema>;
 export type ProductExtra = z.infer<typeof productExtraSchema>;

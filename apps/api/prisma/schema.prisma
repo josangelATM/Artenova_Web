@@ -74,9 +74,31 @@ model Product {
   extras       ProductExtra[]
   customFields CustomField[]
   tags         ProductTag[]
+  reviews      ProductReview[]
   orderItems   OrderItem[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+enum ProductReviewSource {
+  customer
+  admin
+}
+
+model ProductReview {
+  id           String              @id @default(cuid())
+  productId    String
+  product      Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating       Int
+  customerName String
+  comment      String
+  isApproved   Boolean             @default(true)
+  source       ProductReviewSource @default(customer)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([productId, isApproved, createdAt])
+  @@index([isApproved, createdAt])
 }
 
 model ProductTag {

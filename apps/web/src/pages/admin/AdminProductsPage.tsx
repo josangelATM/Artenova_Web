@@ -6,6 +6,12 @@ import { api } from "../../lib/api";
 import { AdminEmptyState, AdminPageHeader, AdminSection, StatusChip, adminSurfaceSx } from "./adminUi";
 
 type ProductImageInput = Omit<ProductImage, "id">;
+type PriceTierInput = {
+  minQuantity: number;
+  unitPrice: number;
+  totalPrice?: number | "" | null;
+  label?: string | null;
+};
 
 const emptyProduct = {
   name: "",
@@ -33,6 +39,7 @@ export function AdminProductsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [draft, setDraft] = useState<typeof emptyProduct>(emptyProduct);
   const [images, setImages] = useState<ProductImageInput[]>([]);
+  const [priceTiers, setPriceTiers] = useState<PriceTierInput[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
@@ -60,6 +67,7 @@ export function AdminProductsPage() {
     setSelectedId("");
     setDraft({ ...emptyProduct, categoryId: categories[0]?.id ?? "" });
     setImages([]);
+    setPriceTiers([]);
     setError("");
     setMessage("");
   }
@@ -85,6 +93,7 @@ export function AdminProductsPage() {
         tagIds: selected.tags.map((tag) => tag.id),
       });
       setImages(selected.images.map(({ url, alt, position }) => ({ url, alt, position })));
+      setPriceTiers(selected.priceTiers.map(({ minQuantity, unitPrice, totalPrice, label }) => ({ minQuantity, unitPrice, totalPrice, label })));
       setError("");
       setMessage("");
     }
@@ -102,7 +111,12 @@ export function AdminProductsPage() {
         images: normalizeImages(images),
         isHero: false,
         heroSlot: null,
-        priceTiers: [],
+        priceTiers: priceTiers.map((tier) => ({
+          minQuantity: Number(tier.minQuantity) || 1,
+          unitPrice: Number(tier.unitPrice) || 0,
+          totalPrice: tier.totalPrice == null || tier.totalPrice === "" ? null : Number(tier.totalPrice),
+          label: tier.label?.trim() || null,
+        })),
         extras: [],
         customFields: [],
       });
@@ -155,6 +169,10 @@ export function AdminProductsPage() {
       if (!image) return current;
       return normalizeImages([image, ...next]);
     });
+  }
+
+  function updatePriceTier(index: number, patch: Partial<PriceTierInput>) {
+    setPriceTiers((current) => current.map((tier, itemIndex) => (itemIndex === index ? { ...tier, ...patch } : tier)));
   }
 
   return (
@@ -287,6 +305,81 @@ export function AdminProductsPage() {
               <Stack direction="row" spacing={2}>
                 <FormControlLabel control={<Checkbox checked={draft.isPublished} onChange={(event) => setDraft({ ...draft, isPublished: event.target.checked })} />} label="Publicado" />
                 <FormControlLabel control={<Checkbox checked={draft.isFeatured} onChange={(event) => setDraft({ ...draft, isFeatured: event.target.checked })} />} label="Destacado" />
+              </Stack>
+            </AdminSection>
+
+            <AdminSection
+              title="Precios por cantidad"
+              description="Descuentos o precios especiales según la cantidad."
+              action={
+                <Button
+                  size="small"
+                  startIcon={<Plus size={16} />}
+                  onClick={() =>
+                    setPriceTiers((current) => [
+                      ...current,
+                      { minQuantity: 2, unitPrice: Number(draft.basePrice) || 0, totalPrice: "", label: "" },
+                    ])
+                  }
+                >
+                  Agregar precio
+                </Button>
+              }
+            >
+              <Stack spacing={1.5}>
+                {priceTiers.length === 0 && (
+                  <Typography color="text.secondary">Sin precios por cantidad. Se usará el precio base.</Typography>
+                )}
+                {priceTiers.map((tier, index) => (
+                  <Paper key={index} sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)" }}>
+                    <Grid container spacing={1.5} alignItems="center">
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          label="Cantidad mínima"
+                          value={tier.minQuantity}
+                          onChange={(event) => updatePriceTier(index, { minQuantity: Number(event.target.value) })}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          label="Precio unitario"
+                          value={tier.unitPrice}
+                          onChange={(event) => updatePriceTier(index, { unitPrice: Number(event.target.value) })}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          label="Precio total exacto"
+                          value={tier.totalPrice ?? ""}
+                          onChange={(event) => updatePriceTier(index, { totalPrice: event.target.value === "" ? "" : Number(event.target.value) })}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 5 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Texto visible"
+                          value={tier.label ?? ""}
+                          onChange={(event) => updatePriceTier(index, { label: event.target.value })}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 1 }}>
+                        <IconButton aria-label="Eliminar precio" onClick={() => setPriceTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                          <Trash2 size={18} />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))}
               </Stack>
             </AdminSection>
 

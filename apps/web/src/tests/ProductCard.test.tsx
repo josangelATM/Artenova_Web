@@ -24,6 +24,8 @@ const product: Product = {
   priceTiers: [],
   extras: [],
   customFields: [],
+  reviews: [],
+  reviewSummary: { averageRating: 4.8, reviewCount: 12 },
   tags: [
     { id: "t1", name: "Regalo", slug: "regalo", description: null, accentColor: "#ef798a", isActive: true },
     { id: "t2", name: "Mascotas", slug: "mascotas", description: null, accentColor: "#8ac6d1", isActive: true }
@@ -42,6 +44,7 @@ describe("ProductCard", () => {
 
     expect(screen.getByText("Retrato grabado")).toBeInTheDocument();
     expect(screen.getByText("$16.00")).toBeInTheDocument();
+    expect(screen.getByText("4.8 (12)")).toBeInTheDocument();
     expect(screen.getByText("Mascotas")).toBeInTheDocument();
     expect(screen.queryByText("Regalo")).not.toBeInTheDocument();
     expect(screen.queryByText("Destacado")).not.toBeInTheDocument();

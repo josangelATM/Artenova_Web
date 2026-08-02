@@ -1,9 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
-import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, adminTagInputSchema, updateOrderSchema } from "@artenova/shared";
+import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminTagInputSchema, updateOrderSchema, updateReviewApprovalSchema } from "@artenova/shared";
 import { prisma } from "../lib/prisma";
-import { orderPayload, productPayload } from "../lib/serialize";
+import { orderPayload, productPayload, reviewPayload } from "../lib/serialize";
 import { requireAdmin, signAdminToken } from "../middleware/auth";
 import { uploadProductImage } from "../services/uploadService";
 
@@ -16,7 +16,8 @@ const productInclude = {
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
   extras: true,
-  customFields: { orderBy: { position: "asc" as const } }
+  customFields: { orderBy: { position: "asc" as const } },
+  reviews: { orderBy: { createdAt: "desc" as const } }
 };
 
 adminRouter.post("/auth/login", async (req, res) => {
@@ -49,18 +50,19 @@ adminRouter.get("/me", requireAdmin, async (req, res) => {
 adminRouter.use(requireAdmin);
 
 adminRouter.get("/dashboard", async (_req, res) => {
-  const [orders, products, categories, tags] = await Promise.all([
+  const [orders, products, categories, tags, reviews] = await Promise.all([
     prisma.order.count(),
     prisma.product.count(),
     prisma.category.count(),
-    prisma.tag.count()
+    prisma.tag.count(),
+    prisma.productReview.count()
   ]);
   const latestOrders = await prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
     take: 6
   });
-  res.json({ counts: { orders, products, categories, tags }, latestOrders: latestOrders.map(orderPayload) });
+  res.json({ counts: { orders, products, categories, tags, reviews }, latestOrders: latestOrders.map(orderPayload) });
 });
 
 adminRouter.get("/categories", async (_req, res) => {
@@ -114,6 +116,83 @@ adminRouter.delete("/tags/:id", async (req, res) => {
 adminRouter.get("/products", async (_req, res) => {
   const products = await prisma.product.findMany({ include: productInclude, orderBy: { createdAt: "desc" } });
   res.json(products.map(productPayload));
+});
+
+adminRouter.get("/reviews", async (req, res) => {
+  const status = typeof req.query.status === "string" ? req.query.status : "all";
+  const productId = typeof req.query.productId === "string" ? req.query.productId : "";
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+  const reviews = await prisma.productReview.findMany({
+    where: {
+      isApproved: status === "approved" ? true : status === "hidden" ? false : undefined,
+      productId: productId || undefined,
+      OR: q
+        ? [
+            { customerName: { contains: q, mode: "insensitive" } },
+            { comment: { contains: q, mode: "insensitive" } },
+            { product: { name: { contains: q, mode: "insensitive" } } }
+          ]
+        : undefined
+    },
+    include: { product: { select: { name: true, slug: true } } },
+    orderBy: { createdAt: "desc" }
+  });
+
+  res.json(reviews.map(reviewPayload));
+});
+
+adminRouter.post("/reviews", async (req, res) => {
+  const input = adminProductReviewInputSchema.parse(req.body);
+  const product = await prisma.product.findUnique({ where: { id: input.productId }, select: { id: true } });
+  if (!product) {
+    res.status(404).json({ message: "Producto no encontrado" });
+    return;
+  }
+
+  const review = await prisma.productReview.create({
+    data: {
+      productId: input.productId,
+      rating: input.rating,
+      customerName: input.customerName,
+      comment: input.comment,
+      isApproved: input.isApproved,
+      source: "admin"
+    },
+    include: { product: { select: { name: true, slug: true } } }
+  });
+  res.status(201).json(reviewPayload(review));
+});
+
+adminRouter.put("/reviews/:id", async (req, res) => {
+  const input = adminProductReviewInputSchema.parse(req.body);
+  const review = await prisma.productReview.update({
+    where: { id: req.params.id },
+    data: {
+      productId: input.productId,
+      rating: input.rating,
+      customerName: input.customerName,
+      comment: input.comment,
+      isApproved: input.isApproved
+    },
+    include: { product: { select: { name: true, slug: true } } }
+  });
+  res.json(reviewPayload(review));
+});
+
+adminRouter.patch("/reviews/:id/approval", async (req, res) => {
+  const input = updateReviewApprovalSchema.parse(req.body);
+  const review = await prisma.productReview.update({
+    where: { id: req.params.id },
+    data: { isApproved: input.isApproved },
+    include: { product: { select: { name: true, slug: true } } }
+  });
+  res.json(reviewPayload(review));
+});
+
+adminRouter.delete("/reviews/:id", async (req, res) => {
+  await prisma.productReview.delete({ where: { id: req.params.id } });
+  res.status(204).end();
 });
 
 adminRouter.post("/products/images", imageUpload.single("file"), async (req, res) => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Container, Paper, Stack, Typography } from "@mui/material";
-import { Boxes, Eye, FolderTree, Home, Tags } from "lucide-react";
+import { Boxes, Eye, FolderTree, Home, MessageSquareText, Tags } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { adminSurfaceSx } from "./adminUi";
@@ -8,6 +8,7 @@ import { adminSurfaceSx } from "./adminUi";
 const tabs = [
   { label: "Inicio", to: "/admin", icon: Home },
   { label: "Productos", to: "/admin/productos", icon: Boxes },
+  { label: "Reseñas", to: "/admin/resenas", icon: MessageSquareText },
   { label: "Categorías", to: "/admin/categorias", icon: FolderTree },
   { label: "Etiquetas", to: "/admin/tags", icon: Tags },
 ];

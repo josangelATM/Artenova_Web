@@ -4,6 +4,10 @@ const toNumber = (value: DecimalLike | number | null | undefined) =>
   value == null ? value : Number(value.toString());
 
 export function productPayload(product: any) {
+  const reviews = product.reviews?.map(reviewPayload) ?? [];
+  const reviewCount = reviews.length;
+  const averageRating = reviewCount > 0 ? Number((reviews.reduce((total: number, review: any) => total + review.rating, 0) / reviewCount).toFixed(1)) : 0;
+
   return {
     ...product,
     basePrice: toNumber(product.basePrice),
@@ -20,7 +24,19 @@ export function productPayload(product: any) {
     customFields: product.customFields?.map((field: any) => ({
       ...field,
       options: Array.isArray(field.options) ? field.options : []
-    })) ?? []
+    })) ?? [],
+    reviews,
+    reviewSummary: { averageRating, reviewCount }
+  };
+}
+
+export function reviewPayload(review: any) {
+  return {
+    ...review,
+    productName: review.product?.name ?? review.productName,
+    productSlug: review.product?.slug ?? review.productSlug,
+    createdAt: review.createdAt?.toISOString?.() ?? review.createdAt,
+    updatedAt: review.updatedAt?.toISOString?.() ?? review.updatedAt
   };
 }
 

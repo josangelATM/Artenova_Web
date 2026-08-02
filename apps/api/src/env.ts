@@ -12,6 +12,7 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16).default("dev-session-secret-change-me"),
   APP_BASE_URL: z.string().url().default("http://localhost:5174"),
   API_BASE_URL: z.string().url().default("http://localhost:4000"),
+  WEB_INTERNAL_BASE_URL: z.string().url().default("http://web"),
   SITE_BRAND_NAME: z.string().default("Artenova"),
   SITE_HERO_TITLE: z
     .string()

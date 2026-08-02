@@ -1,4 +1,13 @@
-import type { AdminCategoryInput, AdminTagInput, Category, CreateOrderInput, Order, Product, SiteSettings, Tag, UpdateOrderInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminProductReviewInput, AdminTagInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductImage, ProductReview, SiteSettings, Tag, UpdateOrderInput } from "@artenova/shared";
+
+type AdminProductPayload = Omit<Partial<Product>, "images" | "priceTiers" | "extras" | "customFields"> & {
+  id?: string;
+  tagIds?: string[];
+  images?: Array<Omit<ProductImage, "id">>;
+  priceTiers?: Array<Omit<PriceTier, "id">>;
+  extras?: Array<Omit<ProductExtra, "id">>;
+  customFields?: Array<Omit<CustomField, "id">>;
+};
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -27,6 +36,8 @@ export const api = {
   tags: () => request<Tag[]>("/api/catalog/tags"),
   products: (params: URLSearchParams) => request<Product[]>(`/api/catalog/products?${params.toString()}`),
   product: (slug: string) => request<Product>(`/api/catalog/products/${slug}`),
+  createProductReview: (slug: string, input: CreateProductReviewInput) =>
+    request<ProductReview>(`/api/catalog/products/${slug}/reviews`, { method: "POST", body: JSON.stringify(input) }),
   createOrder: (input: CreateOrderInput) =>
     request<Order>("/api/orders", { method: "POST", body: JSON.stringify(input) }),
   getOrder: (code: string) => request<Order>(`/api/orders/${code}`),
@@ -61,11 +72,20 @@ export const api = {
     }),
   pauseAdminTag: (id: string) => request<Tag>(`/api/admin/tags/${id}`, { method: "DELETE" }),
   adminProducts: () => request<Product[]>("/api/admin/products"),
-  saveAdminProduct: (product: Partial<Product> & { id?: string; tagIds?: string[] }) =>
+  saveAdminProduct: (product: AdminProductPayload) =>
     request<Product>(product.id ? `/api/admin/products/${product.id}` : "/api/admin/products", {
       method: product.id ? "PUT" : "POST",
       body: JSON.stringify(product)
     }),
+  adminReviews: (params: URLSearchParams) => request<ProductReview[]>(`/api/admin/reviews?${params.toString()}`),
+  saveAdminReview: (review: AdminProductReviewInput & { id?: string }) =>
+    request<ProductReview>(review.id ? `/api/admin/reviews/${review.id}` : "/api/admin/reviews", {
+      method: review.id ? "PUT" : "POST",
+      body: JSON.stringify(review)
+    }),
+  setAdminReviewApproval: (id: string, isApproved: boolean) =>
+    request<ProductReview>(`/api/admin/reviews/${id}/approval`, { method: "PATCH", body: JSON.stringify({ isApproved }) }),
+  deleteAdminReview: (id: string) => request<void>(`/api/admin/reviews/${id}`, { method: "DELETE" }),
   adminOrders: () => request<Order[]>("/api/admin/orders"),
   updateOrder: (id: string, input: UpdateOrderInput) =>
     request<Order>(`/api/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(input) })

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createProductReviewSchema } from "@artenova/shared";
 import { productPayload } from "../lib/serialize";
 import { env } from "../env";
 import { prisma } from "../lib/prisma";
@@ -11,7 +12,8 @@ const productInclude = {
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
   extras: true,
-  customFields: { orderBy: { position: "asc" as const } }
+  customFields: { orderBy: { position: "asc" as const } },
+  reviews: { where: { isApproved: true }, orderBy: { createdAt: "desc" as const } }
 };
 
 catalogRouter.get("/settings", async (_req, res) => {
@@ -79,5 +81,35 @@ catalogRouter.get("/products/:slug", async (req, res) => {
     return;
   }
   res.json(productPayload(product));
+});
+
+catalogRouter.post("/products/:slug/reviews", async (req, res) => {
+  const input = createProductReviewSchema.parse(req.body);
+  const product = await prisma.product.findFirst({
+    where: { slug: req.params.slug, isPublished: true },
+    select: { id: true }
+  });
+
+  if (!product) {
+    res.status(404).json({ message: "Producto no encontrado" });
+    return;
+  }
+
+  const review = await prisma.productReview.create({
+    data: {
+      productId: product.id,
+      rating: input.rating,
+      customerName: input.customerName,
+      comment: input.comment,
+      isApproved: true,
+      source: "customer"
+    }
+  });
+
+  res.status(201).json({
+    ...review,
+    createdAt: review.createdAt.toISOString(),
+    updatedAt: review.updatedAt.toISOString()
+  });
 });
 

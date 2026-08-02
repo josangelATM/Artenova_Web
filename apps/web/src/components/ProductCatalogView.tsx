@@ -14,10 +14,11 @@ import {
   Typography,
 } from "@mui/material";
 import { CheckCircle2, MessageCircle, Palette, Search, Sparkles, Truck } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { formatCurrency, type Category, type Product, type SiteSettings, type Tag } from "@artenova/shared";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
+import { applySeo } from "../lib/seo";
 import { visiblePublicTags } from "../lib/tags";
 import { ProductCard } from "./ProductCard";
 import { CatalogGridSkeleton } from "./SkeletonStates";
@@ -36,6 +37,7 @@ const trustItems = [
 ];
 
 export function ProductCatalogView() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -106,6 +108,25 @@ export function ProductCatalogView() {
       setCatalogProducts(nextProducts);
     });
   }, []);
+
+  useEffect(() => {
+    const isCatalog = location.pathname === "/catalogo";
+    const canonicalPath =
+      isCatalog && category && !tag && !q
+        ? `/catalogo?category=${encodeURIComponent(category)}`
+        : isCatalog
+          ? "/catalogo"
+          : "/";
+    applySeo({
+      title: isCatalog ? "Catálogo de regalos personalizados" : settings?.heroTitle ?? "Regalos personalizados que guardan historias",
+      description:
+        settings?.heroSubtitle ??
+        "Taller creativo de corte y grabado láser para mascotas, bodas y detalles personalizados en Panamá.",
+      path: canonicalPath,
+      image: catalogProducts[0]?.images[0]?.url,
+      type: "website",
+    });
+  }, [catalogProducts, category, location.pathname, q, settings, tag]);
 
   useEffect(() => {
     setLoading(true);

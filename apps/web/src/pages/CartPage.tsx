@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Box, Button, Container, Divider, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { calculateLineTotal, formatCurrency } from "@artenova/shared";
 import { api } from "../lib/api";
+import { applySeo } from "../lib/seo";
 import { useCart } from "../store/cart";
 
 export function CartPage() {
@@ -14,6 +15,15 @@ export function CartPage() {
   const [customerNote, setCustomerNote] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    applySeo({
+      title: "Tu pedido",
+      description: "Revisa tu pedido de piezas personalizadas antes de enviarlo a Artenova.",
+      path: "/carrito",
+      type: "website",
+    });
+  }, []);
 
   async function submit() {
     setSubmitting(true);

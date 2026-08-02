@@ -7,6 +7,7 @@ import { env } from "./env";
 import { adminRouter } from "./routes/admin";
 import { catalogRouter } from "./routes/catalog";
 import { ordersRouter } from "./routes/orders";
+import { seoRouter } from "./routes/seo";
 import { errorHandler } from "./middleware/errors";
 
 export function createApp() {
@@ -29,6 +30,7 @@ export function createApp() {
     res.json({ ok: true, service: "artenova-api" });
   });
 
+  app.use(seoRouter);
   app.use("/api/catalog", catalogRouter);
   app.use("/api/orders", ordersRouter);
   app.use("/api/admin", adminRouter);
