@@ -10,6 +10,13 @@ const productInclude = {
   category: true,
 };
 
+type SitemapUrl = {
+  loc: string;
+  lastmod?: string;
+  changefreq: string;
+  priority: string;
+};
+
 function appBaseUrl() {
   return env.APP_BASE_URL.replace(/\/$/, "");
 }
@@ -116,7 +123,7 @@ seoRouter.get("/sitemap.xml", async (_req, res) => {
     }),
   ]);
 
-  const urls = [
+  const urls: SitemapUrl[] = [
     { loc: absoluteUrl("/"), changefreq: "weekly", priority: "1.0" },
     { loc: absoluteUrl("/catalogo"), changefreq: "weekly", priority: "0.9" },
     { loc: absoluteUrl("/contacto"), changefreq: "monthly", priority: "0.6" },
