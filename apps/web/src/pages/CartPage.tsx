@@ -21,6 +21,7 @@ export function CartPage() {
       title: "Tu pedido",
       description: "Revisa tu pedido de piezas personalizadas antes de enviarlo a Artenova.",
       path: "/carrito",
+      robots: "noindex,follow",
       type: "website",
     });
   }, []);

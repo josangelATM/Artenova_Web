@@ -22,8 +22,8 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-artenova}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-artenova}?schema=public
-      APP_BASE_URL: ${PROD_APP_BASE_URL:-http://localhost:90}
-      API_BASE_URL: ${PROD_API_BASE_URL:-http://localhost:90/api}
+      APP_BASE_URL: ${PROD_APP_BASE_URL:?Define PROD_APP_BASE_URL con el dominio publico de produccion}
+      API_BASE_URL: ${PROD_API_BASE_URL:?Define PROD_API_BASE_URL con el dominio publico de la API}
       NODE_ENV: production
       UPLOAD_DRIVER: s3
     depends_on:

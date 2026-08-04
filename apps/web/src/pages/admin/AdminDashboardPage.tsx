@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Grid, Paper, Stack, Typography } from "@mui/material";
-import { Boxes, FolderPlus, MessageSquareText, Plus, Tags } from "lucide-react";
+import { Boxes, FolderPlus, MessageSquareText, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminStat, adminSurfaceSx } from "./adminUi";
 
-type Dashboard = { counts: { products: number; categories: number; tags?: number; reviews?: number } };
+type Dashboard = { counts: { products: number; categories: number; reviews?: number } };
 
 export function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -17,27 +17,24 @@ export function AdminDashboardPage() {
   if (!dashboard) return null;
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <AdminPageHeader
         title="Inicio"
-        subtitle="Mantén visible el catálogo y sus colecciones."
+        subtitle="Mantén visible el catálogo y entra rápido a los flujos más usados."
         action={
-          <Button component={Link} to="/admin/productos" variant="contained" startIcon={<Plus size={18} />}>
+          <Button component={Link} to="/admin/productos/nuevo" variant="contained" startIcon={<Plus size={18} />}>
             Nuevo producto
           </Button>
         }
       />
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <AdminStat label="Productos" value={dashboard.counts.products} detail="Piezas visibles o guardadas" />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <AdminStat label="Categorías" value={dashboard.counts.categories} detail="Colecciones principales" />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <AdminStat label="Etiquetas" value={dashboard.counts.tags ?? 0} detail="Filtros y temas" />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <AdminStat label="Reseñas" value={dashboard.counts.reviews ?? 0} detail="Opiniones publicadas u ocultas" />
         </Grid>
       </Grid>
@@ -47,24 +44,19 @@ export function AdminDashboardPage() {
             Accesos rápidos
           </Typography>
           <Grid container spacing={1.25}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Button fullWidth component={Link} to="/admin/productos" variant="outlined" startIcon={<Boxes size={18} />}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Button fullWidth component={Link} to="/admin/productos/nuevo" variant="outlined" startIcon={<Boxes size={18} />}>
                 Nuevo producto
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Button fullWidth component={Link} to="/admin/resenas" variant="outlined" startIcon={<MessageSquareText size={18} />}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Button fullWidth component={Link} to="/admin/resenas/nuevo" variant="outlined" startIcon={<MessageSquareText size={18} />}>
                 Nueva reseña
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Button fullWidth component={Link} to="/admin/categorias" variant="outlined" startIcon={<FolderPlus size={18} />}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Button fullWidth component={Link} to="/admin/categorias/nuevo" variant="outlined" startIcon={<FolderPlus size={18} />}>
                 Nueva categoría
-              </Button>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Button fullWidth component={Link} to="/admin/tags" variant="outlined" startIcon={<Tags size={18} />}>
-                Nueva etiqueta
               </Button>
             </Grid>
           </Grid>

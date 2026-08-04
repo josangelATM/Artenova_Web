@@ -22,6 +22,7 @@ export function ConfirmationPage() {
       title: `Pedido ${order.code}`,
       description: `Pedido recibido por Artenova para ${order.customerName}. Total estimado: ${formatCurrency(order.estimatedTotal)}.`,
       path: `/pedido/${order.code}`,
+      robots: "noindex,nofollow",
       type: "website",
     });
   }, [order]);

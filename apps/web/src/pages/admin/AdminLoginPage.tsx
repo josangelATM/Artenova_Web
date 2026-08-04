@@ -3,6 +3,7 @@ import { Alert, Box, Button, Container, IconButton, InputAdornment, Paper, Stack
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import { applySeo } from "../../lib/seo";
 import { adminSurfaceSx } from "./adminUi";
 
 export function AdminLoginPage() {
@@ -12,6 +13,16 @@ export function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    applySeo({
+      title: "Acceso admin",
+      description: "Acceso privado al panel administrativo de Artenova.",
+      path: "/admin/login",
+      robots: "noindex,nofollow",
+      type: "website",
+    });
+  }, []);
 
   useEffect(() => {
     let mounted = true;

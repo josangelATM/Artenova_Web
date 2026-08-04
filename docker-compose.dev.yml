@@ -24,12 +24,15 @@ services:
       - .env
     environment:
       CI: "true"
+      NODE_ENV: development
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
       DATABASE_URL: postgresql://${POSTGRES_USER:-artenova}:${POSTGRES_PASSWORD:-artenova_dev}@postgres:5432/${POSTGRES_DB:-artenova}?schema=public
       APP_BASE_URL: http://localhost:5174
       API_BASE_URL: http://localhost:4000
-      UPLOAD_DRIVER: s3
+      WEB_INTERNAL_BASE_URL: http://web
+      UPLOAD_DRIVER: ${UPLOAD_DRIVER:-local}
+      LOCAL_UPLOAD_DIR: ${LOCAL_UPLOAD_DIR:-/app/uploads}
     command: >
       sh -c "pnpm --filter @artenova/api db:generate &&
       pnpm --filter @artenova/api db:deploy &&
@@ -43,6 +46,7 @@ services:
       - ./apps/api/package.json:/app/apps/api/package.json
       - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json
       - ./packages/shared/src:/app/packages/shared/src
+      - ./uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

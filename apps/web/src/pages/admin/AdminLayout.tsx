@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Container, Paper, Stack, Typography } from "@mui/material";
-import { Boxes, Eye, FolderTree, Home, MessageSquareText, Tags } from "lucide-react";
+import { Alert, Box, Button, Container, Paper, Stack } from "@mui/material";
+import { Boxes, Eye, FolderTree, Home, MessageSquareText } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import { applySeo } from "../../lib/seo";
 import { adminSurfaceSx } from "./adminUi";
 
 const tabs = [
@@ -10,7 +11,6 @@ const tabs = [
   { label: "Productos", to: "/admin/productos", icon: Boxes },
   { label: "Reseñas", to: "/admin/resenas", icon: MessageSquareText },
   { label: "Categorías", to: "/admin/categorias", icon: FolderTree },
-  { label: "Etiquetas", to: "/admin/tags", icon: Tags },
 ];
 
 export function AdminLayout() {
@@ -18,6 +18,16 @@ export function AdminLayout() {
   const location = useLocation();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    applySeo({
+      title: "Panel admin",
+      description: "Panel administrativo privado de Artenova.",
+      path: "/admin",
+      robots: "noindex,nofollow",
+      type: "website",
+    });
+  }, []);
 
   useEffect(() => {
     void api.adminMe()
@@ -32,29 +42,12 @@ export function AdminLayout() {
   if (!ready) return null;
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: { xs: 2, md: 3 } }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: { xs: 1.5, md: 2 } }}>
       <Container maxWidth="xl">
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "244px minmax(0,1fr)" }, gap: 3 }}>
-          <Paper
-            sx={{
-              ...adminSurfaceSx,
-              p: 2,
-              alignSelf: "start",
-              position: "sticky",
-              top: { xs: 0, md: 12 },
-              zIndex: (theme) => theme.zIndex.appBar + 1,
-            }}
-          >
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="h5" fontWeight={900}>
-                  Artenova
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Panel del catálogo
-                </Typography>
-              </Box>
-              <Stack direction={{ xs: "row", md: "column" }} spacing={1} sx={{ overflowX: { xs: "auto", md: "visible" }, pb: { xs: 0.5, md: 0 } }}>
+        <Stack spacing={2}>
+          <Paper sx={{ ...adminSurfaceSx, p: { xs: 1.25, md: 1.5 } }}>
+            <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} alignItems={{ xs: "stretch", lg: "center" }} justifyContent="space-between">
+              <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.25 }}>
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   const active = tab.to === activeTab?.to;
@@ -66,24 +59,19 @@ export function AdminLayout() {
                       startIcon={<Icon size={18} />}
                       variant={active ? "contained" : "text"}
                       color={active ? "primary" : "inherit"}
-                      sx={{
-                        justifyContent: "flex-start",
-                        minWidth: { xs: "max-content", md: "auto" },
-                        borderRadius: 2,
-                        px: 1.5,
-                      }}
+                      sx={{ minWidth: "max-content", borderRadius: 2, px: 1.5 }}
                     >
                       {tab.label}
                     </Button>
                   );
                 })}
               </Stack>
-              <Button component={Link} to="/" variant="outlined" startIcon={<Eye size={18} />}>
+              <Button component={Link} to="/" variant="outlined" startIcon={<Eye size={18} />} sx={{ minWidth: "max-content" }}>
                 Ver tienda
               </Button>
             </Stack>
           </Paper>
-          <Stack spacing={3} minWidth={0}>
+          <Stack spacing={2.5} minWidth={0}>
             {error && (
               <Alert severity="error" onClose={() => setError("")}>
                 {error}
@@ -91,7 +79,7 @@ export function AdminLayout() {
             )}
             <Outlet context={{ setError }} />
           </Stack>
-        </Box>
+        </Stack>
       </Container>
     </Box>
   );

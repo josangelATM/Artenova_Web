@@ -189,7 +189,6 @@ const weddingTiersAcrylic = [
 const products = [
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas"],
     name: "Cédulas personalizadas para mascotas",
     slug: "cedulas-personalizadas-mascotas",
     description:
@@ -209,7 +208,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas"],
     name: "Retrato grabado en láser en MDF",
     slug: "retrato-grabado-mdf",
     description:
@@ -224,7 +222,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas"],
     name: "Retrato mediano grabado en MDF",
     slug: "retrato-mediano-grabado-mdf",
     description:
@@ -239,7 +236,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas", "recuerdo"],
     name: "Huellas que jamás se olvidan",
     slug: "huellas-que-jamas-se-olvidan",
     description:
@@ -254,7 +250,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas", "recuerdo"],
     name: "Huella de amor",
     slug: "huella-de-amor",
     description: "Marco decorativo personalizado con fotos de tu mascota.",
@@ -268,7 +263,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas", "recuerdo"],
     name: "Recuerdo en acrílico transparente",
     slug: "recuerdo-acrilico-transparente",
     description:
@@ -283,7 +277,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas"],
     name: "Llavero personalizado en acrílico dorado espejo",
     slug: "llavero-personalizado-acrilico-dorado",
     description: "Detalle pequeño para llevar siempre a tu mascota contigo.",
@@ -297,7 +290,6 @@ const products = [
   },
   {
     categorySlug: "mascotas",
-    tagSlugs: ["mascotas"],
     name: "Portallaves personalizado",
     slug: "portallaves-personalizado",
     description: "Portallaves con forma de huella y nombre de tu mascota.",
@@ -376,7 +368,6 @@ const products = [
     ],
   ].map(([slug, name, material, size, image, tiers], index) => ({
     categorySlug: "bodas",
-    tagSlugs: ["bodas", "recuerdo"],
     name: name as string,
     slug: slug as string,
     description:
@@ -450,43 +441,9 @@ async function main() {
     }),
   ]);
 
-  const tags = await Promise.all([
-    prisma.tag.upsert({
-      where: { slug: "mascotas" },
-      create: {
-        name: "Mascotas",
-        slug: "mascotas",
-        description: "Detalles pensados para mascotas y sus recuerdos.",
-        accentColor: "#8ac6d1",
-      },
-      update: {},
-    }),
-    prisma.tag.upsert({
-      where: { slug: "bodas" },
-      create: {
-        name: "Bodas",
-        slug: "bodas",
-        description: "Recordatorios y detalles para bodas.",
-        accentColor: "#f07086",
-      },
-      update: {},
-    }),
-    prisma.tag.upsert({
-      where: { slug: "recuerdo" },
-      create: {
-        name: "Recuerdo",
-        slug: "recuerdo",
-        description: "Piezas para conservar momentos especiales.",
-        accentColor: "#9b8fd3",
-      },
-      update: {},
-    }),
-  ]);
-
   const categoryBySlug = new Map(
     categories.map((category) => [category.slug, category.id]),
   );
-  const tagBySlug = new Map(tags.map((tag) => [tag.slug, tag.id]));
 
   for (const product of products) {
     const isHero = "isHero" in product ? product.isHero : false;
@@ -500,13 +457,8 @@ async function main() {
         prisma.priceTier.deleteMany({ where: { productId: existing.id } }),
         prisma.productExtra.deleteMany({ where: { productId: existing.id } }),
         prisma.customField.deleteMany({ where: { productId: existing.id } }),
-        prisma.productTag.deleteMany({ where: { productId: existing.id } }),
       ]);
     }
-
-    const tagLinks = product.tagSlugs.map((slug) => ({
-      tagId: tagBySlug.get(slug)!,
-    }));
 
     await prisma.product.upsert({
       where: { slug: product.slug },
@@ -522,7 +474,6 @@ async function main() {
         isHero,
         heroSlot: isHero ? (heroSlot ?? null) : null,
         categoryId: categoryBySlug.get(product.categorySlug)!,
-        tags: { create: tagLinks },
         images: {
           create: [
             {
@@ -560,7 +511,6 @@ async function main() {
         isHero,
         heroSlot: isHero ? (heroSlot ?? null) : null,
         categoryId: categoryBySlug.get(product.categorySlug)!,
-        tags: { create: tagLinks },
         images: {
           create: [
             {

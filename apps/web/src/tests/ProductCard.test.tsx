@@ -13,9 +13,11 @@ const product: Product = {
   description: "Detalle personalizado",
   categoryId: "c1",
   basePrice: 16,
+  discountType: null,
+  discountValue: null,
   material: "MDF",
   size: "20 cm",
-  technique: "Grabado láser",
+  technique: "Grabado laser",
   isPublished: true,
   isFeatured: true,
   isHero: false,
@@ -24,16 +26,14 @@ const product: Product = {
   priceTiers: [],
   extras: [],
   customFields: [],
+  variants: [],
+  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
   reviews: [],
   reviewSummary: { averageRating: 4.8, reviewCount: 12 },
-  tags: [
-    { id: "t1", name: "Regalo", slug: "regalo", description: null, accentColor: "#ef798a", isActive: true },
-    { id: "t2", name: "Mascotas", slug: "mascotas", description: null, accentColor: "#8ac6d1", isActive: true }
-  ]
 };
 
 describe("ProductCard", () => {
-  it("shows product name, base price, and useful tags only", () => {
+  it("shows product name, base price, and review summary", () => {
     render(
       <ThemeProvider theme={theme}>
         <BrowserRouter>
@@ -45,11 +45,8 @@ describe("ProductCard", () => {
     expect(screen.getByText("Retrato grabado")).toBeInTheDocument();
     expect(screen.getByText("$16.00")).toBeInTheDocument();
     expect(screen.getByText("4.8 (12)")).toBeInTheDocument();
-    expect(screen.getByText("Mascotas")).toBeInTheDocument();
-    expect(screen.queryByText("Regalo")).not.toBeInTheDocument();
     expect(screen.queryByText("Destacado")).not.toBeInTheDocument();
     expect(screen.queryByText("Consultar")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Retrato grabado/i })).toHaveAttribute("href", "/producto/retrato-grabado");
   });
 });
-

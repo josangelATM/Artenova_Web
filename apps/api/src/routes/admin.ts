@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
-import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminTagInputSchema, updateOrderSchema, updateReviewApprovalSchema } from "@artenova/shared";
+import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, updateOrderSchema, updateReviewApprovalSchema } from "@artenova/shared";
 import { prisma } from "../lib/prisma";
 import { orderPayload, productPayload, reviewPayload } from "../lib/serialize";
 import { requireAdmin, signAdminToken } from "../middleware/auth";
@@ -12,9 +12,16 @@ const imageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize
 
 const productInclude = {
   category: true,
-  tags: { include: { tag: true } },
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
+  variants: {
+    orderBy: { position: "asc" as const },
+    include: {
+      images: { orderBy: { position: "asc" as const } },
+      attributes: { orderBy: { position: "asc" as const } },
+      priceTiers: { orderBy: { minQuantity: "asc" as const } }
+    }
+  },
   extras: true,
   customFields: { orderBy: { position: "asc" as const } },
   reviews: { orderBy: { createdAt: "desc" as const } }
@@ -50,11 +57,10 @@ adminRouter.get("/me", requireAdmin, async (req, res) => {
 adminRouter.use(requireAdmin);
 
 adminRouter.get("/dashboard", async (_req, res) => {
-  const [orders, products, categories, tags, reviews] = await Promise.all([
+  const [orders, products, categories, reviews] = await Promise.all([
     prisma.order.count(),
     prisma.product.count(),
     prisma.category.count(),
-    prisma.tag.count(),
     prisma.productReview.count()
   ]);
   const latestOrders = await prisma.order.findMany({
@@ -62,11 +68,20 @@ adminRouter.get("/dashboard", async (_req, res) => {
     orderBy: { createdAt: "desc" },
     take: 6
   });
-  res.json({ counts: { orders, products, categories, tags, reviews }, latestOrders: latestOrders.map(orderPayload) });
+  res.json({ counts: { orders, products, categories, reviews }, latestOrders: latestOrders.map(orderPayload) });
 });
 
 adminRouter.get("/categories", async (_req, res) => {
   res.json(await prisma.category.findMany({ orderBy: { name: "asc" } }));
+});
+
+adminRouter.get("/categories/:id", async (req, res) => {
+  const category = await prisma.category.findUnique({ where: { id: req.params.id } });
+  if (!category) {
+    res.status(404).json({ message: "Categoria no encontrada" });
+    return;
+  }
+  res.json(category);
 });
 
 adminRouter.post("/categories", async (req, res) => {
@@ -89,33 +104,18 @@ adminRouter.delete("/categories/:id", async (req, res) => {
   res.json(category);
 });
 
-adminRouter.get("/tags", async (_req, res) => {
-  res.json(await prisma.tag.findMany({ orderBy: { name: "asc" } }));
-});
-
-adminRouter.post("/tags", async (req, res) => {
-  const input = adminTagInputSchema.parse(req.body);
-  const tag = await prisma.tag.create({ data: input });
-  res.status(201).json(tag);
-});
-
-adminRouter.put("/tags/:id", async (req, res) => {
-  const input = adminTagInputSchema.parse(req.body);
-  const tag = await prisma.tag.update({ where: { id: req.params.id }, data: input });
-  res.json(tag);
-});
-
-adminRouter.delete("/tags/:id", async (req, res) => {
-  const tag = await prisma.tag.update({
-    where: { id: req.params.id },
-    data: { isActive: false }
-  });
-  res.json(tag);
-});
-
 adminRouter.get("/products", async (_req, res) => {
   const products = await prisma.product.findMany({ include: productInclude, orderBy: { createdAt: "desc" } });
   res.json(products.map(productPayload));
+});
+
+adminRouter.get("/products/:id", async (req, res) => {
+  const product = await prisma.product.findUnique({ where: { id: req.params.id }, include: productInclude });
+  if (!product) {
+    res.status(404).json({ message: "Producto no encontrado" });
+    return;
+  }
+  res.json(productPayload(product));
 });
 
 adminRouter.get("/reviews", async (req, res) => {
@@ -140,6 +140,18 @@ adminRouter.get("/reviews", async (req, res) => {
   });
 
   res.json(reviews.map(reviewPayload));
+});
+
+adminRouter.get("/reviews/:id", async (req, res) => {
+  const review = await prisma.productReview.findUnique({
+    where: { id: req.params.id },
+    include: { product: { select: { name: true, slug: true } } }
+  });
+  if (!review) {
+    res.status(404).json({ message: "Resena no encontrada" });
+    return;
+  }
+  res.json(reviewPayload(review));
 });
 
 adminRouter.post("/reviews", async (req, res) => {
@@ -218,6 +230,8 @@ adminRouter.post("/products", async (req, res) => {
       description: input.description,
       categoryId: input.categoryId,
       basePrice: input.basePrice,
+      discountType: input.discountType || null,
+      discountValue: input.discountValue ?? null,
       material: input.material,
       size: input.size,
       technique: input.technique,
@@ -225,9 +239,22 @@ adminRouter.post("/products", async (req, res) => {
       isFeatured: input.isFeatured,
       isHero: input.isHero,
       heroSlot: input.isHero ? input.heroSlot ?? "primary" : null,
-      tags: { create: input.tagIds.map((tagId) => ({ tagId })) },
       images: { create: input.images },
       priceTiers: { create: input.priceTiers },
+      variants: {
+        create: input.variants.map((variant, position) => ({
+          name: variant.name,
+          sku: variant.sku || null,
+          basePrice: variant.basePrice,
+          discountType: variant.discountType || null,
+          discountValue: variant.discountValue ?? null,
+          isActive: variant.isActive,
+          position: variant.position ?? position,
+          images: { create: variant.images },
+          attributes: { create: variant.attributes.map((attribute, attributePosition) => ({ ...attribute, position: attribute.position ?? attributePosition })) },
+          priceTiers: { create: variant.priceTiers }
+        }))
+      },
       extras: { create: input.extras },
       customFields: { create: input.customFields.map((field, position) => ({ ...field, position })) }
     },
@@ -242,9 +269,9 @@ adminRouter.put("/products/:id", async (req, res) => {
   await prisma.$transaction([
     prisma.productImage.deleteMany({ where: { productId: id } }),
     prisma.priceTier.deleteMany({ where: { productId: id } }),
+    prisma.productVariant.deleteMany({ where: { productId: id } }),
     prisma.productExtra.deleteMany({ where: { productId: id } }),
-    prisma.customField.deleteMany({ where: { productId: id } }),
-    prisma.productTag.deleteMany({ where: { productId: id } })
+    prisma.customField.deleteMany({ where: { productId: id } })
   ]);
   const product = await prisma.product.update({
     where: { id },
@@ -255,6 +282,8 @@ adminRouter.put("/products/:id", async (req, res) => {
       description: input.description,
       categoryId: input.categoryId,
       basePrice: input.basePrice,
+      discountType: input.discountType || null,
+      discountValue: input.discountValue ?? null,
       material: input.material,
       size: input.size,
       technique: input.technique,
@@ -262,9 +291,22 @@ adminRouter.put("/products/:id", async (req, res) => {
       isFeatured: input.isFeatured,
       isHero: input.isHero,
       heroSlot: input.isHero ? input.heroSlot ?? "primary" : null,
-      tags: { create: input.tagIds.map((tagId) => ({ tagId })) },
       images: { create: input.images },
       priceTiers: { create: input.priceTiers },
+      variants: {
+        create: input.variants.map((variant, position) => ({
+          name: variant.name,
+          sku: variant.sku || null,
+          basePrice: variant.basePrice,
+          discountType: variant.discountType || null,
+          discountValue: variant.discountValue ?? null,
+          isActive: variant.isActive,
+          position: variant.position ?? position,
+          images: { create: variant.images },
+          attributes: { create: variant.attributes.map((attribute, attributePosition) => ({ ...attribute, position: attribute.position ?? attributePosition })) },
+          priceTiers: { create: variant.priceTiers }
+        }))
+      },
       extras: { create: input.extras },
       customFields: { create: input.customFields.map((field, position) => ({ ...field, position })) }
     },

@@ -1,24 +1,116 @@
-import type { Product, ProductExtra } from "./index";
+import type { DiscountType, PriceTier, Product, ProductExtra, ProductVariant, PricingSummary } from "./index";
 
-export function getUnitPrice(product: Pick<Product, "basePrice" | "priceTiers">, quantity: number): number {
+type Discountable = {
+  basePrice: number;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
+};
+
+type TieredPrice = Discountable & {
+  priceTiers: Array<Pick<PriceTier, "minQuantity" | "unitPrice" | "totalPrice">>;
+};
+
+export function applyDiscount(basePrice: number, discountType?: DiscountType | null, discountValue?: number | null): number {
+  if (!discountType || discountValue == null || discountValue <= 0) return roundMoney(basePrice);
+  const discounted = discountType === "percentage" ? basePrice * (1 - discountValue / 100) : basePrice - discountValue;
+  return roundMoney(Math.max(0, discounted));
+}
+
+function roundMoney(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function resolveTierPrice(
+  tier: Pick<PriceTier, "minQuantity" | "unitPrice" | "totalPrice">,
+  discountType?: DiscountType | null,
+  discountValue?: number | null
+) {
+  const originalUnitPrice = roundMoney(tier.unitPrice);
+  const originalTotalPrice = tier.totalPrice == null ? null : roundMoney(tier.totalPrice);
+  return {
+    ...tier,
+    originalUnitPrice,
+    originalTotalPrice,
+    finalUnitPrice: applyDiscount(originalUnitPrice, discountType, discountValue),
+    finalTotalPrice: originalTotalPrice == null ? null : applyDiscount(originalTotalPrice, discountType, discountValue),
+    hasDiscount: Boolean(discountType && discountValue != null && discountValue > 0),
+  };
+}
+
+export function getUnitPrice(product: TieredPrice, quantity: number): number {
   const sorted = [...product.priceTiers].sort((a, b) => b.minQuantity - a.minQuantity);
-  return sorted.find((tier) => quantity >= tier.minQuantity)?.unitPrice ?? product.basePrice;
+  const tier = sorted.find((item) => quantity >= item.minQuantity);
+  if (tier) {
+    return applyDiscount(tier.unitPrice, product.discountType, product.discountValue);
+  }
+  return applyDiscount(product.basePrice, product.discountType, product.discountValue);
+}
+
+export function resolvePricingSummary(item: Discountable): PricingSummary {
+  return {
+    originalPrice: roundMoney(item.basePrice),
+    finalPrice: applyDiscount(item.basePrice, item.discountType, item.discountValue),
+    hasDiscount: Boolean(item.discountType && item.discountValue != null && item.discountValue > 0),
+    discountType: item.discountType ?? null,
+    discountValue: item.discountValue ?? null,
+  };
+}
+
+export function getFromPrice(product: Pick<Product, "basePrice" | "discountType" | "discountValue" | "variants">): number {
+  if (!product.variants?.length) {
+    return resolvePricingSummary(product).finalPrice;
+  }
+
+  const activeVariantPrices = product.variants
+    .filter((variant) => variant.isActive)
+    .map((variant) => resolvePricingSummary({
+      basePrice: variant.basePrice,
+      discountType: variant.discountType ?? product.discountType,
+      discountValue: variant.discountValue ?? product.discountValue,
+    }).finalPrice);
+
+  return activeVariantPrices.length > 0 ? Math.min(...activeVariantPrices) : resolvePricingSummary(product).finalPrice;
 }
 
 export function calculateLineTotal(
-  product: Pick<Product, "basePrice" | "priceTiers" | "extras">,
+  product: Pick<Product, "basePrice" | "priceTiers" | "extras" | "discountType" | "discountValue">,
   quantity: number,
   selectedExtraIds: string[]
 ): { unitPrice: number; extrasTotal: number; lineTotal: number; extras: ProductExtra[] } {
   const exactTier = product.priceTiers.find((tier) => tier.totalPrice != null && tier.minQuantity === quantity);
-  const unitPrice = exactTier ? exactTier.totalPrice! / quantity : getUnitPrice(product, quantity);
+  const discountedTier = exactTier ? resolveTierPrice(exactTier, product.discountType, product.discountValue) : null;
+  const unitPrice = discountedTier?.finalTotalPrice != null ? roundMoney(discountedTier.finalTotalPrice / quantity) : getUnitPrice(product, quantity);
   const selected = product.extras.filter((extra) => selectedExtraIds.includes(extra.id ?? ""));
   const extrasTotal = selected.reduce((sum, extra) => sum + extra.priceDelta, 0);
   return {
     unitPrice,
     extrasTotal,
-    lineTotal: (exactTier?.totalPrice ?? unitPrice * quantity) + extrasTotal * quantity,
+    lineTotal: roundMoney((discountedTier?.finalTotalPrice ?? unitPrice * quantity) + extrasTotal * quantity),
     extras: selected
+  };
+}
+
+export function resolveDisplayTiers<T extends TieredPrice>(item: T) {
+  return item.priceTiers.map((tier) => resolveTierPrice(tier, item.discountType, item.discountValue));
+}
+
+export function resolveVariantPricing(variant: ProductVariant, product: Pick<Product, "discountType" | "discountValue" | "priceTiers">) {
+  const discountType = variant.discountType ?? product.discountType;
+  const discountValue = variant.discountValue ?? product.discountValue;
+  const priceTiers = variant.priceTiers.length > 0 ? variant.priceTiers : product.priceTiers;
+
+  return {
+    pricingSummary: resolvePricingSummary({
+      basePrice: variant.basePrice,
+      discountType,
+      discountValue,
+    }),
+    priceTiers: resolveDisplayTiers({
+      basePrice: variant.basePrice,
+      discountType,
+      discountValue,
+      priceTiers,
+    }),
   };
 }
 

@@ -15,11 +15,13 @@ export const customFieldTypes = [
 ] as const;
 export const heroSlotValues = ["primary", "secondary"] as const;
 export const productReviewSourceValues = ["customer", "admin"] as const;
+export const discountTypeValues = ["percentage", "fixed"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
+export type DiscountType = (typeof discountTypeValues)[number];
 
 export const moneySchema = z.coerce.number().nonnegative().finite();
 
@@ -32,23 +34,7 @@ export const categorySchema = z.object({
   isActive: z.boolean(),
 });
 
-export const tagSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string(),
-  description: z.string().nullable(),
-  accentColor: z.string().nullable(),
-  isActive: z.boolean(),
-});
-
 export const adminCategoryInputSchema = z.object({
-  name: z.string().min(2),
-  slug: z.string().min(2),
-  description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
-});
-
-export const adminTagInputSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
   description: z.string().optional().nullable(),
@@ -68,6 +54,42 @@ export const priceTierSchema = z.object({
   unitPrice: moneySchema,
   totalPrice: moneySchema.optional().nullable(),
   label: z.string().optional().nullable(),
+  originalUnitPrice: moneySchema.optional(),
+  originalTotalPrice: moneySchema.optional().nullable(),
+  finalUnitPrice: moneySchema.optional(),
+  finalTotalPrice: moneySchema.optional().nullable(),
+  hasDiscount: z.boolean().optional(),
+});
+
+export const pricingSummarySchema = z.object({
+  originalPrice: moneySchema,
+  finalPrice: moneySchema,
+  hasDiscount: z.boolean(),
+  discountType: z.enum(discountTypeValues).nullable().optional(),
+  discountValue: moneySchema.nullable().optional(),
+});
+
+export const productVariantAttributeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1),
+  value: z.string().min(1),
+  position: z.number().int().nonnegative().optional(),
+});
+
+export const productVariantSchema = z.object({
+  id: z.string(),
+  productId: z.string().optional(),
+  name: z.string(),
+  sku: z.string().nullable().optional(),
+  basePrice: moneySchema,
+  discountType: z.enum(discountTypeValues).nullable().optional(),
+  discountValue: moneySchema.nullable().optional(),
+  isActive: z.boolean(),
+  position: z.number().int().nonnegative(),
+  images: z.array(productImageSchema).default([]),
+  attributes: z.array(productVariantAttributeSchema).default([]),
+  priceTiers: z.array(priceTierSchema).default([]),
+  pricingSummary: pricingSummarySchema,
 });
 
 export const productReviewSchema = z.object({
@@ -126,6 +148,8 @@ export const productSchema = z.object({
   material: z.string().nullable(),
   size: z.string().nullable(),
   technique: z.string().nullable(),
+  discountType: z.enum(discountTypeValues).nullable().optional(),
+  discountValue: moneySchema.nullable().optional(),
   isPublished: z.boolean(),
   isFeatured: z.boolean(),
   isHero: z.boolean(),
@@ -134,7 +158,8 @@ export const productSchema = z.object({
   priceTiers: z.array(priceTierSchema),
   extras: z.array(productExtraSchema),
   customFields: z.array(customFieldSchema),
-  tags: z.array(tagSchema).default([]),
+  variants: z.array(productVariantSchema).default([]),
+  pricingSummary: pricingSummarySchema,
   reviews: z.array(productReviewSchema).default([]),
   reviewSummary: z.object({
     averageRating: z.number(),
@@ -176,6 +201,8 @@ export const adminProductInputSchema = z.object({
   description: z.string().min(2),
   categoryId: z.string().min(1),
   basePrice: moneySchema,
+  discountType: z.enum(discountTypeValues).optional().nullable(),
+  discountValue: moneySchema.optional().nullable(),
   material: z.string().optional().nullable(),
   size: z.string().optional().nullable(),
   technique: z.string().optional().nullable(),
@@ -187,7 +214,11 @@ export const adminProductInputSchema = z.object({
   priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   extras: z.array(productExtraSchema.omit({ id: true })).default([]),
   customFields: z.array(customFieldSchema.omit({ id: true })).default([]),
-  tagIds: z.array(z.string()).default([]),
+  variants: z.array(productVariantSchema.omit({ id: true, pricingSummary: true }).extend({
+    images: z.array(productImageSchema.omit({ id: true })).default([]),
+    attributes: z.array(productVariantAttributeSchema.omit({ id: true })).default([]),
+    priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
+  })).default([]),
 });
 
 export const siteSettingsSchema = z.object({
@@ -210,15 +241,16 @@ export const siteSettingsSchema = z.object({
 });
 
 export type Category = z.infer<typeof categorySchema>;
-export type Tag = z.infer<typeof tagSchema>;
 export type AdminCategoryInput = z.infer<typeof adminCategoryInputSchema>;
-export type AdminTagInput = z.infer<typeof adminTagInputSchema>;
 export type Product = z.infer<typeof productSchema>;
+export type PricingSummary = z.infer<typeof pricingSummarySchema>;
 export type ProductReview = z.infer<typeof productReviewSchema>;
 export type CreateProductReviewInput = z.infer<typeof createProductReviewSchema>;
 export type AdminProductReviewInput = z.infer<typeof adminProductReviewInputSchema>;
 export type ProductImage = z.infer<typeof productImageSchema>;
 export type PriceTier = z.infer<typeof priceTierSchema>;
+export type ProductVariant = z.infer<typeof productVariantSchema>;
+export type ProductVariantAttribute = z.infer<typeof productVariantAttributeSchema>;
 export type ProductExtra = z.infer<typeof productExtraSchema>;
 export type CustomField = z.infer<typeof customFieldSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
@@ -254,4 +286,4 @@ export function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-export { calculateLineTotal, getUnitPrice } from "./pricing";
+export { applyDiscount, calculateLineTotal, getFromPrice, getUnitPrice, resolveDisplayTiers, resolvePricingSummary, resolveVariantPricing } from "./pricing";

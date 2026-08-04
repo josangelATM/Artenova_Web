@@ -4,27 +4,27 @@ export const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#8f55bd",
-      light: "#c69be0",
-      dark: "#62357f",
-      contrastText: "#fff8f3"
+      main: "#9146C7",
+      light: "#F1E4F8",
+      dark: "#6E2FA0",
+      contrastText: "#FFFDFC"
     },
     secondary: {
-      main: "#ef798a",
-      light: "#ffc4bd",
-      dark: "#b84e62",
-      contrastText: "#4d2f24"
+      main: "#D8C3CF",
+      light: "#F3E9EE",
+      dark: "#A88999",
+      contrastText: "#3B2118"
     },
     warning: {
       main: "#d9a441"
     },
     background: {
-      default: "#fff7ef",
-      paper: "#fffaf5"
+      default: "#F8F1EC",
+      paper: "#FFFDFC"
     },
     text: {
-      primary: "#402c25",
-      secondary: "#765c55"
+      primary: "#3B2118",
+      secondary: "#74584E"
     }
   },
   shape: {
@@ -57,6 +57,21 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 999
+        },
+        containedPrimary: {
+          boxShadow: "0 12px 28px rgba(145, 70, 199, 0.22)",
+          "&:hover": {
+            boxShadow: "0 16px 32px rgba(145, 70, 199, 0.28)"
+          }
+        },
+        outlinedPrimary: {
+          backgroundColor: "#FFFDFC",
+          borderColor: "#9146C7",
+          color: "#9146C7",
+          "&:hover": {
+            backgroundColor: "#F1E4F8",
+            borderColor: "#9146C7"
+          }
         }
       }
     },
@@ -64,7 +79,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
-          boxShadow: "0 18px 55px rgba(91, 60, 37, 0.12)"
+          boxShadow: "0 18px 55px rgba(59, 33, 24, 0.12)"
         }
       }
     }

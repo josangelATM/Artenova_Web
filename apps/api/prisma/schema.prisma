@@ -21,6 +21,11 @@ enum CustomFieldType {
   note
 }
 
+enum DiscountType {
+  percentage
+  fixed
+}
+
 model AdminUser {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -41,18 +46,6 @@ model Category {
   updatedAt   DateTime  @updatedAt
 }
 
-model Tag {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  description String?
-  accentColor String?
-  isActive    Boolean      @default(true)
-  products    ProductTag[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
 model Product {
   id           String        @id @default(cuid())
   name         String
@@ -60,6 +53,8 @@ model Product {
   sku          String?       @unique
   description  String
   basePrice    Decimal       @db.Decimal(10, 2)
+  discountType DiscountType?
+  discountValue Decimal?     @db.Decimal(10, 2)
   material     String?
   size         String?
   technique    String?
@@ -71,13 +66,53 @@ model Product {
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images       ProductImage[]
   priceTiers   PriceTier[]
+  variants     ProductVariant[]
   extras       ProductExtra[]
   customFields CustomField[]
-  tags         ProductTag[]
   reviews      ProductReview[]
   orderItems   OrderItem[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+model ProductVariant {
+  id            String                    @id @default(cuid())
+  productId     String
+  product       Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String
+  sku           String?
+  basePrice     Decimal                   @db.Decimal(10, 2)
+  discountType  DiscountType?
+  discountValue Decimal?                  @db.Decimal(10, 2)
+  isActive      Boolean                   @default(true)
+  position      Int                       @default(0)
+  images        ProductVariantImage[]
+  attributes    ProductVariantAttribute[]
+  priceTiers    PriceTier[]
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([productId, position])
+}
+
+model ProductVariantImage {
+  id        String         @id @default(cuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String
+  position  Int            @default(0)
+  createdAt DateTime       @default(now())
+}
+
+model ProductVariantAttribute {
+  id        String         @id @default(cuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  name      String
+  value     String
+  position  Int            @default(0)
+  createdAt DateTime       @default(now())
 }
 
 enum ProductReviewSource {
@@ -101,16 +136,6 @@ model ProductReview {
   @@index([isApproved, createdAt])
 }
 
-model ProductTag {
-  productId String
-  tagId     String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@id([productId, tagId])
-}
-
 model ProductImage {
   id        String   @id @default(cuid())
   productId String
@@ -123,8 +148,10 @@ model ProductImage {
 
 model PriceTier {
   id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
   minQuantity Int
   unitPrice   Decimal  @db.Decimal(10, 2)
   totalPrice  Decimal? @db.Decimal(10, 2)

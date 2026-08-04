@@ -27,7 +27,6 @@ describe("product reviews", () => {
       id: "p1",
       name: "Retrato",
       basePrice: 20,
-      tags: [],
       priceTiers: [],
       extras: [],
       customFields: [],

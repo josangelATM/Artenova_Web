@@ -15,10 +15,11 @@ Tienda administrable para Artenova, taller creativo de corte y grabado láser. E
 ## Configuracion
 
 1. Copia `.env.example` a `.env`.
-2. Completa credenciales S3 reales: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`.
-3. Cambia `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `SESSION_SECRET`.
+2. Para desarrollo con Docker puedes usar `UPLOAD_DRIVER=local` y no necesitas credenciales S3.
+3. Si vas a usar produccion o S3 en desarrollo, completa `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`.
+4. Cambia `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `SESSION_SECRET`.
 
-Los compose de desarrollo y produccion fuerzan `UPLOAD_DRIVER=s3`; las imagenes de producto se guardan bajo `products/*` en S3 y no se montan ni se sirven desde `uploads/` locales.
+El compose de desarrollo usa `UPLOAD_DRIVER=local` por defecto y monta `./uploads` para persistir imagenes locales. El compose de produccion sigue usando `s3`.
 
 ## Desarrollo con Docker
 
@@ -48,8 +49,9 @@ docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter
 docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter @artenova/api db:seed
 ```
 
-El compose de produccion expone HTTP en el puerto `90`; por ahora se accede con `http://IP_DEL_SERVIDOR:90`.
-Si quieres fijar la IP en el entorno de produccion, define `PROD_APP_BASE_URL=http://IP_DEL_SERVIDOR:90` y `PROD_API_BASE_URL=http://IP_DEL_SERVIDOR:90/api`.
+El compose de produccion expone HTTP en el puerto `90`; define siempre `PROD_APP_BASE_URL` con la URL publica final del sitio antes de levantarlo.
+Define tambien `PROD_API_BASE_URL` con la URL publica de la API, normalmente `https://DOMINIO/api` si el API queda detras del mismo dominio.
+Estas variables alimentan canonical, Open Graph, robots y sitemap; no deben apuntar a `localhost` en produccion.
 El API usa `WEB_INTERNAL_BASE_URL` para leer el `index.html` del servicio web e inyectar Open Graph en URLs de producto; en Docker Compose queda como `http://web`.
 
 ## Pruebas

@@ -1,451 +1,185 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Checkbox, Chip, FormControlLabel, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
-import { ArrowDown, ArrowUp, ImageIcon, ImagePlus, Plus, Star, Trash2 } from "lucide-react";
-import type { Category, Product, ProductImage, Tag } from "@artenova/shared";
+import { Box, Button, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import type { GridColDef } from "@mui/x-data-grid";
+import { FilterX, Plus } from "lucide-react";
+import type { Category, Product } from "@artenova/shared";
+import { Link as RouterLink } from "react-router-dom";
 import { api } from "../../lib/api";
-import { AdminEmptyState, AdminPageHeader, AdminSection, StatusChip, adminSurfaceSx } from "./adminUi";
-
-type ProductImageInput = Omit<ProductImage, "id">;
-type PriceTierInput = {
-  minQuantity: number;
-  unitPrice: number;
-  totalPrice?: number | "" | null;
-  label?: string | null;
-};
-
-const emptyProduct = {
-  name: "",
-  slug: "",
-  sku: "",
-  description: "",
-  categoryId: "",
-  basePrice: 0,
-  material: "",
-  size: "",
-  technique: "Corte y grabado láser",
-  isPublished: true,
-  isFeatured: false,
-  tagIds: [] as string[],
-};
-
-function normalizeImages(items: ProductImageInput[]) {
-  return items.map((image, position) => ({ ...image, position }));
-}
+import { AdminPageHeader, StatusChip } from "./adminUi";
+import { AdminDataGrid, AdminListToolbar, adminViewEditColumns } from "./adminCrudUi";
 
 export function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [draft, setDraft] = useState<typeof emptyProduct>(emptyProduct);
-  const [images, setImages] = useState<ProductImageInput[]>([]);
-  const [priceTiers, setPriceTiers] = useState<PriceTierInput[]>([]);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const selected = useMemo(() => products.find((product) => product.id === selectedId), [products, selectedId]);
-  const filteredProducts = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return products;
-    return products.filter((product) => [product.name, product.slug, product.sku ?? "", product.categoryId].some((value) => value.toLowerCase().includes(term)));
-  }, [products, query]);
-
-  async function load() {
-    const [nextProducts, nextCategories, nextTags] = await Promise.all([api.adminProducts(), api.adminCategories(), api.adminTags()]);
-    setProducts(nextProducts);
-    setCategories(nextCategories);
-    setTags(nextTags);
-    const firstCategoryId = nextCategories[0]?.id;
-    if (!draft.categoryId && firstCategoryId) {
-      setDraft((current) => ({ ...current, categoryId: firstCategoryId }));
-    }
-  }
-
-  function resetForm() {
-    setSelectedId("");
-    setDraft({ ...emptyProduct, categoryId: categories[0]?.id ?? "" });
-    setImages([]);
-    setPriceTiers([]);
-    setError("");
-    setMessage("");
-  }
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [featuredFilter, setFeaturedFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const actions = adminViewEditColumns("/admin/productos");
+  const hasFilters = Boolean(query.trim() || statusFilter !== "all" || featuredFilter !== "all" || categoryFilter !== "all");
 
   useEffect(() => {
-    void load();
+    let active = true;
+    setLoading(true);
+    void Promise.all([api.adminProducts(), api.adminCategories()]).then(([items, nextCategories]) => {
+      if (!active) return;
+      setProducts(items);
+      setCategories(nextCategories);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  useEffect(() => {
-    if (selected) {
-      setDraft({
-        name: selected.name,
-        slug: selected.slug,
-        sku: selected.sku ?? "",
-        description: selected.description,
-        categoryId: selected.categoryId,
-        basePrice: selected.basePrice,
-        material: selected.material ?? "",
-        size: selected.size ?? "",
-        technique: selected.technique ?? "",
-        isPublished: selected.isPublished,
-        isFeatured: selected.isFeatured,
-        tagIds: selected.tags.map((tag) => tag.id),
-      });
-      setImages(selected.images.map(({ url, alt, position }) => ({ url, alt, position })));
-      setPriceTiers(selected.priceTiers.map(({ minQuantity, unitPrice, totalPrice, label }) => ({ minQuantity, unitPrice, totalPrice, label })));
-      setError("");
-      setMessage("");
-    }
-  }, [selected]);
+  const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
 
-  async function save() {
-    try {
-      setError("");
-      await api.saveAdminProduct({
-        ...draft,
-        id: selectedId || undefined,
-        sku: draft.sku || null,
-        basePrice: Number(draft.basePrice),
-        tagIds: draft.tagIds ?? [],
-        images: normalizeImages(images),
-        isHero: false,
-        heroSlot: null,
-        priceTiers: priceTiers.map((tier) => ({
-          minQuantity: Number(tier.minQuantity) || 1,
-          unitPrice: Number(tier.unitPrice) || 0,
-          totalPrice: tier.totalPrice == null || tier.totalPrice === "" ? null : Number(tier.totalPrice),
-          label: tier.label?.trim() || null,
-        })),
-        extras: [],
-        customFields: [],
-      });
-      setMessage("Producto guardado");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar");
-    }
-  }
+  const rows = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return products.filter((product) => {
+      const categoryName = categoryById.get(product.categoryId) ?? "";
+      const matchesSearch = !term || [product.name, product.slug, product.sku ?? "", product.description, categoryName].some((value) => value.toLowerCase().includes(term));
+      const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? product.isPublished : !product.isPublished);
+      const matchesFeatured = featuredFilter === "all" || (featuredFilter === "yes" ? product.isFeatured : !product.isFeatured);
+      const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
+      return matchesSearch && matchesStatus && matchesFeatured && matchesCategory;
+    });
+  }, [categoryById, categoryFilter, featuredFilter, products, query, statusFilter]);
 
-  async function uploadImages(files: File[]) {
-    if (files.length === 0) return;
-    try {
-      setUploadingImage(true);
-      setError("");
-      const uploadedImages: ProductImageInput[] = [];
-      for (const [offset, file] of files.entries()) {
-        const uploaded = await api.uploadProductImage({
-          file,
-          slug: draft.slug || selectedId || "product",
-          alt: draft.name || file.name,
-          position: images.length + offset,
-        });
-        uploadedImages.push(uploaded);
+  const columns = useMemo<GridColDef<Product>[]>(
+    () => [
+      {
+        field: "actions",
+        headerName: "Acciones",
+        minWidth: 172,
+        sortable: false,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack direction="row" spacing={0.5}>
+            {actions.view(row.id)}
+            {actions.edit(row.id)}
+          </Stack>
+        )
+      },
+      {
+        field: "product",
+        headerName: "Producto",
+        flex: 1.35,
+        minWidth: 300,
+        renderCell: ({ row }) => {
+          const image = row.images[0];
+          return (
+            <Stack spacing={0.25} minWidth={0}>
+              <Tooltip
+                arrow
+                enterDelay={500}
+                placement="right"
+                title={
+                  image ? (
+                    <Box component="img" src={image.url} alt={image.alt || row.name} sx={{ width: 180, height: 180, objectFit: "cover", borderRadius: 2, display: "block" }} />
+                  ) : (
+                    "Sin imagen"
+                  )
+                }
+              >
+                <Typography component="span" fontWeight={900} noWrap sx={{ cursor: image ? "zoom-in" : "default" }}>
+                  {row.name}
+                </Typography>
+              </Tooltip>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {row.sku ? `Ref. ${row.sku}` : "Sin referencia"}
+              </Typography>
+            </Stack>
+          );
+        }
+      },
+      {
+        field: "category",
+        headerName: "Categoría",
+        minWidth: 180,
+        flex: 0.75,
+        renderCell: ({ row }) => categoryById.get(row.categoryId) ?? "Sin categoría"
+      },
+      {
+        field: "status",
+        headerName: "Estado",
+        minWidth: 140,
+        renderCell: ({ row }) => <StatusChip status={row.isPublished ? "published" : "draft"} />
+      },
+      {
+        field: "basePrice",
+        headerName: "Precio base",
+        minWidth: 140,
+        renderCell: ({ row }) => `$${row.basePrice.toFixed(2)}`
+      },
+      {
+        field: "featured",
+        headerName: "Destacado",
+        minWidth: 112,
+        renderCell: ({ row }) => (row.isFeatured ? "Sí" : "No")
+      },
+      {
+        field: "variants",
+        headerName: "Variantes",
+        minWidth: 112,
+        renderCell: ({ row }) => row.variants.length
       }
-      setImages((current) => normalizeImages([...current, ...uploadedImages]));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo subir la imagen");
-    } finally {
-      setUploadingImage(false);
-    }
-  }
+    ],
+    [actions, categoryById]
+  );
 
-  function moveImage(index: number, offset: number) {
-    setImages((current) => {
-      const target = index + offset;
-      if (target < 0 || target >= current.length) return current;
-      const next = [...current];
-      const [image] = next.splice(index, 1);
-      if (!image) return current;
-      next.splice(target, 0, image);
-      return normalizeImages(next);
-    });
-  }
-
-  function makePrimaryImage(index: number) {
-    setImages((current) => {
-      const next = [...current];
-      const [image] = next.splice(index, 1);
-      if (!image) return current;
-      return normalizeImages([image, ...next]);
-    });
-  }
-
-  function updatePriceTier(index: number, patch: Partial<PriceTierInput>) {
-    setPriceTiers((current) => current.map((tier, itemIndex) => (itemIndex === index ? { ...tier, ...patch } : tier)));
+  function clearFilters() {
+    setQuery("");
+    setStatusFilter("all");
+    setFeaturedFilter("all");
+    setCategoryFilter("all");
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <AdminPageHeader
         title="Productos"
-        subtitle="Mantén las piezas visibles en el catálogo."
+        subtitle="Explora el catálogo con filtros y acciones claras antes de abrir cada ficha."
         action={
-          <Button variant="contained" startIcon={<Plus size={18} />} onClick={resetForm}>
+          <Button component={RouterLink} to="/admin/productos/nuevo" variant="contained" startIcon={<Plus size={18} />}>
             Nuevo producto
           </Button>
         }
       />
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 2, md: 1 } }}>
-          <Paper sx={{ ...adminSurfaceSx, p: 2 }}>
-            <Stack spacing={1.5}>
-              <TextField size="small" label="Buscar producto" value={query} onChange={(event) => setQuery(event.target.value)} />
-              {filteredProducts.length === 0 ? (
-                <AdminEmptyState title="Sin productos" description="Crea el primer producto del catálogo." />
-              ) : (
-                filteredProducts.map((product) => (
-                  <Button
-                    key={product.id}
-                    color={product.id === selectedId ? "secondary" : "primary"}
-                    variant={product.id === selectedId ? "contained" : "text"}
-                    onClick={() => setSelectedId(product.id)}
-                    sx={{ justifyContent: "flex-start", borderRadius: 2, textAlign: "left" }}
-                  >
-                    <Stack direction="row" spacing={1.25} alignItems="center" width="100%">
-                      {product.images[0]?.url ? (
-                        <Box component="img" src={product.images[0].url} alt="" sx={{ width: 42, height: 42, objectFit: "cover", borderRadius: 1, flexShrink: 0 }} />
-                      ) : (
-                        <Box sx={{ width: 42, height: 42, display: "grid", placeItems: "center", borderRadius: 1, bgcolor: "rgba(64,44,37,.08)", color: "text.secondary", flexShrink: 0 }}>
-                          <ImageIcon size={18} />
-                        </Box>
-                      )}
-                      <Box flex={1} minWidth={0}>
-                        <Typography noWrap fontWeight={900}>
-                          {product.name}
-                        </Typography>
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                          <StatusChip status={product.isPublished ? "published" : "draft"} />
-                          {product.isFeatured && <Chip size="small" label="Destacado" variant="outlined" />}
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  </Button>
-                ))
-              )}
-            </Stack>
-          </Paper>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 8 }} sx={{ order: { xs: 1, md: 2 } }}>
-          <Stack spacing={2.5}>
-            {message && (
-              <Alert severity="success" onClose={() => setMessage("")}>
-                {message}
-              </Alert>
-            )}
-            {error && (
-              <Alert severity="error" onClose={() => setError("")}>
-                {error}
-              </Alert>
-            )}
-
-            <AdminSection title={selectedId ? "Editar producto" : "Nuevo producto"} description="Información que aparece en la tienda.">
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField fullWidth label="Nombre" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField fullWidth label="Enlace corto" value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} helperText="Ejemplo: retrato-mascota" />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField fullWidth label="Referencia" value={draft.sku ?? ""} onChange={(event) => setDraft({ ...draft, sku: event.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField fullWidth type="number" label="Precio desde" value={draft.basePrice} onChange={(event) => setDraft({ ...draft, basePrice: Number(event.target.value) })} />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <TextField fullWidth multiline minRows={3} label="Descripción" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField select fullWidth label="Categoría" value={draft.categoryId} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value })}>
-                    {categories.map((category) => (
-                      <MenuItem key={category.id} value={category.id}>
-                        {category.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    select
-                    fullWidth
-                    SelectProps={{
-                      multiple: true,
-                      renderValue: (selectedTags) => (
-                        <Stack direction="row" gap={0.75} flexWrap="wrap">
-                          {(selectedTags as string[]).map((tagId) => {
-                            const tag = tags.find((item) => item.id === tagId);
-                            return <Chip key={tagId} label={tag?.name ?? tagId} size="small" />;
-                          })}
-                        </Stack>
-                      ),
-                    }}
-                    label="Etiquetas"
-                    value={draft.tagIds ?? []}
-                    onChange={(event) => setDraft({ ...draft, tagIds: typeof event.target.value === "string" ? event.target.value.split(",") : event.target.value })}
-                  >
-                    {tags.map((tag) => (
-                      <MenuItem key={tag.id} value={tag.id}>
-                        {tag.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField fullWidth label="Material" value={draft.material ?? ""} onChange={(event) => setDraft({ ...draft, material: event.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField fullWidth label="Tamaño" value={draft.size ?? ""} onChange={(event) => setDraft({ ...draft, size: event.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField fullWidth label="Técnica" value={draft.technique ?? ""} onChange={(event) => setDraft({ ...draft, technique: event.target.value })} />
-                </Grid>
-              </Grid>
-              <Stack direction="row" spacing={2}>
-                <FormControlLabel control={<Checkbox checked={draft.isPublished} onChange={(event) => setDraft({ ...draft, isPublished: event.target.checked })} />} label="Publicado" />
-                <FormControlLabel control={<Checkbox checked={draft.isFeatured} onChange={(event) => setDraft({ ...draft, isFeatured: event.target.checked })} />} label="Destacado" />
-              </Stack>
-            </AdminSection>
-
-            <AdminSection
-              title="Precios por cantidad"
-              description="Descuentos o precios especiales según la cantidad."
-              action={
-                <Button
-                  size="small"
-                  startIcon={<Plus size={16} />}
-                  onClick={() =>
-                    setPriceTiers((current) => [
-                      ...current,
-                      { minQuantity: 2, unitPrice: Number(draft.basePrice) || 0, totalPrice: "", label: "" },
-                    ])
-                  }
-                >
-                  Agregar precio
-                </Button>
-              }
-            >
-              <Stack spacing={1.5}>
-                {priceTiers.length === 0 && (
-                  <Typography color="text.secondary">Sin precios por cantidad. Se usará el precio base.</Typography>
-                )}
-                {priceTiers.map((tier, index) => (
-                  <Paper key={index} sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)" }}>
-                    <Grid container spacing={1.5} alignItems="center">
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          type="number"
-                          label="Cantidad mínima"
-                          value={tier.minQuantity}
-                          onChange={(event) => updatePriceTier(index, { minQuantity: Number(event.target.value) })}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          type="number"
-                          label="Precio unitario"
-                          value={tier.unitPrice}
-                          onChange={(event) => updatePriceTier(index, { unitPrice: Number(event.target.value) })}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          type="number"
-                          label="Precio total exacto"
-                          value={tier.totalPrice ?? ""}
-                          onChange={(event) => updatePriceTier(index, { totalPrice: event.target.value === "" ? "" : Number(event.target.value) })}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6, md: 5 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Texto visible"
-                          value={tier.label ?? ""}
-                          onChange={(event) => updatePriceTier(index, { label: event.target.value })}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 1 }}>
-                        <IconButton aria-label="Eliminar precio" onClick={() => setPriceTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
-                          <Trash2 size={18} />
-                        </IconButton>
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                ))}
-              </Stack>
-            </AdminSection>
-
-            <AdminSection title="Fotos" description="Sube fotos claras para mostrar el producto en el catálogo.">
-              <Stack spacing={2}>
-                <Button component="label" variant="outlined" startIcon={<ImagePlus size={18} />} disabled={uploadingImage}>
-                  {uploadingImage ? "Subiendo fotos..." : "Subir fotos"}
-                  <input
-                    hidden
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    type="file"
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      event.target.value = "";
-                      void uploadImages(files);
-                    }}
-                  />
-                </Button>
-                {images.length === 0 ? (
-                  <AdminEmptyState title="Sin imagen" description="Sube una imagen para que el producto se vea en el catálogo." />
-                ) : (
-                  <Grid container spacing={2}>
-                    {images.map((image, index) => (
-                      <Grid key={image.url} size={{ xs: 12, sm: 6 }}>
-                        <Paper sx={{ p: 1.25, border: "1px solid rgba(64,44,37,.10)" }}>
-                          <Stack spacing={1}>
-                            <Box sx={{ position: "relative" }}>
-                              <Box component="img" src={image.url} alt={image.alt} sx={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: 1 }} />
-                              {index === 0 && <Chip size="small" icon={<Star size={14} />} label="Principal" sx={{ position: "absolute", left: 8, top: 8, bgcolor: "rgba(255,250,245,.94)", fontWeight: 900 }} />}
-                            </Box>
-                            <TextField size="small" label="Descripción de la foto" value={image.alt} onChange={(event) => setImages((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, alt: event.target.value } : item)))} />
-                            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                              <Typography variant="caption" color="text.secondary">
-                                Foto {index + 1}
-                              </Typography>
-                              <Stack direction="row" spacing={0.5}>
-                                <IconButton aria-label="Hacer imagen principal" disabled={index === 0} onClick={() => makePrimaryImage(index)}>
-                                  <Star size={18} />
-                                </IconButton>
-                                <IconButton aria-label="Subir imagen" disabled={index === 0} onClick={() => moveImage(index, -1)}>
-                                  <ArrowUp size={18} />
-                                </IconButton>
-                                <IconButton aria-label="Bajar imagen" disabled={index === images.length - 1} onClick={() => moveImage(index, 1)}>
-                                  <ArrowDown size={18} />
-                                </IconButton>
-                                <IconButton aria-label="Eliminar imagen" onClick={() => setImages((current) => normalizeImages(current.filter((_, itemIndex) => itemIndex !== index)))}>
-                                  <Trash2 size={18} />
-                                </IconButton>
-                              </Stack>
-                            </Stack>
-                          </Stack>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </Stack>
-            </AdminSection>
-
-            <Button variant="contained" size="large" onClick={save}>
-              Guardar producto
-            </Button>
+      <AdminListToolbar
+        search={query}
+        onSearchChange={setQuery}
+        searchLabel="Buscar producto"
+        secondaryAction={
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
+            <TextField select size="small" label="Estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} sx={{ minWidth: 150 }}>
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="published">Publicados</MenuItem>
+              <MenuItem value="draft">Ocultos</MenuItem>
+            </TextField>
+            <TextField select size="small" label="Destacado" value={featuredFilter} onChange={(event) => setFeaturedFilter(event.target.value)} sx={{ minWidth: 150 }}>
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="yes">Sí</MenuItem>
+              <MenuItem value="no">No</MenuItem>
+            </TextField>
+            <TextField select size="small" label="Categoría" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} sx={{ minWidth: 200 }}>
+              <MenuItem value="all">Todas</MenuItem>
+              {categories.map((category) => (
+                <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
+              ))}
+            </TextField>
+            <Tooltip title="Limpiar filtros">
+              <span>
+                <IconButton aria-label="Limpiar filtros" onClick={clearFilters} disabled={!hasFilters} sx={{ border: "1px solid rgba(64,44,37,.18)", borderRadius: 2 }}>
+                  <FilterX size={18} />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
-        </Grid>
-      </Grid>
+        }
+      />
+      <AdminDataGrid rows={rows} columns={columns} loading={loading} emptyTitle="Sin productos" emptyDescription="Crea el primer producto del catálogo." />
     </Stack>
   );
 }

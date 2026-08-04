@@ -59,6 +59,9 @@ export function Layout() {
               </Box>
             </Box>
             <Stack direction="row" spacing={{ xs: 0.25, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+              <Button component={Link} to="/catalogo">
+                Catálogo
+              </Button>
               <Button component={Link} to="/contacto">
                 Contacto
               </Button>

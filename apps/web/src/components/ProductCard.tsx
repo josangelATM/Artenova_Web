@@ -3,13 +3,11 @@ import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/ma
 import { ImageIcon, Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency, type Product } from "@artenova/shared";
-import { visiblePublicTags } from "../lib/tags";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const image = product.images[0];
   const [imageFailed, setImageFailed] = useState(false);
   const extraImages = Math.max(0, product.images.length - 1);
-  const tags = visiblePublicTags(product.tags);
 
   useEffect(() => {
     setImageFailed(false);
@@ -100,19 +98,13 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           </Typography>
         </Stack>
 
-        {tags.length > 0 && (
-          <Typography variant="caption" color="text.secondary" fontWeight={800}>
-            {tags.slice(0, 2).map((tag) => tag.name).join(" · ")}
-          </Typography>
-        )}
-
         <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1.5}>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Desde
             </Typography>
             <Typography fontWeight={900} fontSize={18}>
-              {formatCurrency(product.basePrice)}
+              {formatCurrency(product.pricingSummary.finalPrice)}
             </Typography>
           </Box>
         </Stack>
@@ -120,4 +112,3 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
     </Card>
   );
 }
-

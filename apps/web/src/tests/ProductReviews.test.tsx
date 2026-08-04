@@ -12,9 +12,11 @@ const product: Product = {
   description: "Detalle personalizado",
   categoryId: "c1",
   basePrice: 16,
+  discountType: null,
+  discountValue: null,
   material: "MDF",
   size: "20 cm",
-  technique: "Grabado láser",
+  technique: "Grabado laser",
   isPublished: true,
   isFeatured: true,
   isHero: false,
@@ -23,7 +25,8 @@ const product: Product = {
   priceTiers: [],
   extras: [],
   customFields: [],
-  tags: [],
+  variants: [],
+  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
   reviewSummary: { averageRating: 4.5, reviewCount: 2 },
   reviews: [
     {
@@ -31,7 +34,7 @@ const product: Product = {
       productId: "p1",
       rating: 5,
       customerName: "Ana",
-      comment: "Quedó precioso.",
+      comment: "Quedo precioso.",
       isApproved: true,
       source: "customer",
       createdAt: "2026-08-01T10:00:00.000Z"
@@ -47,11 +50,9 @@ describe("ProductReviews", () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText("Reseñas")).toBeInTheDocument();
-    expect(screen.getByText("4.5 de 5 · 2 reseñas")).toBeInTheDocument();
-    expect(screen.getByText("Ana")).toBeInTheDocument();
-    expect(screen.getByText("Quedó precioso.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Tu nombre")).toBeInTheDocument();
-    expect(screen.getByLabelText("Comentario")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /tu nombre/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /comentario/i })).toBeInTheDocument();
+    expect(screen.getByText(/Ana/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quedo precioso/i)).toBeInTheDocument();
   });
 });

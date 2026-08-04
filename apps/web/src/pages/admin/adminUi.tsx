@@ -61,13 +61,13 @@ export function AdminSection({
 
 export function AdminEmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
-    <Paper sx={{ ...adminSurfaceSx, p: 4, textAlign: "center" }}>
+    <Box sx={{ p: 4, textAlign: "center" }}>
       <Stack spacing={1.5} alignItems="center">
         <Typography fontWeight={900}>{title}</Typography>
         {description && <Typography color="text.secondary">{description}</Typography>}
         {action}
       </Stack>
-    </Paper>
+    </Box>
   );
 }
 

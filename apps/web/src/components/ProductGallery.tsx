@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, ImageIcon, Maximize2, X } from "lucide-react";
-import type { Product, ProductImage } from "@artenova/shared";
+import type { ProductImage } from "@artenova/shared";
 
 function imageLabel(image: ProductImage, productName: string, index: number) {
   return image.alt?.trim() || `${productName} ${index + 1}`;
 }
 
-export function ProductGallery({ product }: { product: Product }) {
+export function ProductGallery({ productName, images, galleryKey }: { productName: string; images: ProductImage[]; galleryKey: string }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
-  const images = product.images;
   const activeImage = images[activeIndex];
   const hasMany = images.length > 1;
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [product.id]);
+  }, [galleryKey]);
 
   function goTo(offset: number) {
     if (!images.length) return;
@@ -50,7 +49,7 @@ export function ProductGallery({ product }: { product: Product }) {
       >
         <Stack spacing={1.5} alignItems="center">
           <ImageIcon size={34} />
-          <Typography fontWeight={900}>{product.name}</Typography>
+          <Typography fontWeight={900}>{productName}</Typography>
         </Stack>
       </Box>
     );
@@ -85,7 +84,7 @@ export function ProductGallery({ product }: { product: Product }) {
             <Box
               component="img"
               src={activeImage.url}
-              alt={imageLabel(activeImage, product.name, activeIndex)}
+              alt={imageLabel(activeImage, productName, activeIndex)}
               sx={{ width: "100%", aspectRatio: "4 / 5", objectFit: "cover" }}
             />
           </Box>
@@ -163,7 +162,7 @@ export function ProductGallery({ product }: { product: Product }) {
                 <Box
                   component="img"
                   src={image.url}
-                  alt={imageLabel(image, product.name, index)}
+                  alt={imageLabel(image, productName, index)}
                   sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 1.5 }}
                 />
               </Box>
@@ -194,7 +193,7 @@ export function ProductGallery({ product }: { product: Product }) {
       >
         <Box sx={{ minHeight: "100vh", color: "text.primary", display: "grid", gridTemplateRows: "auto 1fr", background: "rgba(255,247,239,.34)", backdropFilter: "blur(10px)" }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: { xs: 1.5, md: 2 } }}>
-            <Typography fontWeight={900} noWrap sx={{ maxWidth: "78vw" }}>{product.name}</Typography>
+            <Typography fontWeight={900} noWrap sx={{ maxWidth: "78vw" }}>{productName}</Typography>
             <IconButton aria-label="Cerrar imagen" onClick={() => setViewerOpen(false)} sx={{ color: "text.primary", bgcolor: "rgba(255,250,245,.78)", "&:hover": { bgcolor: "background.paper" } }}>
               <X />
             </IconButton>
@@ -203,7 +202,7 @@ export function ProductGallery({ product }: { product: Product }) {
             <Box
               component="img"
               src={activeImage.url}
-              alt={imageLabel(activeImage, product.name, activeIndex)}
+              alt={imageLabel(activeImage, productName, activeIndex)}
               sx={{ maxWidth: "100%", maxHeight: "calc(100vh - 96px)", objectFit: "contain", borderRadius: { xs: 2, md: 3 }, boxShadow: "0 28px 90px rgba(64,44,37,.26)" }}
             />
             {hasMany && (

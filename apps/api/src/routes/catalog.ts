@@ -8,9 +8,17 @@ export const catalogRouter = Router();
 
 const productInclude = {
   category: true,
-  tags: { where: { tag: { isActive: true } }, include: { tag: true } },
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
+  variants: {
+    where: { isActive: true },
+    orderBy: { position: "asc" as const },
+    include: {
+      images: { orderBy: { position: "asc" as const } },
+      attributes: { orderBy: { position: "asc" as const } },
+      priceTiers: { orderBy: { minQuantity: "asc" as const } }
+    }
+  },
   extras: true,
   customFields: { orderBy: { position: "asc" as const } },
   reviews: { where: { isApproved: true }, orderBy: { createdAt: "desc" as const } }
@@ -39,23 +47,13 @@ catalogRouter.get("/categories", async (_req, res) => {
   res.json(categories);
 });
 
-catalogRouter.get("/tags", async (_req, res) => {
-  const tags = await prisma.tag.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" }
-  });
-  res.json(tags);
-});
-
 catalogRouter.get("/products", async (req, res) => {
   const category = typeof req.query.category === "string" ? req.query.category : undefined;
-  const tag = typeof req.query.tag === "string" ? req.query.tag : undefined;
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const products = await prisma.product.findMany({
     where: {
       isPublished: true,
       category: category ? { slug: category, isActive: true } : { isActive: true },
-      tags: tag ? { some: { tag: { slug: tag, isActive: true } } } : undefined,
       OR: q
         ? [
             { name: { contains: q, mode: "insensitive" } },
