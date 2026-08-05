@@ -1,25 +1,72 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
-import { ChevronLeft, ChevronRight, ImageIcon, Maximize2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, X } from "lucide-react";
 import type { ProductImage } from "@artenova/shared";
+
+export type ProductGalleryItem = {
+  key: string;
+  image: ProductImage;
+};
 
 function imageLabel(image: ProductImage, productName: string, index: number) {
   return image.alt?.trim() || `${productName} ${index + 1}`;
 }
 
-export function ProductGallery({ productName, images, galleryKey }: { productName: string; images: ProductImage[]; galleryKey: string }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function ProductGallery({
+  productName,
+  items,
+  activeKey,
+  onActiveKeyChange
+}: {
+  productName: string;
+  items: ProductGalleryItem[];
+  activeKey: string;
+  onActiveKeyChange: (key: string) => void;
+}) {
   const [viewerOpen, setViewerOpen] = useState(false);
-  const activeImage = images[activeIndex];
-  const hasMany = images.length > 1;
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, items.findIndex((item) => item.key === activeKey)));
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const activeItem = items[activeIndex];
+  const activeImage = activeItem?.image;
+  const hasMany = items.length > 1;
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [galleryKey]);
+    const index = items.findIndex((item) => item.key === activeKey);
+    setActiveIndex(index >= 0 ? index : 0);
+  }, [activeKey, items]);
+
+  function updateActiveIndex(nextIndex: number) {
+    const nextItem = items[nextIndex];
+    if (!nextItem) return;
+    setActiveIndex(nextIndex);
+    onActiveKeyChange(nextItem.key);
+  }
 
   function goTo(offset: number) {
-    if (!images.length) return;
-    setActiveIndex((current) => (current + offset + images.length) % images.length);
+    if (!items.length) return;
+    const nextIndex = (activeIndex + offset + items.length) % items.length;
+    updateActiveIndex(nextIndex);
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLElement>) {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLElement>) {
+    const start = touchStartRef.current;
+    const touch = event.changedTouches[0];
+    touchStartRef.current = null;
+    if (!start || !touch || !hasMany) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 42) return;
+    if (Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return;
+
+    if (deltaX < 0) goTo(1);
+    if (deltaX > 0) goTo(-1);
   }
 
   useEffect(() => {
@@ -30,7 +77,7 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerOpen, images.length]);
+  }, [viewerOpen, activeIndex, items]);
 
   if (!activeImage) {
     return (
@@ -55,22 +102,37 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
     );
   }
 
+  const arrowSx = {
+    width: { xs: 38, md: 40 },
+    height: { xs: 38, md: 40 },
+    bgcolor: "transparent",
+    color: "rgba(64,44,37,.52)",
+    boxShadow: "none",
+    "&:hover": { bgcolor: "transparent", color: "rgba(64,44,37,.72)" }
+  } as const;
+
   return (
     <>
-      <Stack spacing={1.5}>
+      <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "flex-start" }}>
         <Box
           sx={{
+            order: { xs: 1, md: 2 },
             position: "relative",
             overflow: "hidden",
             borderRadius: 3,
             boxShadow: "0 24px 70px rgba(64,44,37,.18)",
-            background: "#fffaf5",
+            background: "linear-gradient(180deg, rgba(255,250,245,.98) 0%, rgba(250,239,231,.9) 100%)",
+            border: "1px solid rgba(64,44,37,.10)",
+            flex: 1,
+            minWidth: 0,
           }}
         >
           <Box
             component="button"
             type="button"
             onClick={() => setViewerOpen(true)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             aria-label="Ampliar imagen"
             sx={{
               display: "block",
@@ -79,45 +141,39 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
               border: 0,
               cursor: "zoom-in",
               background: "transparent",
+              minHeight: 0,
+              touchAction: "pan-y",
             }}
           >
             <Box
               component="img"
               src={activeImage.url}
               alt={imageLabel(activeImage, productName, activeIndex)}
-              sx={{ width: "100%", aspectRatio: "4 / 5", objectFit: "cover" }}
+              sx={{
+                width: "100%",
+                aspectRatio: "4 / 5",
+                objectFit: "contain",
+                display: "block",
+                p: { xs: 1.5, md: 2 },
+                bgcolor: "rgba(255,255,255,.45)",
+              }}
             />
           </Box>
-          <IconButton
-            aria-label="Ampliar imagen"
-            onClick={() => setViewerOpen(true)}
-            sx={{
-              position: "absolute",
-              top: 14,
-              right: 14,
-              width: 44,
-              height: 44,
-              bgcolor: "rgba(255,250,245,.92)",
-              "&:hover": { bgcolor: "background.paper" },
-            }}
-          >
-            <Maximize2 size={18} />
-          </IconButton>
           {hasMany && (
             <>
               <IconButton
                 aria-label="Imagen anterior"
                 onClick={() => goTo(-1)}
-                sx={{ position: "absolute", left: 12, top: "50%", width: 44, height: 44, bgcolor: "rgba(255,250,245,.92)" }}
+                sx={{ ...arrowSx, position: "absolute", left: 12, top: "50%" }}
               >
-                <ChevronLeft size={22} />
+                <ChevronLeft size={18} />
               </IconButton>
               <IconButton
                 aria-label="Imagen siguiente"
                 onClick={() => goTo(1)}
-                sx={{ position: "absolute", right: 12, top: "50%", width: 44, height: 44, bgcolor: "rgba(255,250,245,.92)" }}
+                sx={{ ...arrowSx, position: "absolute", right: 12, top: "50%" }}
               >
-                <ChevronRight size={22} />
+                <ChevronRight size={18} />
               </IconButton>
               <Typography
                 variant="caption"
@@ -128,42 +184,60 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
                   px: 1.25,
                   py: 0.4,
                   borderRadius: 999,
-                  bgcolor: "rgba(64,44,37,.72)",
+                  bgcolor: "rgba(64,44,37,.62)",
                   color: "common.white",
                   fontWeight: 900,
                 }}
               >
-                {activeIndex + 1} / {images.length}
+                {activeIndex + 1} / {items.length}
               </Typography>
             </>
           )}
         </Box>
 
         {hasMany && (
-          <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.5 }}>
-            {images.map((image, index) => (
+          <Stack
+            direction={{ xs: "row", md: "column" }}
+            spacing={1}
+            sx={{
+              order: { xs: 2, md: 1 },
+              overflowX: { xs: "auto", md: "visible" },
+              overflowY: { xs: "visible", md: "auto" },
+              pb: { xs: 0.5, md: 0 },
+              pr: { md: 0.5 },
+              maxHeight: { md: "min(560px, 72vh)" },
+              flex: { md: "0 0 92px" }
+            }}
+          >
+            {items.map((item, index) => (
               <Box
-                key={`${image.url}-${index}`}
+                key={item.key}
                 component="button"
                 type="button"
-                onClick={() => setActiveIndex(index)}
+                onClick={() => updateActiveIndex(index)}
                 aria-label={`Ver imagen ${index + 1}`}
                 sx={{
-                  flex: { xs: "0 0 64px", sm: "0 0 76px" },
-                  width: { xs: 64, sm: 76 },
-                  height: { xs: 64, sm: 76 },
-                  p: 0.35,
+                  flex: { xs: "0 0 72px", sm: "0 0 84px", md: "0 0 84px" },
+                  width: { xs: 72, sm: 84, md: 84 },
+                  height: { xs: 72, sm: 84, md: 84 },
+                  p: 0.5,
                   borderRadius: 2,
-                  border: index === activeIndex ? "2px solid #8f55bd" : "1px solid rgba(64,44,37,.16)",
-                  background: "#fffaf5",
+                  border: index === activeIndex ? "2px solid rgba(196,110,78,1)" : "1px solid rgba(64,44,37,.16)",
+                  background: "rgba(255,250,245,.9)",
                   cursor: "pointer",
                 }}
               >
                 <Box
                   component="img"
-                  src={image.url}
-                  alt={imageLabel(image, productName, index)}
-                  sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 1.5 }}
+                  src={item.image.url}
+                  alt={imageLabel(item.image, productName, index)}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: 1.5,
+                    bgcolor: "rgba(255,255,255,.65)",
+                  }}
                 />
               </Box>
             ))}
@@ -194,8 +268,8 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
         <Box sx={{ minHeight: "100vh", color: "text.primary", display: "grid", gridTemplateRows: "auto 1fr", background: "rgba(255,247,239,.34)", backdropFilter: "blur(10px)" }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: { xs: 1.5, md: 2 } }}>
             <Typography fontWeight={900} noWrap sx={{ maxWidth: "78vw" }}>{productName}</Typography>
-            <IconButton aria-label="Cerrar imagen" onClick={() => setViewerOpen(false)} sx={{ color: "text.primary", bgcolor: "rgba(255,250,245,.78)", "&:hover": { bgcolor: "background.paper" } }}>
-              <X />
+            <IconButton aria-label="Cerrar imagen" onClick={() => setViewerOpen(false)} sx={{ ...arrowSx, color: "rgba(64,44,37,.74)" }}>
+              <X size={18} />
             </IconButton>
           </Stack>
           <Box sx={{ position: "relative", display: "grid", placeItems: "center", p: { xs: 1, md: 3 } }}>
@@ -203,18 +277,29 @@ export function ProductGallery({ productName, images, galleryKey }: { productNam
               component="img"
               src={activeImage.url}
               alt={imageLabel(activeImage, productName, activeIndex)}
-              sx={{ maxWidth: "100%", maxHeight: "calc(100vh - 96px)", objectFit: "contain", borderRadius: { xs: 2, md: 3 }, boxShadow: "0 28px 90px rgba(64,44,37,.26)" }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              sx={{
+                maxWidth: "100%",
+                maxHeight: "calc(100vh - 96px)",
+                objectFit: "contain",
+                borderRadius: { xs: 2, md: 3 },
+                boxShadow: "0 28px 90px rgba(64,44,37,.26)",
+                bgcolor: "rgba(255,255,255,.55)",
+                p: { xs: 1, md: 1.5 },
+                touchAction: "pan-y",
+              }}
             />
             {hasMany && (
               <>
-                <IconButton aria-label="Imagen anterior" onClick={() => goTo(-1)} sx={{ position: "absolute", left: { xs: 8, md: 24 }, width: 48, height: 48, color: "text.primary", bgcolor: "rgba(255,250,245,.78)", "&:hover": { bgcolor: "background.paper" } }}>
-                  <ChevronLeft />
+                <IconButton aria-label="Imagen anterior" onClick={() => goTo(-1)} sx={{ ...arrowSx, position: "absolute", left: { xs: 8, md: 24 } }}>
+                  <ChevronLeft size={18} />
                 </IconButton>
-                <IconButton aria-label="Imagen siguiente" onClick={() => goTo(1)} sx={{ position: "absolute", right: { xs: 8, md: 24 }, width: 48, height: 48, color: "text.primary", bgcolor: "rgba(255,250,245,.78)", "&:hover": { bgcolor: "background.paper" } }}>
-                  <ChevronRight />
+                <IconButton aria-label="Imagen siguiente" onClick={() => goTo(1)} sx={{ ...arrowSx, position: "absolute", right: { xs: 8, md: 24 } }}>
+                  <ChevronRight size={18} />
                 </IconButton>
                 <Typography sx={{ position: "absolute", bottom: 18, px: 1.5, py: 0.5, borderRadius: 999, bgcolor: "rgba(255,250,245,.82)", fontWeight: 900 }}>
-                  {activeIndex + 1} / {images.length}
+                  {activeIndex + 1} / {items.length}
                 </Typography>
               </>
             )}

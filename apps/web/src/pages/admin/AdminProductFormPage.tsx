@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Alert, Box, Button, Checkbox, Chip, FormControlLabel, Grid, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
-import { ArrowDown, ArrowUp, ImagePlus, Plus, Sparkles, Star, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, ImagePlus, Plus, Sparkles, Star, Trash2 } from "lucide-react";
 import type { Category, DiscountType, Product, ProductImage, ProductOption, ProductOptionValue } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -494,21 +494,32 @@ export function AdminProductFormPage() {
           </Button>
           {priceTiers.length === 0 && <Typography color="text.secondary">Sin precios por cantidad. Se usará el precio base del producto.</Typography>}
           {priceTiers.map((tier, index) => (
-            <PriceTierEditor key={`product-tier-${index}`} tier={tier} onChange={(patch) => updatePriceTier(index, patch)} onDelete={() => setPriceTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+            <PriceTierEditor
+              key={`product-tier-${index}`}
+              tier={tier}
+              onChange={(patch) => updatePriceTier(index, patch)}
+              onDuplicate={() =>
+                setPriceTiers((current) => [
+                  ...current.slice(0, index + 1),
+                  { ...tier },
+                  ...current.slice(index + 1)
+                ])
+              }
+              onDelete={() => setPriceTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+            />
           ))}
         </Stack>
       </AdminSection>
 
       <AdminSection title="Fotos del producto base" description="Se usan como respaldo cuando una variante no tiene fotos propias.">
         <Stack spacing={2}>
-          <Button component="label" variant="outlined" startIcon={<ImagePlus size={18} />} disabled={uploadingKey === "product"}>
-            {uploadingKey === "product" ? "Subiendo fotos..." : "Subir fotos"}
-            <input hidden accept="image/png,image/jpeg,image/webp" multiple type="file" onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              void uploadImages(files, "product");
-            }} />
-          </Button>
+          <ImageUploadDropzone
+            disabled={uploadingKey === "product"}
+            loadingLabel="Subiendo fotos..."
+            idleLabel="Subir fotos"
+            helperText="Arrastra imagenes aqui o haz click para seleccionarlas."
+            onFilesSelected={(files) => void uploadImages(files, "product")}
+          />
           {renderImageEditor(images, setImages)}
         </Stack>
       </AdminSection>
@@ -630,19 +641,32 @@ export function AdminProductFormPage() {
                     </Stack>
                     {variant.priceTiers.length === 0 && <Typography color="text.secondary">Si no agregas precios aquí, la variante usará los del producto base.</Typography>}
                     {variant.priceTiers.map((tier, tierIndex) => (
-                      <PriceTierEditor key={`${variant.id}-tier-${tierIndex}`} tier={tier} onChange={(patch) => updateVariantPriceTier(variant.id, tierIndex, patch)} onDelete={() => updateVariant(variant.id, { priceTiers: variant.priceTiers.filter((_, itemIndex) => itemIndex !== tierIndex) })} />
+                      <PriceTierEditor
+                        key={`${variant.id}-tier-${tierIndex}`}
+                        tier={tier}
+                        onChange={(patch) => updateVariantPriceTier(variant.id, tierIndex, patch)}
+                        onDuplicate={() =>
+                          updateVariant(variant.id, {
+                            priceTiers: [
+                              ...variant.priceTiers.slice(0, tierIndex + 1),
+                              { ...tier },
+                              ...variant.priceTiers.slice(tierIndex + 1)
+                            ]
+                          })
+                        }
+                        onDelete={() => updateVariant(variant.id, { priceTiers: variant.priceTiers.filter((_, itemIndex) => itemIndex !== tierIndex) })}
+                      />
                     ))}
                   </Stack>
 
                   <Stack spacing={1.5}>
-                    <Button component="label" variant="outlined" startIcon={<ImagePlus size={18} />} disabled={uploadingKey === variant.id}>
-                      {uploadingKey === variant.id ? "Subiendo fotos..." : "Subir fotos de variante"}
-                      <input hidden accept="image/png,image/jpeg,image/webp" multiple type="file" onChange={(event) => {
-                        const files = Array.from(event.target.files ?? []);
-                        event.target.value = "";
-                        void uploadImages(files, variant.id);
-                      }} />
-                    </Button>
+                    <ImageUploadDropzone
+                      disabled={uploadingKey === variant.id}
+                      loadingLabel="Subiendo fotos..."
+                      idleLabel="Subir fotos de variante"
+                      helperText="Arrastra imagenes de esta variante o haz click para seleccionarlas."
+                      onFilesSelected={(files) => void uploadImages(files, variant.id)}
+                    />
                     {renderImageEditor(variant.images, (nextImages) => updateVariant(variant.id, { images: nextImages }))}
                   </Stack>
                 </Stack>
@@ -662,7 +686,112 @@ export function AdminProductFormPage() {
   );
 }
 
-function PriceTierEditor({ tier, onChange, onDelete }: { tier: PriceTierInput; onChange: (patch: Partial<PriceTierInput>) => void; onDelete: () => void }) {
+function ImageUploadDropzone({
+  disabled,
+  idleLabel,
+  loadingLabel,
+  helperText,
+  onFilesSelected
+}: {
+  disabled: boolean;
+  idleLabel: string;
+  loadingLabel: string;
+  helperText: string;
+  onFilesSelected: (files: File[]) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  function preventDefaults(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    preventDefaults(event);
+    if (disabled) return;
+    setIsDragging(false);
+    const files = Array.from(event.dataTransfer.files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (files.length > 0) {
+      onFilesSelected(files);
+    }
+  }
+
+  return (
+    <Box
+      component="label"
+      onDragEnter={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (!disabled) setIsDragging(true);
+      }}
+      onDragOver={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (!disabled) setIsDragging(true);
+      }}
+      onDragLeave={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setIsDragging(false);
+      }}
+      onDrop={handleDrop}
+      sx={{
+        border: "1.5px dashed",
+        borderColor: isDragging ? "primary.main" : "rgba(64,44,37,.20)",
+        borderRadius: 2,
+        px: 2,
+        py: 2.25,
+        cursor: disabled ? "not-allowed" : "pointer",
+        bgcolor: isDragging ? "rgba(224,122,95,.08)" : "rgba(255,250,245,.6)",
+        transition: "border-color .2s ease, background-color .2s ease, transform .2s ease",
+        "&:hover": disabled
+          ? undefined
+          : {
+              borderColor: "primary.main",
+              bgcolor: "rgba(224,122,95,.05)"
+            }
+      }}
+    >
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
+        <Stack spacing={0.5}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <ImagePlus size={18} />
+            <Typography fontWeight={900}>{disabled ? loadingLabel : idleLabel}</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            {disabled ? "Procesando imagenes..." : helperText}
+          </Typography>
+        </Stack>
+        <Button component="span" variant="outlined" disabled={disabled}>
+          Seleccionar
+        </Button>
+      </Stack>
+      <input
+        hidden
+        accept="image/png,image/jpeg,image/webp"
+        multiple
+        type="file"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          if (files.length > 0) {
+            onFilesSelected(files);
+          }
+        }}
+      />
+    </Box>
+  );
+}
+
+function PriceTierEditor({
+  tier,
+  onChange,
+  onDuplicate,
+  onDelete
+}: {
+  tier: PriceTierInput;
+  onChange: (patch: Partial<PriceTierInput>) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
   return (
     <Box sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)", borderRadius: 2 }}>
       <Grid container spacing={1.5} alignItems="center">
@@ -672,16 +801,21 @@ function PriceTierEditor({ tier, onChange, onDelete }: { tier: PriceTierInput; o
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <TextField fullWidth size="small" type="text" label="Precio unitario" value={tier.unitPrice} onChange={(event) => onChange({ unitPrice: event.target.value })} slotProps={{ htmlInput: { inputMode: "decimal" } }} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
           <TextField fullWidth size="small" type="text" label="Precio total exacto" value={tier.totalPrice ?? ""} onChange={(event) => onChange({ totalPrice: event.target.value })} slotProps={{ htmlInput: { inputMode: "decimal" } }} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
           <TextField fullWidth size="small" label="Texto visible" value={tier.label ?? ""} onChange={(event) => onChange({ label: event.target.value })} />
         </Grid>
-        <Grid size={{ xs: 12, md: 1 }}>
-          <IconButton aria-label="Eliminar precio" onClick={onDelete}>
-            <Trash2 size={18} />
-          </IconButton>
+        <Grid size={{ xs: 12, md: 2 }}>
+          <Stack direction="row" justifyContent={{ xs: "flex-start", md: "flex-end" }}>
+            <IconButton aria-label="Duplicar precio" onClick={onDuplicate}>
+              <Copy size={18} />
+            </IconButton>
+            <IconButton aria-label="Eliminar precio" onClick={onDelete}>
+              <Trash2 size={18} />
+            </IconButton>
+          </Stack>
         </Grid>
       </Grid>
     </Box>

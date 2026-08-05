@@ -51,10 +51,10 @@ export function HomePage() {
 
   useEffect(() => {
     applySeo({
-      title: settings?.heroTitle ?? "Regalos personalizados que guardan historias",
+      title: settings?.heroTitle ?? "Detalles personalizados en acrílico, madera y más",
       description:
         settings?.heroSubtitle ??
-        "Taller creativo de corte y grabado láser para mascotas, bodas y detalles personalizados en Panamá.",
+        "Diseñamos placas, recordatorios, regalos y artículos personalizados para mascotas, celebraciones y ocasiones especiales, hechos contigo antes de fabricar.",
       path: "/",
       image: featuredProducts[0]?.images[0]?.url,
       type: "website",
@@ -76,10 +76,10 @@ export function HomePage() {
                     </Typography>
                   </Stack>
                   <Typography variant="h3" sx={{ fontSize: { xs: 28, md: 40 }, lineHeight: 1.04, maxWidth: 680 }}>
-                    Regalos personalizados en Panamá con corte y grabado láser.
+                    Creamos recuerdos que hacen especial cada momento.
                   </Typography>
                   <Typography color="text.secondary" sx={{ maxWidth: 620 }}>
-                    Diseñamos placas, recordatorios, regalos y artículos personalizados para mascotas, celebraciones y ocasiones especiales.
+                    Diseñamos placas, recordatorios, regalos y artículos personalizados para mascotas, celebraciones y ocasiones especiales, hechos contigo antes de fabricar.
                   </Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
                     {quoteUrl ? (
@@ -139,16 +139,17 @@ export function HomePage() {
                 </Grid>
               )}
 
-              <Box className="home-catalog-banner">
-                <Stack spacing={1.25} alignItems="center" textAlign="center">
-                  <Typography variant="h5" fontWeight={900}>
-                    Ver catálogo completo
-                  </Typography>
-                  <Button component={Link} to="/catalogo" variant="contained" size="large" endIcon={<ArrowRight size={18} />} className="home-catalog-banner-button">
-                    Explorar todos los productos
-                  </Button>
-                </Stack>
-              </Box>
+              <Button
+                component={Link}
+                to="/catalogo"
+                variant="contained"
+                size="large"
+                endIcon={<ArrowRight size={18} />}
+                className="home-catalog-banner-button"
+                sx={{ alignSelf: "center" }}
+              >
+                Quiero ver más
+              </Button>
             </Stack>
           </Paper>
 

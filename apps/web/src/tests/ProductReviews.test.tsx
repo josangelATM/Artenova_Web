@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { describe, expect, it, vi } from "vitest";
 import type { Product } from "@artenova/shared";
@@ -41,16 +41,20 @@ const product: Product = {
 };
 
 describe("ProductReviews", () => {
-  it("shows review summary, comments, and public form", () => {
+  it("shows reviews on the page and opens the form inside a dialog", () => {
     render(
       <ThemeProvider theme={theme}>
         <ProductReviews product={product} onReviewCreated={vi.fn()} />
       </ThemeProvider>
     );
 
-    expect(screen.getByRole("textbox", { name: /tu nombre/i })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: /comentario/i })).toBeInTheDocument();
     expect(screen.getByText(/Ana/i)).toBeInTheDocument();
     expect(screen.getByText(/Quedo precioso/i)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /tu nombre/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /deja tu reseña/i }));
+
+    expect(screen.getByRole("textbox", { name: /tu nombre/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /comentario/i })).toBeInTheDocument();
   });
 });

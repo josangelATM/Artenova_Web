@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
 import { formatCurrency, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
-import { ProductGallery } from "../components/ProductGallery";
+import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
 import { ProductReviews } from "../components/ProductReviews";
 import { ProductPageSkeleton } from "../components/SkeletonStates";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -11,6 +11,10 @@ import { whatsappHref } from "../lib/contact";
 import { applySeo, productSeoDescription } from "../lib/seo";
 
 type SelectionState = Record<string, string>;
+type GalleryImageItem = ProductGalleryItem & {
+  variantId: string | null;
+  selectionState: SelectionState | null;
+};
 
 function variantSelectionMap(variant: ProductVariant) {
   return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
@@ -48,6 +52,7 @@ export function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<SelectionState>({});
+  const [activeGalleryKey, setActiveGalleryKey] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -60,8 +65,8 @@ export function ProductPage() {
         if (!active) return;
         setProduct(nextProduct);
         setSettings(nextSettings);
-        const firstVariant = nextProduct.variants.find((variant) => variant.isActive) ?? nextProduct.variants[0] ?? null;
-        setSelectedOptions(firstVariant ? completeSelectionFromVariant(firstVariant) : {});
+        setSelectedOptions({});
+        setActiveGalleryKey(nextProduct.images[0] ? `base:${nextProduct.images[0].id}` : "");
       })
       .catch((err) => {
         if (!active) return;
@@ -79,18 +84,68 @@ export function ProductPage() {
 
   const productOptions = product?.productOptions ?? [];
   const activeVariants = useMemo(() => product?.variants.filter((variant) => variant.isActive) ?? [], [product?.variants]);
+  const hasOptionSelection = useMemo(() => productOptions.some((option) => Boolean(selectedOptions[option.id])), [productOptions, selectedOptions]);
+
   const selectedVariant = useMemo(() => {
     if (!product) return null;
     if (productOptions.length === 0) return activeVariants[0] ?? product.variants[0] ?? null;
+    if (!hasOptionSelection) return null;
     return activeVariants.find((variant) => {
       const selectionMap = variantSelectionMap(variant);
       return productOptions.every((option) => selectionMap[option.id] === selectedOptions[option.id]);
-    }) ?? activeVariants.find((variant) => matchesSelection(variant, selectedOptions)) ?? activeVariants[0] ?? null;
-  }, [activeVariants, product, productOptions, selectedOptions]);
+    }) ?? activeVariants.find((variant) => matchesSelection(variant, selectedOptions)) ?? null;
+  }, [activeVariants, hasOptionSelection, product, productOptions, selectedOptions]);
 
-  const activeImages = selectedVariant?.images.length ? selectedVariant.images : product?.images ?? [];
-  const activePricing = selectedVariant?.pricingSummary ?? null;
-  const activePriceTiers = selectedVariant?.priceTiers ?? [];
+  const galleryItems = useMemo<GalleryImageItem[]>(() => {
+    if (!product) return [];
+    const baseItems = product.images.map((image, index) => ({
+      key: `base:${image.id ?? index}`,
+      image,
+      variantId: null,
+      selectionState: null
+    }));
+    const variantItems = activeVariants.flatMap((variant) => {
+      const selectionState = completeSelectionFromVariant(variant);
+      return variant.images.map((image, index) => ({
+        key: `variant:${variant.id}:${image.id ?? index}`,
+        image,
+        variantId: variant.id,
+        selectionState
+      }));
+    });
+    return [...baseItems, ...variantItems];
+  }, [activeVariants, product]);
+
+  useEffect(() => {
+    if (!galleryItems.length) {
+      setActiveGalleryKey("");
+      return;
+    }
+    if (!activeGalleryKey || !galleryItems.some((item) => item.key === activeGalleryKey)) {
+      setActiveGalleryKey(galleryItems[0]!.key);
+    }
+  }, [activeGalleryKey, galleryItems]);
+
+  const activeGalleryItem = useMemo(
+    () => galleryItems.find((item) => item.key === activeGalleryKey) ?? galleryItems[0] ?? null,
+    [activeGalleryKey, galleryItems]
+  );
+
+  useEffect(() => {
+    if (!activeGalleryItem) return;
+    const nextSelection = activeGalleryItem.selectionState ?? {};
+    const currentKeys = Object.keys(selectedOptions);
+    const nextKeys = Object.keys(nextSelection);
+    const selectionChanged =
+      currentKeys.length !== nextKeys.length ||
+      nextKeys.some((key) => selectedOptions[key] !== nextSelection[key]);
+    if (selectionChanged) {
+      setSelectedOptions(nextSelection);
+    }
+  }, [activeGalleryItem, selectedOptions]);
+
+  const activePricing = selectedVariant?.pricingSummary ?? product?.pricingSummary ?? null;
+  const activePriceTiers = selectedVariant?.priceTiers.length ? selectedVariant.priceTiers : product?.priceTiers ?? [];
 
   const availabilityByOption = useMemo(() => {
     if (!product) return new Map<string, Set<string>>();
@@ -115,10 +170,10 @@ export function ProductPage() {
       title: product.name,
       description: productSeoDescription({ name: product.name, description: product.description, price: activePricing.finalPrice }),
       path: `/producto/${product.slug}`,
-      image: activeImages[0]?.url ?? product.images[0]?.url,
+      image: activeGalleryItem?.image.url ?? product.images[0]?.url,
       type: "product",
     });
-  }, [activeImages, activePricing, product]);
+  }, [activeGalleryItem, activePricing, product]);
 
   if (loading) return <ProductPageSkeleton />;
 
@@ -128,8 +183,8 @@ export function ProductPage() {
         <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: "center" }}>
           <Stack spacing={2} alignItems="center">
             <Typography variant="h3">Producto no disponible</Typography>
-            <Typography color="text.secondary">{loadError || "Este enlace ya no esta publicado."}</Typography>
-            <Button component={Link} to="/" variant="contained">
+            <Typography color="text.secondary">{loadError || "Este enlace ya no está publicado."}</Typography>
+            <Button component={Link} to="/catalogo" variant="contained">
               Ver catálogo
             </Button>
           </Stack>
@@ -138,6 +193,7 @@ export function ProductPage() {
     );
   }
 
+  const hasVariants = productOptions.length > 0;
   const consultUrl = whatsappHref(
     settings?.whatsapp,
     `Hola, estoy interesado en ${product.name}${selectedVariant ? ` - ${selectedVariant.name}` : ""}${(selectedVariant?.sku ?? product.sku) ? ` (REF ${selectedVariant?.sku ?? product.sku})` : ""}.`
@@ -149,39 +205,35 @@ export function ProductPage() {
         <Grid size={{ xs: 12, md: 6 }}>
           <ProductGallery
             productName={selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name}
-            images={activeImages}
-            galleryKey={selectedVariant?.id ?? product.id}
+            items={galleryItems}
+            activeKey={activeGalleryItem?.key ?? ""}
+            onActiveKeyChange={setActiveGalleryKey}
           />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Stack spacing={{ xs: 2.5, md: 3 }}>
             <Box>
-              <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 56 }, overflowWrap: "anywhere" }}>
+              <Typography variant="h2" sx={{ fontSize: { xs: 30, md: 44 }, lineHeight: { xs: 1.05, md: 1.02 }, overflowWrap: "anywhere", maxWidth: "12ch" }}>
                 {product.name}
               </Typography>
-              {(selectedVariant?.sku ?? product.sku) && (
-                <Typography variant="overline" color="text.secondary" fontWeight={900}>
-                  REF {selectedVariant?.sku ?? product.sku}
-                </Typography>
-              )}
               {product.reviewSummary.reviewCount > 0 && (
-                <Stack direction="row" spacing={1} alignItems="center" mt={1}>
+                <Stack direction="row" spacing={1} alignItems="center" mt={1.25}>
                   <Rating value={product.reviewSummary.averageRating} precision={0.5} readOnly size="small" />
                   <Typography variant="body2" color="text.secondary" fontWeight={800}>
                     {product.reviewSummary.averageRating.toFixed(1)} ({product.reviewSummary.reviewCount})
                   </Typography>
                 </Stack>
               )}
-              <Typography color="text.secondary" mt={1}>
+              <Typography color="text.secondary" mt={1.5} sx={{ maxWidth: "62ch", lineHeight: 1.75 }}>
                 {product.description}
               </Typography>
 
-              {productOptions.length > 0 && (
+              {hasVariants && (
                 <Stack spacing={1.5} mt={2.5}>
                   {productOptions.map((option) => (
                     <Stack key={option.id} spacing={0.85}>
-                      <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 0.4 }}>
                         {option.name}
                       </Typography>
                       <Stack direction="row" gap={0.75} flexWrap="wrap">
@@ -196,7 +248,19 @@ export function ProductPage() {
                               color={isSelected ? "secondary" : "default"}
                               variant={isSelected ? "filled" : "outlined"}
                               label={value.value}
-                              onClick={() => setSelectedOptions((current) => resolveNextSelection(productOptions, activeVariants, current, option.id, value.id))}
+                              onClick={() => {
+                                const nextSelection = resolveNextSelection(productOptions, activeVariants, selectedOptions, option.id, value.id);
+                                setSelectedOptions(nextSelection);
+                                const matchingVariant = activeVariants.find((variant) =>
+                                  productOptions.every((productOption) => variantSelectionMap(variant)[productOption.id] === nextSelection[productOption.id])
+                                ) ?? activeVariants.find((variant) => matchesSelection(variant, nextSelection));
+                                const nextGalleryItem = matchingVariant
+                                  ? galleryItems.find((item) => item.variantId === matchingVariant.id)
+                                  : galleryItems.find((item) => item.variantId === null) ?? galleryItems[0];
+                                if (nextGalleryItem) {
+                                  setActiveGalleryKey(nextGalleryItem.key);
+                                }
+                              }}
                             />
                           );
                         })}
@@ -207,30 +271,42 @@ export function ProductPage() {
               )}
             </Box>
 
-            <Paper className="soft-panel" sx={{ p: 3 }}>
-              <Grid container spacing={2}>
-                <ProductInfo label={selectedVariant ? "Variante" : "Desde"} value={selectedVariant?.name ?? formatCurrency(activePricing.finalPrice)} />
-              </Grid>
-              <Stack direction="row" spacing={1} alignItems="baseline" mt={2}>
-                <Typography variant="h4" fontWeight={900}>
-                  {formatCurrency(activePricing.finalPrice)}
+            <Paper className="soft-panel" sx={{ p: { xs: 2.5, md: 3 }, border: "1px solid rgba(64,44,37,.08)" }}>
+              <Stack spacing={1.25}>
+                <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 0.4 }}>
+                  {"Precio"}
                 </Typography>
-                {activePricing.hasDiscount && (
-                  <Typography color="text.secondary" sx={{ textDecoration: "line-through" }}>
-                    {formatCurrency(activePricing.originalPrice)}
+                <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                  <Typography variant="h4" fontWeight={900} sx={{ fontSize: { xs: 32, md: 36 } }}>
+                    {formatCurrency(activePricing.finalPrice)}
                   </Typography>
-                )}
+                  {activePricing.hasDiscount && (
+                    <Typography color="text.secondary" sx={{ textDecoration: "line-through" }}>
+                      {formatCurrency(activePricing.originalPrice)}
+                    </Typography>
+                  )}
+                </Stack>
               </Stack>
             </Paper>
 
             {activePriceTiers.length > 0 && (
-              <Paper sx={{ p: 3 }}>
+              <Paper sx={{ p: { xs: 2.5, md: 3 }, border: "1px solid rgba(64,44,37,.08)" }}>
                 <Typography variant="h6" fontWeight={900}>
                   Precios por cantidad
                 </Typography>
-                <Stack spacing={1} mt={1.25}>
+                <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                  Ideal si necesitas varias piezas del mismo diseño.
+                </Typography>
+                <Stack spacing={1.1} mt={1.5}>
                   {activePriceTiers.map((tier) => (
-                    <Stack key={tier.id ?? tier.minQuantity} direction="row" justifyContent="space-between" gap={2}>
+                    <Stack
+                      key={tier.id ?? tier.minQuantity}
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="flex-start"
+                      gap={2}
+                      sx={{ py: 1.1, borderBottom: "1px solid rgba(64,44,37,.08)" }}
+                    >
                       <Typography>{tier.label ?? `${tier.minQuantity}+ unidades`}</Typography>
                       <Stack spacing={0.25} alignItems="flex-end">
                         <Typography fontWeight={900} textAlign="right">
@@ -249,9 +325,9 @@ export function ProductPage() {
             )}
 
             {product.extras.length > 0 && (
-              <Paper sx={{ p: 3 }}>
+              <Paper sx={{ p: { xs: 2.5, md: 3 }, border: "1px solid rgba(64,44,37,.08)" }}>
                 <Typography variant="h6" fontWeight={900}>
-                  Opciones disponibles
+                  Opciones adicionales
                 </Typography>
                 <Stack spacing={1} mt={1.25}>
                   {product.extras.map((extra) => (
@@ -266,6 +342,21 @@ export function ProductPage() {
               </Paper>
             )}
 
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+              {consultUrl ? (
+                <Button href={consultUrl} target="_blank" rel="noreferrer" size="large" variant="contained" startIcon={<WhatsAppIcon size={20} />}>
+                  Consultar por WhatsApp
+                </Button>
+              ) : (
+                <Button component={Link} to="/contacto" size="large" variant="contained">
+                  Contactar
+                </Button>
+              )}
+              <Button component={Link} to="/catalogo" size="large" variant="outlined">
+                Ver más productos
+              </Button>
+            </Stack>
+
             <ProductReviews
               product={product}
               onReviewCreated={(review) =>
@@ -277,35 +368,9 @@ export function ProductPage() {
                 })
               }
             />
-
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-              {consultUrl ? (
-                <Button href={consultUrl} target="_blank" rel="noreferrer" size="large" variant="contained" startIcon={<WhatsAppIcon size={20} />}>
-                  Consultar por WhatsApp
-                </Button>
-              ) : (
-                <Button component={Link} to="/contacto" size="large" variant="contained">
-                  Contactar
-                </Button>
-              )}
-              <Button component={Link} to="/" size="large" variant="outlined">
-                Ver más productos
-              </Button>
-            </Stack>
           </Stack>
         </Grid>
       </Grid>
     </Container>
-  );
-}
-
-function ProductInfo({ label, value }: { label: string; value: string }) {
-  return (
-    <Grid size={{ xs: 6 }}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography fontWeight={900}>{value}</Typography>
-    </Grid>
   );
 }

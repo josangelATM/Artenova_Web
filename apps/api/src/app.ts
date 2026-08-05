@@ -23,7 +23,14 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
   if (env.UPLOAD_DRIVER === "local") {
-    app.use("/uploads", express.static(path.resolve(env.LOCAL_UPLOAD_DIR)));
+    app.use(
+      "/uploads",
+      (_req, res, next) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        next();
+      },
+      express.static(path.resolve(env.LOCAL_UPLOAD_DIR))
+    );
   }
 
   app.get("/api/health", (_req, res) => {

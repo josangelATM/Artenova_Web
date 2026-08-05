@@ -91,7 +91,7 @@ describe("CatalogPage", () => {
     cleanup();
   });
 
-  it("shows occasion cards and then goes directly to catalog controls", async () => {
+  it("goes directly to category controls without the collections section", async () => {
     const list = [makeProduct("p1", "Producto 1"), makeProduct("p2", "Producto 2")];
     settingsMock.mockResolvedValue(settings);
     categoriesMock.mockResolvedValue(categories);
@@ -103,7 +103,7 @@ describe("CatalogPage", () => {
       expect(screen.getByPlaceholderText(/busca por nombre, referencia o idea/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/explora por ocasión/i)).toBeInTheDocument();
+    expect(screen.queryByText(/explora por ocasión/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/destacado/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/piezas para empezar/i)).not.toBeInTheDocument();
     expect(screen.getByText("Categorías")).toBeInTheDocument();

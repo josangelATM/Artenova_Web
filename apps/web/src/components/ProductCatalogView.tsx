@@ -68,13 +68,6 @@ export function ProductCatalogView() {
     navigate("/catalogo");
   }
 
-  function selectCategory(slug: string) {
-    const next = new URLSearchParams(searchParams);
-    next.delete("category");
-    navigate({ pathname: slug ? `/catalogo/${slug}` : "/catalogo", search: next.toString() });
-    document.getElementById("catalog-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   useEffect(() => {
     const allParams = new URLSearchParams();
     void Promise.all([api.categories(), api.settings(), api.products(allParams)]).then(([nextCategories, nextSettings, nextProducts]) => {
@@ -136,30 +129,6 @@ export function ProductCatalogView() {
     <Box className="catalog-shell">
       <Container id="catalogo" maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
         <Stack spacing={{ xs: 2.5, md: 3.5 }}>
-          {categories.length > 0 && (
-            <Stack spacing={1.5}>
-              <SectionHeading eyebrow="Colecciones" title="Explora por ocasión" actionLabel="Ver todo" onAction={() => selectCategory("")} />
-              <Grid container spacing={{ xs: 1.5, md: 2 }}>
-                {categories.map((item) => {
-                  const sample = catalogProducts.find((product) => product.categoryId === item.id);
-                  return (
-                    <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                      <Button className="collection-card" onClick={() => selectCategory(item.slug)} fullWidth>
-                        {sample?.images[0] && <Box component="img" src={sample.images[0].url} alt={sample.images[0].alt || item.name} />}
-                        <Box className="collection-card-copy">
-                          <Typography variant="h6" fontWeight={900}>
-                            {item.name}
-                          </Typography>
-                          <Typography variant="body2">{item.description ?? "Modelos personalizados para esta ocasión."}</Typography>
-                        </Box>
-                      </Button>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Stack>
-          )}
-
           <Box className="catalog-premium-bar">
             <Grid container spacing={{ xs: 1.5, md: 2.5 }} alignItems="center">
               <Grid size={{ xs: 12, lg: 7 }}>
