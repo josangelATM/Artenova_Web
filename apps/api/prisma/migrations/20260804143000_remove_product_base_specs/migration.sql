@@ -1,0 +1,4 @@
+ALTER TABLE "Product"
+  DROP COLUMN IF EXISTS "material",
+  DROP COLUMN IF EXISTS "size",
+  DROP COLUMN IF EXISTS "technique";

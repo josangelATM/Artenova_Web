@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Box, Button, Container, Divider, Grid, Stack, Typography } from "@mui/material";
-import { Clock, Mail, MapPin, MessageCircle } from "lucide-react";
+import { Clock, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { SiteSettings } from "@artenova/shared";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 export function Footer() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -67,7 +68,7 @@ export function Footer() {
               <Typography fontWeight={900}>Consulta por WhatsApp</Typography>
               <Stack direction={{ xs: "column", sm: "row", md: "column" }} spacing={1.25}>
                 {whatsappUrl && (
-                  <Button href={whatsappUrl} target="_blank" rel="noreferrer" color="secondary" variant="contained" startIcon={<MessageCircle size={18} />}>
+                  <Button href={whatsappUrl} target="_blank" rel="noreferrer" color="secondary" variant="contained" startIcon={<WhatsAppIcon size={18} />}>
                     WhatsApp
                   </Button>
                 )}

@@ -55,9 +55,6 @@ model Product {
   basePrice    Decimal       @db.Decimal(10, 2)
   discountType DiscountType?
   discountValue Decimal?     @db.Decimal(10, 2)
-  material     String?
-  size         String?
-  technique    String?
   isPublished  Boolean       @default(true)
   isFeatured   Boolean       @default(false)
   isHero        Boolean       @default(false)
@@ -66,6 +63,7 @@ model Product {
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images       ProductImage[]
   priceTiers   PriceTier[]
+  options      ProductOption[]
   variants     ProductVariant[]
   extras       ProductExtra[]
   customFields CustomField[]
@@ -81,6 +79,7 @@ model ProductVariant {
   product       Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
   name          String
   sku           String?
+  selectionKey  String?
   basePrice     Decimal                   @db.Decimal(10, 2)
   discountType  DiscountType?
   discountValue Decimal?                  @db.Decimal(10, 2)
@@ -88,11 +87,51 @@ model ProductVariant {
   position      Int                       @default(0)
   images        ProductVariantImage[]
   attributes    ProductVariantAttribute[]
+  optionValues  ProductVariantOptionValue[]
   priceTiers    PriceTier[]
   createdAt     DateTime                  @default(now())
   updatedAt     DateTime                  @updatedAt
 
   @@index([productId, position])
+  @@index([productId, selectionKey])
+}
+
+model ProductOption {
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int                  @default(0)
+  values    ProductOptionValue[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([productId, position])
+}
+
+model ProductOptionValue {
+  id         String                     @id @default(cuid())
+  optionId    String
+  option      ProductOption             @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  value       String
+  position    Int                       @default(0)
+  swatch      String?
+  variants    ProductVariantOptionValue[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@index([optionId, position])
+}
+
+model ProductVariantOptionValue {
+  variantId     String
+  optionValueId String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue   ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+  createdAt     DateTime           @default(now())
+
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
 }
 
 model ProductVariantImage {

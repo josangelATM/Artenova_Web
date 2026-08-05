@@ -47,13 +47,18 @@ export function AdminProductDetailPage() {
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
       {product && (
         <>
+          {(() => {
+            const primaryVariant = product.variants.find((variant) => variant.isActive) ?? product.variants[0] ?? null;
+            const hasOptions = product.productOptions.length > 0;
+            return (
+              <>
           <AdminDetailSection title="Datos base">
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <AdminField label="Slug" value={product.slug} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <AdminField label="Referencia" value={product.sku || "Sin referencia"} />
+                <AdminField label="Referencia" value={(hasOptions ? product.sku : primaryVariant?.sku) || "Sin referencia"} />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <AdminField label="Estado" value={<StatusChip status={product.isPublished ? "published" : "draft"} />} />
@@ -67,22 +72,13 @@ export function AdminProductDetailPage() {
               <Grid size={{ xs: 12 }}>
                 <AdminField label="Descripción" value={product.description} />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <AdminField label="Material" value={product.material || "A confirmar"} />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <AdminField label="Tamaño" value={product.size || "A confirmar"} />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <AdminField label="Técnica" value={product.technique || "A confirmar"} />
-              </Grid>
             </Grid>
           </AdminDetailSection>
 
           <AdminDetailSection title="Descuento y precios por cantidad">
-            <AdminField label="Descuento" value={product.discountType ? `${product.discountType} ${product.discountValue ?? 0}` : "Sin descuento"} />
+            <AdminField label="Descuento" value={(hasOptions ? product.discountType : primaryVariant?.discountType) ? `${hasOptions ? product.discountType : primaryVariant?.discountType} ${hasOptions ? product.discountValue ?? 0 : primaryVariant?.discountValue ?? 0}` : "Sin descuento"} />
             <Stack spacing={1}>
-              {product.priceTiers.length === 0 && <Typography color="text.secondary">Sin precios por cantidad a nivel producto.</Typography>}
+              {product.priceTiers.length === 0 && <Typography color="text.secondary">Sin precios por cantidad visibles.</Typography>}
               {product.priceTiers.map((tier) => (
                 <Stack key={tier.id ?? tier.minQuantity} direction="row" justifyContent="space-between" gap={2}>
                   <Typography>{tier.label ?? `${tier.minQuantity}+ unidades`}</Typography>
@@ -104,7 +100,14 @@ export function AdminProductDetailPage() {
           </AdminDetailSection>
 
           <AdminDetailSection title="Variantes">
-            {product.variants.length === 0 && <Typography color="text.secondary">Producto simple, sin variantes.</Typography>}
+            {!hasOptions && <Typography color="text.secondary">Producto simple con una variante principal automatica.</Typography>}
+            {product.productOptions.length > 0 && (
+              <Stack direction="row" gap={0.75} flexWrap="wrap" mb={2}>
+                {product.productOptions.map((option) => (
+                  <Chip key={option.id} label={`${option.name}: ${option.values.map((value) => value.value).join(", ")}`} size="small" />
+                ))}
+              </Stack>
+            )}
             <Stack spacing={2}>
               {product.variants.map((variant) => (
                 <Box key={variant.id} sx={{ border: "1px solid rgba(64,44,37,.10)", borderRadius: 2, p: 2 }}>
@@ -115,13 +118,16 @@ export function AdminProductDetailPage() {
                     </Stack>
                     <Typography color="text.secondary">Precio: ${variant.pricingSummary.finalPrice.toFixed(2)}</Typography>
                     <Stack direction="row" gap={0.75} flexWrap="wrap">
-                      {variant.attributes.map((attribute, index) => <Chip key={`${variant.id}-${index}`} label={`${attribute.name}: ${attribute.value}`} size="small" variant="outlined" />)}
+                      {variant.selections.map((selection) => <Chip key={`${variant.id}-${selection.optionValueId}`} label={`${selection.optionName}: ${selection.value}`} size="small" variant="outlined" />)}
                     </Stack>
                   </Stack>
                 </Box>
               ))}
             </Stack>
           </AdminDetailSection>
+              </>
+            );
+          })()}
         </>
       )}
     </Stack>

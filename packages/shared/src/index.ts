@@ -76,11 +76,36 @@ export const productVariantAttributeSchema = z.object({
   position: z.number().int().nonnegative().optional(),
 });
 
+export const productOptionValueSchema = z.object({
+  id: z.string(),
+  optionId: z.string().optional(),
+  value: z.string().min(1),
+  position: z.number().int().nonnegative(),
+  swatch: z.string().optional().nullable(),
+});
+
+export const productOptionSchema = z.object({
+  id: z.string(),
+  productId: z.string().optional(),
+  name: z.string().min(1),
+  position: z.number().int().nonnegative(),
+  values: z.array(productOptionValueSchema).default([]),
+});
+
+export const productVariantSelectionSchema = z.object({
+  optionId: z.string(),
+  optionName: z.string(),
+  optionValueId: z.string(),
+  value: z.string(),
+  position: z.number().int().nonnegative(),
+});
+
 export const productVariantSchema = z.object({
   id: z.string(),
   productId: z.string().optional(),
   name: z.string(),
   sku: z.string().nullable().optional(),
+  selectionKey: z.string().nullable().optional(),
   basePrice: moneySchema,
   discountType: z.enum(discountTypeValues).nullable().optional(),
   discountValue: moneySchema.nullable().optional(),
@@ -88,6 +113,7 @@ export const productVariantSchema = z.object({
   position: z.number().int().nonnegative(),
   images: z.array(productImageSchema).default([]),
   attributes: z.array(productVariantAttributeSchema).default([]),
+  selections: z.array(productVariantSelectionSchema).default([]),
   priceTiers: z.array(priceTierSchema).default([]),
   pricingSummary: pricingSummarySchema,
 });
@@ -145,9 +171,6 @@ export const productSchema = z.object({
   description: z.string(),
   categoryId: z.string(),
   basePrice: moneySchema,
-  material: z.string().nullable(),
-  size: z.string().nullable(),
-  technique: z.string().nullable(),
   discountType: z.enum(discountTypeValues).nullable().optional(),
   discountValue: moneySchema.nullable().optional(),
   isPublished: z.boolean(),
@@ -158,6 +181,7 @@ export const productSchema = z.object({
   priceTiers: z.array(priceTierSchema),
   extras: z.array(productExtraSchema),
   customFields: z.array(customFieldSchema),
+  productOptions: z.array(productOptionSchema).default([]),
   variants: z.array(productVariantSchema).default([]),
   pricingSummary: pricingSummarySchema,
   reviews: z.array(productReviewSchema).default([]),
@@ -203,9 +227,6 @@ export const adminProductInputSchema = z.object({
   basePrice: moneySchema,
   discountType: z.enum(discountTypeValues).optional().nullable(),
   discountValue: moneySchema.optional().nullable(),
-  material: z.string().optional().nullable(),
-  size: z.string().optional().nullable(),
-  technique: z.string().optional().nullable(),
   isPublished: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isHero: z.boolean().default(false),
@@ -214,9 +235,12 @@ export const adminProductInputSchema = z.object({
   priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   extras: z.array(productExtraSchema.omit({ id: true })).default([]),
   customFields: z.array(customFieldSchema.omit({ id: true })).default([]),
-  variants: z.array(productVariantSchema.omit({ id: true, pricingSummary: true }).extend({
+  productOptions: z.array(productOptionSchema.extend({
+    values: z.array(productOptionValueSchema).default([]),
+  })).default([]),
+  variants: z.array(productVariantSchema.omit({ pricingSummary: true, attributes: true, selections: true }).extend({
     images: z.array(productImageSchema.omit({ id: true })).default([]),
-    attributes: z.array(productVariantAttributeSchema.omit({ id: true })).default([]),
+    optionValueIds: z.array(z.string()).default([]),
     priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   })).default([]),
 });
@@ -251,6 +275,9 @@ export type ProductImage = z.infer<typeof productImageSchema>;
 export type PriceTier = z.infer<typeof priceTierSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type ProductVariantAttribute = z.infer<typeof productVariantAttributeSchema>;
+export type ProductOption = z.infer<typeof productOptionSchema>;
+export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
+export type ProductVariantSelection = z.infer<typeof productVariantSelectionSchema>;
 export type ProductExtra = z.infer<typeof productExtraSchema>;
 export type CustomField = z.infer<typeof customFieldSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

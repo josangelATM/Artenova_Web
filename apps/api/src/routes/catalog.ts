@@ -5,17 +5,31 @@ import { env } from "../env";
 import { prisma } from "../lib/prisma";
 
 export const catalogRouter = Router();
+const db = prisma as any;
 
 const productInclude = {
   category: true,
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
+  options: {
+    orderBy: { position: "asc" as const },
+    include: { values: { orderBy: { position: "asc" as const } } }
+  },
   variants: {
     where: { isActive: true },
     orderBy: { position: "asc" as const },
     include: {
       images: { orderBy: { position: "asc" as const } },
       attributes: { orderBy: { position: "asc" as const } },
+      optionValues: {
+        include: {
+          optionValue: {
+            include: {
+              option: true
+            }
+          }
+        }
+      },
       priceTiers: { orderBy: { minQuantity: "asc" as const } }
     }
   },
@@ -58,8 +72,7 @@ catalogRouter.get("/products", async (req, res) => {
         ? [
             { name: { contains: q, mode: "insensitive" } },
             { sku: { contains: q, mode: "insensitive" } },
-            { description: { contains: q, mode: "insensitive" } },
-            { material: { contains: q, mode: "insensitive" } }
+            { description: { contains: q, mode: "insensitive" } }
           ]
         : undefined
     },
@@ -93,7 +106,7 @@ catalogRouter.post("/products/:slug/reviews", async (req, res) => {
     return;
   }
 
-  const review = await prisma.productReview.create({
+  const review = await db.productReview.create({
     data: {
       productId: product.id,
       rating: input.rating,

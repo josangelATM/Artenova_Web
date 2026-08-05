@@ -12,7 +12,6 @@ import {
 import {
   ArrowRight,
   CheckCircle2,
-  MessageCircle,
   Palette,
   Truck,
 } from "lucide-react";
@@ -20,6 +19,7 @@ import { Link } from "react-router-dom";
 import type { Product, SiteSettings } from "@artenova/shared";
 import { ProductCard } from "../components/ProductCard";
 import { CatalogGridSkeleton } from "../components/SkeletonStates";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
 import { selectFeaturedProducts } from "../lib/featuredProducts";
@@ -27,7 +27,7 @@ import { applySeo } from "../lib/seo";
 
 const trustItems = [
   { icon: CheckCircle2, text: "Diseño antes de fabricar" },
-  { icon: MessageCircle, text: "Atención directa por WhatsApp" },
+  { icon: WhatsAppIcon, text: "Atención directa por WhatsApp" },
   { icon: Truck, text: "Envios a todo el País" },
   { icon: Palette, text: "Personalización por pedido" },
 ];
@@ -83,7 +83,7 @@ export function HomePage() {
                   </Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
                     {quoteUrl ? (
-                      <Button href={quoteUrl} target="_blank" rel="noreferrer" variant="contained" startIcon={<MessageCircle size={18} />}>
+                      <Button href={quoteUrl} target="_blank" rel="noreferrer" variant="contained" startIcon={<WhatsAppIcon size={18} />}>
                         Cotizar por WhatsApp
                       </Button>
                     ) : (

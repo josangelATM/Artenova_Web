@@ -109,9 +109,9 @@ export function AdminProductsPage() {
       },
       {
         field: "basePrice",
-        headerName: "Precio base",
+        headerName: "Precio desde",
         minWidth: 140,
-        renderCell: ({ row }) => `$${row.basePrice.toFixed(2)}`
+        renderCell: ({ row }) => `$${row.pricingSummary.finalPrice.toFixed(2)}`
       },
       {
         field: "featured",

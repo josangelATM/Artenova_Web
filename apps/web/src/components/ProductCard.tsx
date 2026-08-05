@@ -5,9 +5,10 @@ import { Link } from "react-router-dom";
 import { formatCurrency, type Product } from "@artenova/shared";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
-  const image = product.images[0];
+  const image = product.images[0] ?? product.variants[0]?.images[0];
   const [imageFailed, setImageFailed] = useState(false);
-  const extraImages = Math.max(0, product.images.length - 1);
+  const totalImages = product.images.length > 0 ? product.images.length : product.variants.reduce((sum, variant) => sum + variant.images.length, 0);
+  const extraImages = Math.max(0, totalImages - 1);
 
   useEffect(() => {
     setImageFailed(false);
@@ -68,9 +69,9 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
       </Box>
       <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1.25, flex: 1, width: "100%", p: { xs: 2, md: 2.25 } }}>
         <Stack spacing={0.7} sx={{ flex: 1 }}>
-          {product.sku && (
+          {(product.sku ?? product.variants[0]?.sku) && (
             <Typography variant="caption" color="text.secondary" fontWeight={900} letterSpacing={0.4}>
-              REF {product.sku}
+              REF {product.sku ?? product.variants[0]?.sku}
             </Typography>
           )}
           <Typography variant="h6" fontWeight={900} lineHeight={1.08} sx={{ overflowWrap: "anywhere", fontSize: { xs: 19, md: 20 } }}>

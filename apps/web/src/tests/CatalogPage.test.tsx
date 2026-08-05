@@ -31,9 +31,6 @@ function makeProduct(id: string, name: string): Product {
     description: `Descripción de ${name}`,
     categoryId: "c1",
     basePrice: 20,
-    material: "MDF",
-    size: "20 cm",
-    technique: "Grabado láser",
     isPublished: true,
     isFeatured: id === "p1",
     isHero: false,
@@ -42,6 +39,7 @@ function makeProduct(id: string, name: string): Product {
     priceTiers: [],
     extras: [],
     customFields: [],
+    productOptions: [],
     variants: [],
     reviews: [],
     reviewSummary: { averageRating: 0, reviewCount: 0 },
@@ -152,7 +150,7 @@ describe("CatalogPage", () => {
     await waitFor(
       () => {
         expect(productsMock).toHaveBeenCalledTimes(1);
-        expect((productsMock.mock.calls[0][0] as URLSearchParams).get("q")).toBe("placa");
+        expect((productsMock.mock.calls[0]![0] as URLSearchParams).get("q")).toBe("placa");
         expect(applySeoMock).toHaveBeenCalledWith(expect.objectContaining({ robots: "noindex,follow" }));
       },
       { timeout: 900 },

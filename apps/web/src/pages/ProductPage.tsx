@@ -1,14 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
-import { MessageCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { formatCurrency, type Product, type SiteSettings } from "@artenova/shared";
+import { formatCurrency, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
 import { ProductGallery } from "../components/ProductGallery";
 import { ProductReviews } from "../components/ProductReviews";
 import { ProductPageSkeleton } from "../components/SkeletonStates";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
 import { applySeo, productSeoDescription } from "../lib/seo";
+
+type SelectionState = Record<string, string>;
+
+function variantSelectionMap(variant: ProductVariant) {
+  return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
+}
+
+function matchesSelection(variant: ProductVariant, selection: SelectionState) {
+  const byOptionId = variantSelectionMap(variant);
+  return Object.entries(selection).every(([optionId, optionValueId]) => !optionValueId || byOptionId[optionId] === optionValueId);
+}
+
+function completeSelectionFromVariant(variant: ProductVariant) {
+  return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
+}
+
+function resolveNextSelection(options: ProductOption[], variants: ProductVariant[], currentSelection: SelectionState, optionId: string, optionValueId: string) {
+  const draftSelection = { ...currentSelection, [optionId]: optionValueId };
+  const exactMatches = variants.filter((variant) => matchesSelection(variant, draftSelection));
+  if (exactMatches.length === 0) {
+    const fallbackVariant = variants.find((variant) => variant.selections.some((selection) => selection.optionId === optionId && selection.optionValueId === optionValueId));
+    return fallbackVariant ? completeSelectionFromVariant(fallbackVariant) : currentSelection;
+  }
+
+  const anchorVariant = exactMatches[0]!;
+  const completed = completeSelectionFromVariant(anchorVariant);
+  return options.reduce<SelectionState>((acc, option) => ({
+    ...acc,
+    [option.id]: draftSelection[option.id] ?? completed[option.id] ?? ""
+  }), {});
+}
 
 export function ProductPage() {
   const { slug } = useParams();
@@ -16,7 +47,7 @@ export function ProductPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [selectedOptions, setSelectedOptions] = useState<SelectionState>({});
 
   useEffect(() => {
     if (!slug) return;
@@ -29,7 +60,8 @@ export function ProductPage() {
         if (!active) return;
         setProduct(nextProduct);
         setSettings(nextSettings);
-        setSelectedVariantId(nextProduct.variants[0]?.id ?? "");
+        const firstVariant = nextProduct.variants.find((variant) => variant.isActive) ?? nextProduct.variants[0] ?? null;
+        setSelectedOptions(firstVariant ? completeSelectionFromVariant(firstVariant) : {});
       })
       .catch((err) => {
         if (!active) return;
@@ -45,21 +77,37 @@ export function ProductPage() {
     };
   }, [slug]);
 
-  const selectedVariant = product?.variants.find((variant) => variant.id === selectedVariantId) ?? product?.variants[0] ?? null;
+  const productOptions = product?.productOptions ?? [];
+  const activeVariants = useMemo(() => product?.variants.filter((variant) => variant.isActive) ?? [], [product?.variants]);
+  const selectedVariant = useMemo(() => {
+    if (!product) return null;
+    if (productOptions.length === 0) return activeVariants[0] ?? product.variants[0] ?? null;
+    return activeVariants.find((variant) => {
+      const selectionMap = variantSelectionMap(variant);
+      return productOptions.every((option) => selectionMap[option.id] === selectedOptions[option.id]);
+    }) ?? activeVariants.find((variant) => matchesSelection(variant, selectedOptions)) ?? activeVariants[0] ?? null;
+  }, [activeVariants, product, productOptions, selectedOptions]);
+
   const activeImages = selectedVariant?.images.length ? selectedVariant.images : product?.images ?? [];
-  const activePricing = selectedVariant?.pricingSummary ?? product?.pricingSummary ?? null;
-  const activePriceTiers = selectedVariant?.priceTiers.length ? selectedVariant.priceTiers : product?.priceTiers ?? [];
-  const variantAttributeGroups = useMemo(() => {
-    if (!product?.variants.length) return [] as Array<{ name: string; values: string[] }>;
-    const grouped = new Map<string, Set<string>>();
-    product.variants.forEach((variant) => {
-      variant.attributes.forEach((attribute) => {
-        if (!grouped.has(attribute.name)) grouped.set(attribute.name, new Set<string>());
-        grouped.get(attribute.name)?.add(attribute.value);
+  const activePricing = selectedVariant?.pricingSummary ?? null;
+  const activePriceTiers = selectedVariant?.priceTiers ?? [];
+
+  const availabilityByOption = useMemo(() => {
+    if (!product) return new Map<string, Set<string>>();
+    const result = new Map<string, Set<string>>();
+    productOptions.forEach((option) => {
+      option.values.forEach((value) => {
+        const withoutCurrent = Object.fromEntries(Object.entries(selectedOptions).filter(([key]) => key !== option.id));
+        const isAvailable = activeVariants.some((variant) => {
+          if (!variant.selections.some((selection) => selection.optionId === option.id && selection.optionValueId === value.id)) return false;
+          return matchesSelection(variant, withoutCurrent);
+        });
+        if (!result.has(option.id)) result.set(option.id, new Set<string>());
+        if (isAvailable) result.get(option.id)?.add(value.id);
       });
     });
-    return Array.from(grouped.entries()).map(([name, values]) => ({ name, values: Array.from(values) }));
-  }, [product?.variants]);
+    return result;
+  }, [activeVariants, product, productOptions, selectedOptions]);
 
   useEffect(() => {
     if (!product || !activePricing) return;
@@ -92,7 +140,7 @@ export function ProductPage() {
 
   const consultUrl = whatsappHref(
     settings?.whatsapp,
-    `Hola, estoy interesado en ${product.name}${selectedVariant ? ` - ${selectedVariant.name}` : ""}${product.sku ? ` (REF ${product.sku})` : ""}.`
+    `Hola, estoy interesado en ${product.name}${selectedVariant ? ` - ${selectedVariant.name}` : ""}${(selectedVariant?.sku ?? product.sku) ? ` (REF ${selectedVariant?.sku ?? product.sku})` : ""}.`
   );
 
   return (
@@ -128,36 +176,31 @@ export function ProductPage() {
               <Typography color="text.secondary" mt={1}>
                 {product.description}
               </Typography>
-              {product.variants.length > 0 && (
-                <Stack spacing={1.25} mt={2}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                    Variantes disponibles
-                  </Typography>
-                  <Stack direction="row" gap={0.75} flexWrap="wrap">
-                    {product.variants.map((variant) => (
-                      <Chip
-                        key={variant.id}
-                        clickable
-                        color={variant.id === selectedVariant?.id ? "secondary" : "default"}
-                        variant={variant.id === selectedVariant?.id ? "filled" : "outlined"}
-                        label={variant.name}
-                        onClick={() => setSelectedVariantId(variant.id)}
-                      />
-                    ))}
-                  </Stack>
-                  {variantAttributeGroups.map((group) => (
-                    <Stack key={group.name} direction="row" gap={0.75} flexWrap="wrap" alignItems="center">
+
+              {productOptions.length > 0 && (
+                <Stack spacing={1.5} mt={2.5}>
+                  {productOptions.map((option) => (
+                    <Stack key={option.id} spacing={0.85}>
                       <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                        {group.name}
+                        {option.name}
                       </Typography>
-                      {group.values.map((value) => (
-                        <Chip
-                          key={`${group.name}-${value}`}
-                          label={value}
-                          size="small"
-                          variant={selectedVariant?.attributes.some((attribute) => attribute.name === group.name && attribute.value === value) ? "filled" : "outlined"}
-                        />
-                      ))}
+                      <Stack direction="row" gap={0.75} flexWrap="wrap">
+                        {option.values.map((value) => {
+                          const isSelected = selectedOptions[option.id] === value.id;
+                          const isAvailable = availabilityByOption.get(option.id)?.has(value.id) ?? false;
+                          return (
+                            <Chip
+                              key={value.id}
+                              clickable={isAvailable}
+                              disabled={!isAvailable}
+                              color={isSelected ? "secondary" : "default"}
+                              variant={isSelected ? "filled" : "outlined"}
+                              label={value.value}
+                              onClick={() => setSelectedOptions((current) => resolveNextSelection(productOptions, activeVariants, current, option.id, value.id))}
+                            />
+                          );
+                        })}
+                      </Stack>
                     </Stack>
                   ))}
                 </Stack>
@@ -166,9 +209,6 @@ export function ProductPage() {
 
             <Paper className="soft-panel" sx={{ p: 3 }}>
               <Grid container spacing={2}>
-                <ProductInfo label="Material" value={product.material ?? "A confirmar"} />
-                <ProductInfo label="Tamaño" value={product.size ?? "A confirmar"} />
-                <ProductInfo label="Técnica" value={product.technique ?? "A confirmar"} />
                 <ProductInfo label={selectedVariant ? "Variante" : "Desde"} value={selectedVariant?.name ?? formatCurrency(activePricing.finalPrice)} />
               </Grid>
               <Stack direction="row" spacing={1} alignItems="baseline" mt={2}>
@@ -240,7 +280,7 @@ export function ProductPage() {
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
               {consultUrl ? (
-                <Button href={consultUrl} target="_blank" rel="noreferrer" size="large" variant="contained" startIcon={<MessageCircle size={20} />}>
+                <Button href={consultUrl} target="_blank" rel="noreferrer" size="large" variant="contained" startIcon={<WhatsAppIcon size={20} />}>
                   Consultar por WhatsApp
                 </Button>
               ) : (

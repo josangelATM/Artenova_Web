@@ -14,12 +14,25 @@ const defaultDescription = "Artenova, taller creativo de corte y grabado láser 
 const productInclude = {
   images: { orderBy: { position: "asc" as const } },
   priceTiers: { orderBy: { minQuantity: "asc" as const } },
+  options: {
+    orderBy: { position: "asc" as const },
+    include: { values: { orderBy: { position: "asc" as const } } }
+  },
   variants: {
     where: { isActive: true },
     orderBy: { position: "asc" as const },
     include: {
       images: { orderBy: { position: "asc" as const } },
       attributes: { orderBy: { position: "asc" as const } },
+      optionValues: {
+        include: {
+          optionValue: {
+            include: {
+              option: true
+            }
+          }
+        }
+      },
       priceTiers: { orderBy: { minQuantity: "asc" as const } }
     }
   },

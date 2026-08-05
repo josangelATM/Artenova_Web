@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Alert, Box, Button, Container, Grid, Paper, Stack, Typography } from "@mui/material";
-import { CheckCircle2, Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { CheckCircle2, Clock, Mail, MapPin, Phone } from "lucide-react";
 import type { SiteSettings } from "@artenova/shared";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { api } from "../lib/api";
 import { whatsappHref } from "../lib/contact";
 import { applySeo } from "../lib/seo";
@@ -48,7 +49,7 @@ export function ContactPage() {
 
             <Stack direction={{ xs: "column", sm: "row", md: "column" }} spacing={1.25} alignItems="stretch">
               {whatsappUrl && (
-                <Button href={whatsappUrl} target="_blank" rel="noreferrer" variant="contained" startIcon={<MessageCircle size={18} />}>
+                <Button href={whatsappUrl} target="_blank" rel="noreferrer" variant="contained" startIcon={<WhatsAppIcon size={18} />}>
                   Contactar por WhatsApp
                 </Button>
               )}
@@ -93,7 +94,7 @@ export function ContactPage() {
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
                 {whatsappUrl && (
-                  <Button href={whatsappUrl} target="_blank" rel="noreferrer" variant="contained" size="large" startIcon={<MessageCircle size={18} />}>
+                  <Button href={whatsappUrl} target="_blank" rel="noreferrer" variant="contained" size="large" startIcon={<WhatsAppIcon size={18} />}>
                     Abrir WhatsApp
                   </Button>
                 )}

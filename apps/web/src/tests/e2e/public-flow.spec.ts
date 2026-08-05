@@ -71,9 +71,6 @@ test("admin can create a product with image and price tiers", async ({ page }, t
   await page.getByLabel("Categoría").click();
   await page.getByRole("option", { name: categoryName }).click({ force: true });
   await page.getByLabel("Precio base").fill("12.50");
-  await page.getByLabel("Material").fill("MDF");
-  await page.getByLabel("Tamaño").fill("10 cm");
-  await page.getByLabel("Técnica").fill("Grabado láser");
 
   await page.setInputFiles('input[type="file"]', path.resolve("public/seed/mascotas/mascotas-1.jpg"));
   await expect(page.getByRole("img", { name: productName })).toHaveAttribute("src", /products\//);

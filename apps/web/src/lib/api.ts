@@ -1,4 +1,4 @@
-import type { AdminCategoryInput, AdminProductReviewInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductImage, ProductReview, ProductVariant, ProductVariantAttribute, SiteSettings, UpdateOrderInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminProductReviewInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductImage, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateOrderInput } from "@artenova/shared";
 
 type AdminProductPayload = Omit<Partial<Product>, "images" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
   id?: string;
@@ -6,10 +6,15 @@ type AdminProductPayload = Omit<Partial<Product>, "images" | "priceTiers" | "ext
   priceTiers?: Array<Omit<PriceTier, "id">>;
   extras?: Array<Omit<ProductExtra, "id">>;
   customFields?: Array<Omit<CustomField, "id">>;
+  productOptions?: Array<
+    Omit<ProductOption, "productId" | "values"> & {
+      values?: ProductOptionValue[];
+    }
+  >;
   variants?: Array<
-    Omit<ProductVariant, "id" | "pricingSummary" | "images" | "attributes" | "priceTiers"> & {
+    Omit<ProductVariant, "pricingSummary" | "images" | "attributes" | "priceTiers" | "selections"> & {
       images?: Array<Omit<ProductImage, "id">>;
-      attributes?: Array<Omit<ProductVariantAttribute, "id">>;
+      optionValueIds?: string[];
       priceTiers?: Array<Omit<PriceTier, "id">>;
     }
   >;

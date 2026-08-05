@@ -194,9 +194,6 @@ const products = [
     description:
       "Cédulas de identificación personalizadas para mascotas, resistentes al agua, con acabado brillante y capa de resina para mayor durabilidad.",
     basePrice: 10,
-    material: "Acrílico con capa de resina",
-    size: "Grande, mediana y pequeña",
-    technique: "Impresión personalizada con acabado en resina",
     image: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
     imageUrl: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
     featured: true,
@@ -213,9 +210,6 @@ const products = [
     description:
       "Retrato personalizado con la foto de tu mascota, ideal para regalar o decorar un espacio especial.",
     basePrice: 16,
-    material: "MDF",
-    size: "20 cm x 17.3 cm",
-    technique: "Grabado láser",
     image: "/seed/mascotas/mascotas-2.jpg",
     featured: true,
     fields: petFields,
@@ -227,9 +221,6 @@ const products = [
     description:
       "Formato mediano para conservar un recuerdo personalizado de tu mascota.",
     basePrice: 13,
-    material: "MDF",
-    size: "13.7 cm x 11.6 cm",
-    technique: "Grabado láser",
     image: "/seed/mascotas/mascotas-3.jpg",
     featured: false,
     fields: petFields,
@@ -241,9 +232,6 @@ const products = [
     description:
       "Marco decorativo con fotos para honrar y guardar un recuerdo especial.",
     basePrice: 18,
-    material: "Madera",
-    size: "Decorativo",
-    technique: "Corte y grabado láser",
     image: "/seed/mascotas/mascotas-4.jpg",
     featured: true,
     fields: petFields,
@@ -254,9 +242,6 @@ const products = [
     slug: "huella-de-amor",
     description: "Marco decorativo personalizado con fotos de tu mascota.",
     basePrice: 15,
-    material: "Acrílico dorado y espejo",
-    size: "Decorativo",
-    technique: "Grabado láser",
     image: "/seed/mascotas/mascotas-5.jpg",
     featured: false,
     fields: petFields,
@@ -268,9 +253,6 @@ const products = [
     description:
       "Pieza acrílica con foto personalizada y mensaje conmemorativo.",
     basePrice: 16,
-    material: "Acrílico transparente",
-    size: "16 cm x 14 cm",
-    technique: "Grabado láser",
     image: "/seed/mascotas/mascotas-6.jpg",
     featured: false,
     fields: petFields,
@@ -281,9 +263,6 @@ const products = [
     slug: "llavero-personalizado-acrilico-dorado",
     description: "Detalle pequeño para llevar siempre a tu mascota contigo.",
     basePrice: 6,
-    material: "Acrílico dorado espejo y madera",
-    size: "5.5 cm",
-    technique: "Grabado láser en madera",
     image: "/seed/mascotas/mascotas-7.jpg",
     featured: false,
     fields: petFields,
@@ -294,9 +273,6 @@ const products = [
     slug: "portallaves-personalizado",
     description: "Portallaves con forma de huella y nombre de tu mascota.",
     basePrice: 20,
-    material: "MDF y acrílico",
-    size: "15 cm",
-    technique: "Corte y grabado láser",
     image: "/seed/mascotas/mascotas-8.jpg",
     featured: true,
     fields: petFields,
@@ -366,16 +342,13 @@ const products = [
       "/seed/bodas/bodas-9.jpg",
       weddingTiersAcrylic,
     ],
-  ].map(([slug, name, material, size, image, tiers], index) => ({
+  ].map(([slug, name, _material, _size, image, tiers], index) => ({
     categorySlug: "bodas",
     name: name as string,
     slug: slug as string,
     description:
       "Recordatorio personalizado para bodas con nombres, fecha y detalles grabados.",
     basePrice: (tiers as typeof weddingTiersMdf)[0]!.unitPrice,
-    material: material as string,
-    size: size as string,
-    technique: "Corte y grabado láser",
     image: image as string,
     featured: index < 2,
     isHero: slug === "recordatorio-bodas-acrilico-negro-dorado",
@@ -455,6 +428,11 @@ async function main() {
       await prisma.$transaction([
         prisma.productImage.deleteMany({ where: { productId: existing.id } }),
         prisma.priceTier.deleteMany({ where: { productId: existing.id } }),
+        prisma.priceTier.deleteMany({ where: { variant: { productId: existing.id } } }),
+        prisma.productVariantImage.deleteMany({ where: { variant: { productId: existing.id } } }),
+        prisma.productVariantOptionValue.deleteMany({ where: { variant: { productId: existing.id } } }),
+        prisma.productVariantAttribute.deleteMany({ where: { variant: { productId: existing.id } } }),
+        prisma.productVariant.deleteMany({ where: { productId: existing.id } }),
         prisma.productExtra.deleteMany({ where: { productId: existing.id } }),
         prisma.customField.deleteMany({ where: { productId: existing.id } }),
       ]);
@@ -467,9 +445,6 @@ async function main() {
         slug: product.slug,
         description: product.description,
         basePrice: product.basePrice,
-        material: product.material,
-        size: product.size,
-        technique: product.technique,
         isFeatured: product.featured,
         isHero,
         heroSlot: isHero ? (heroSlot ?? null) : null,
@@ -483,7 +458,18 @@ async function main() {
             },
           ],
         },
-        priceTiers: { create: "tiers" in product ? product.tiers : [] },
+        priceTiers: { create: [] },
+        variants: {
+          create: [
+            {
+              name: product.name,
+              basePrice: product.basePrice,
+              isActive: true,
+              position: 0,
+              priceTiers: { create: "tiers" in product ? product.tiers : [] }
+            }
+          ]
+        },
         extras: {
           create:
             "extras" in product
@@ -503,9 +489,6 @@ async function main() {
         name: product.name,
         description: product.description,
         basePrice: product.basePrice,
-        material: product.material,
-        size: product.size,
-        technique: product.technique,
         isPublished: true,
         isFeatured: product.featured,
         isHero,
@@ -520,7 +503,18 @@ async function main() {
             },
           ],
         },
-        priceTiers: { create: "tiers" in product ? product.tiers : [] },
+        priceTiers: { create: [] },
+        variants: {
+          create: [
+            {
+              name: product.name,
+              basePrice: product.basePrice,
+              isActive: true,
+              position: 0,
+              priceTiers: { create: "tiers" in product ? product.tiers : [] }
+            }
+          ]
+        },
         extras: {
           create:
             "extras" in product
