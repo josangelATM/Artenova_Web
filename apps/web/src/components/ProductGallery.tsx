@@ -351,7 +351,6 @@ export function ProductGallery({
   onActiveKeyChange: (key: string) => void;
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerAutoplay, setViewerAutoplay] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
   const [activeIndex, setActiveIndex] = useState(() => Math.max(0, items.findIndex((item) => item.key === activeKey)));
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -365,7 +364,7 @@ export function ProductGallery({
   const activeNavigationKey = hasMany ? activeKey : activePreviewKey;
   const navigationIndex = Math.max(0, navigationItems.findIndex((item) => item.key === activeNavigationKey));
   const canNavigate = navigationItems.length > 1;
-  const viewerVideoShouldAutoplay = viewerOpen && viewerAutoplay && activeMedia?.type === "video";
+  const viewerVideoShouldAutoplay = Boolean(viewerOpen && activeMedia?.type === "video");
   const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && !viewerOpen);
   const [videoThumbnailUrls, setVideoThumbnailUrls] = useState<Record<string, string>>({});
   const videoThumbnailUrlsRef = useRef<Record<string, string>>({});
@@ -374,12 +373,6 @@ export function ProductGallery({
     const index = items.findIndex((item) => item.key === activeKey);
     setActiveIndex(index >= 0 ? index : 0);
   }, [activeKey, items]);
-
-  useEffect(() => {
-    if (!viewerOpen) {
-      setViewerAutoplay(false);
-    }
-  }, [viewerOpen]);
 
   useEffect(() => () => {
     Object.values(videoThumbnailUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
@@ -542,10 +535,7 @@ export function ProductGallery({
           <Box
             component="button"
             type="button"
-            onClick={() => {
-              setViewerAutoplay(Boolean(activeMedia?.type === "video"));
-              setViewerOpen(true);
-            }}
+            onClick={() => setViewerOpen(true)}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             aria-label={activeMedia.type === "video" ? "Ampliar video" : "Ampliar imagen"}
@@ -740,7 +730,7 @@ export function ProductGallery({
                   label={activeMediaLabel}
                   shouldPlay={viewerVideoShouldAutoplay}
                   controls={activeMedia.type === "video"}
-                  preload="metadata"
+                  preload={activeMedia.type === "video" ? "auto" : "metadata"}
                   large
                 />
               </Box>
