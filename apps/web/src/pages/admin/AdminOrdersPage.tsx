@@ -1,9 +1,10 @@
+import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, FormControlLabel, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import { Button, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useTheme } from "@mui/material/styles";
 import { FilterX, Plus } from "lucide-react";
-import { formatCurrency, type Order } from "@artenova/shared";
+import { formatCurrency, type AdminOrderPaymentInput, type Order } from "@artenova/shared";
 import { Link as RouterLink } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip, adminSurfaceSx } from "./adminUi";
@@ -24,6 +25,15 @@ export function AdminOrdersPage() {
   const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
+  const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
+  const [paymentOrderId, setPaymentOrderId] = useState("");
+
+  const paymentMethods: Array<{ value: AdminOrderPaymentInput["method"]; label: string }> = [
+    { value: "efectivo", label: "Efectivo" },
+    { value: "yappy", label: "Yappy" },
+    { value: "transferencia", label: "Transferencia" },
+    { value: "otro", label: "Otro" },
+  ];
 
   useEffect(() => {
     let active = true;
@@ -47,13 +57,45 @@ export function AdminOrdersPage() {
     };
   }, [balanceOnly, dateFrom, dateTo, query, statusFilter]);
 
-  async function markCompleted(id: string) {
+  async function markDelivered(id: string) {
     setUpdatingId(id);
     try {
-      const updated = await api.updateAdminOrderStatus(id, { status: "completado" });
+      const updated = await api.updateAdminOrderStatus(id, { status: "entregado" });
       setOrders((current) => current.map((order) => order.id === id ? updated : order));
     } finally {
       setUpdatingId("");
+    }
+  }
+
+  function openPaymentMenu(event: MouseEvent<HTMLElement>, id: string) {
+    setPaymentMenuAnchor(event.currentTarget);
+    setPaymentOrderId(id);
+  }
+
+  function closePaymentMenu() {
+    setPaymentMenuAnchor(null);
+    setPaymentOrderId("");
+  }
+
+  async function markPaid(method: AdminOrderPaymentInput["method"]) {
+    const order = orders.find((current) => current.id === paymentOrderId);
+    if (!order || order.balance <= 0) {
+      closePaymentMenu();
+      return;
+    }
+
+    setUpdatingId(order.id);
+    try {
+      const updated = await api.createOrderPayment(order.id, {
+        amount: order.balance,
+        method,
+        reference: null,
+        note: "Pago completo registrado desde la lista de pedidos.",
+      });
+      setOrders((current) => current.map((item) => item.id === order.id ? updated : item));
+    } finally {
+      setUpdatingId("");
+      closePaymentMenu();
     }
   }
 
@@ -72,9 +114,14 @@ export function AdminOrdersPage() {
           <Button component={RouterLink} to={`/admin/pedidos/${row.id}/editar`} size="small" variant="text">
             Editar
           </Button>
-          {row.status !== "completado" && (
-            <Button size="small" variant="text" disabled={updatingId === row.id} onClick={() => void markCompleted(row.id)}>
-              Completar
+          {row.balance > 0 && (
+            <Button size="small" variant="text" disabled={updatingId === row.id} onClick={(event) => openPaymentMenu(event, row.id)}>
+              Pagado
+            </Button>
+          )}
+          {row.status !== "entregado" && (
+            <Button size="small" variant="text" disabled={updatingId === row.id} onClick={() => void markDelivered(row.id)}>
+              Entregado
             </Button>
           )}
         </Stack>
@@ -169,9 +216,12 @@ export function AdminOrdersPage() {
             <TextField select size="small" label="Estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} sx={{ minWidth: 160 }}>
               <MenuItem value="all">Todos</MenuItem>
               <MenuItem value="nuevo">Nuevo</MenuItem>
-              <MenuItem value="en_proceso">En proceso</MenuItem>
-              <MenuItem value="completado">Completado</MenuItem>
-              <MenuItem value="cancelado">Cancelado</MenuItem>
+              <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>
+              <MenuItem value="pendiente_aprobacion">Pendiente por aprobación</MenuItem>
+              <MenuItem value="pendiente_fabricacion">Pendiente por fabricación</MenuItem>
+              <MenuItem value="pendiente_imprimir">Pendiente por imprimir</MenuItem>
+              <MenuItem value="listo_entrega">Listo para entrega</MenuItem>
+              <MenuItem value="entregado">Entregado</MenuItem>
             </TextField>
             <TextField size="small" type="date" label="Desde" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} sx={{ minWidth: 150 }} InputLabelProps={{ shrink: true }} />
             <TextField size="small" type="date" label="Hasta" value={dateTo} onChange={(event) => setDateTo(event.target.value)} sx={{ minWidth: 150 }} InputLabelProps={{ shrink: true }} />
@@ -221,11 +271,18 @@ export function AdminOrdersPage() {
                     Editar
                   </Button>
                 </Stack>
-                {order.status !== "completado" && (
-                  <Button variant="text" disabled={updatingId === order.id} onClick={() => void markCompleted(order.id)}>
-                    Marcar completado
-                  </Button>
-                )}
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {order.balance > 0 && (
+                    <Button variant="text" disabled={updatingId === order.id} onClick={(event) => openPaymentMenu(event, order.id)}>
+                      Pagado
+                    </Button>
+                  )}
+                  {order.status !== "entregado" && (
+                    <Button variant="text" disabled={updatingId === order.id} onClick={() => void markDelivered(order.id)}>
+                      Marcar entregado
+                    </Button>
+                  )}
+                </Stack>
               </Stack>
             </Paper>
           ))}
@@ -233,6 +290,13 @@ export function AdminOrdersPage() {
       ) : (
         <AdminDataGrid rows={orders} columns={columns} loading={loading} emptyTitle="Sin pedidos" emptyDescription="Crea el primer pedido manual para empezar a operar desde Admin." />
       )}
+      <Menu anchorEl={paymentMenuAnchor} open={Boolean(paymentMenuAnchor)} onClose={closePaymentMenu}>
+        {paymentMethods.map((method) => (
+          <MenuItem key={method.value} onClick={() => void markPaid(method.value)}>
+            {method.label}
+          </MenuItem>
+        ))}
+      </Menu>
     </Stack>
   );
 }

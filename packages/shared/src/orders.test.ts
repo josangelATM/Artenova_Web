@@ -20,7 +20,7 @@ describe("admin order schemas", () => {
       customerWhatsapp: "6217-2806",
       customerNote: "",
       internalNote: "Pedido de jueves 6 de agosto de 2026",
-      status: "en_proceso",
+      status: "pendiente_fabricacion",
       finalPrice: 24,
       items: [
         {
@@ -64,6 +64,17 @@ describe("admin order schemas", () => {
     expect(payload.items[0]?.productId).toBeNull();
     expect(payload.items[0]?.productName).toBe("Llavero especial");
     expect(payload.payments[0]?.amount).toBe(4);
+  });
+
+  it("rejects legacy order statuses", () => {
+    expect(() => updateAdminOrderSchema.parse({
+      customerName: "Legacy",
+      customerWhatsapp: "6000-0000",
+      customerNote: "",
+      internalNote: null,
+      status: "completado",
+      items: [],
+    })).toThrow();
   });
 
   it("validates payment movements", () => {

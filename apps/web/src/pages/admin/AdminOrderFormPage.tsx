@@ -93,9 +93,12 @@ export function AdminOrderFormPage() {
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Order["status"] })}>
                 <MenuItem value="nuevo">Nuevo</MenuItem>
-                <MenuItem value="en_proceso">En proceso</MenuItem>
-                <MenuItem value="completado">Completado</MenuItem>
-                <MenuItem value="cancelado">Cancelado</MenuItem>
+                <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>
+                <MenuItem value="pendiente_aprobacion">Pendiente por aprobación</MenuItem>
+                <MenuItem value="pendiente_fabricacion">Pendiente por fabricación</MenuItem>
+                <MenuItem value="pendiente_imprimir">Pendiente por imprimir</MenuItem>
+                <MenuItem value="listo_entrega">Listo para entrega</MenuItem>
+                <MenuItem value="entregado">Entregado</MenuItem>
               </TextField>
             </Grid>
           </Grid>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { orderStatusLabels } from "@artenova/shared";
 
 export const adminSurfaceSx: SxProps<Theme> = {
   border: "1px solid rgba(64,44,37,.10)",
@@ -82,10 +83,13 @@ export function AdminStat({ label, value, detail }: { label: string; value: Reac
 }
 
 const statusMeta: Record<string, { label: string; color: "default" | "primary" | "secondary" | "success" | "warning" | "error" }> = {
-  nuevo: { label: "Nuevo", color: "secondary" },
-  en_proceso: { label: "En proceso", color: "warning" },
-  completado: { label: "Completado", color: "success" },
-  cancelado: { label: "Cancelado", color: "error" },
+  nuevo: { label: orderStatusLabels.nuevo, color: "secondary" },
+  pendiente_diseno: { label: orderStatusLabels.pendiente_diseno, color: "warning" },
+  pendiente_aprobacion: { label: orderStatusLabels.pendiente_aprobacion, color: "warning" },
+  pendiente_fabricacion: { label: orderStatusLabels.pendiente_fabricacion, color: "primary" },
+  pendiente_imprimir: { label: orderStatusLabels.pendiente_imprimir, color: "primary" },
+  listo_entrega: { label: orderStatusLabels.listo_entrega, color: "success" },
+  entregado: { label: orderStatusLabels.entregado, color: "success" },
   active: { label: "Activo", color: "success" },
   paused: { label: "Pausado", color: "default" },
   published: { label: "Publicado", color: "success" },

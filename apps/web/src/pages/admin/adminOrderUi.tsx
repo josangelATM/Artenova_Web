@@ -1,6 +1,6 @@
 import { Autocomplete, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
-import { formatCurrency, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
+import { formatCurrency, orderStatusLabels, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
 
 export type DraftItem = {
   productId: string;
@@ -185,7 +185,7 @@ export function OrderSummaryStrip({
   return (
     <Paper sx={{ border: "1px solid rgba(64,44,37,.10)", borderRadius: 2, p: 1.5, bgcolor: "rgba(255,250,245,.92)" }}>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
-        <Typography fontWeight={900}>{status.replace("_", " ")}</Typography>
+        <Typography fontWeight={900}>{orderStatusLabels[status]}</Typography>
         <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
           <Typography variant="body2">Items: <strong>{formatCurrency(itemsTotal)}</strong></Typography>
           <Typography variant="body2">Abonado: <strong>{formatCurrency(paidTotal)}</strong></Typography>

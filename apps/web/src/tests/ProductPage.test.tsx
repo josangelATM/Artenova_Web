@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -154,10 +154,21 @@ describe("ProductPage", () => {
     productMock.mockReset();
     settingsMock.mockReset();
     applySeoMock.mockReset();
+    vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("min-width: 900px"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })));
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   it("starts from the default variant and only changes the variant when the user changes options", async () => {
@@ -190,7 +201,7 @@ describe("ProductPage", () => {
     expect(screen.getByText("$22.00")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Grande" })).toHaveClass("MuiChip-filled");
 
-    expect(screen.queryByLabelText("Imagen anterior")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Imagen anterior")).toBeInTheDocument();
     expect(screen.getByText("$22.00")).toBeInTheDocument();
   });
 
@@ -245,6 +256,218 @@ describe("ProductPage", () => {
       expect(screen.getAllByLabelText(/video base/i).length).toBeGreaterThan(0);
     });
     expect(screen.getAllByLabelText(/video base/i)[0]?.tagName.toLowerCase()).toBe("video");
+  });
+
+  it("opens the fullscreen viewer with a centered large image layout", async () => {
+    productMock.mockResolvedValue(product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByLabelText("Ampliar imagen")[0]!);
+
+    const dialog = await screen.findByRole("dialog");
+    const viewerImage = within(dialog).getByRole("img", { name: /foto pequeno/i });
+
+    expect(viewerImage).toHaveStyle({ objectFit: "contain" });
+    expect(viewerImage).toHaveStyle({ maxWidth: "100%" });
+    expect(viewerImage).toHaveStyle({ maxHeight: "100%" });
+    expect(viewerImage).not.toHaveStyle({ aspectRatio: "4 / 5" });
+  });
+
+  it("shows visible navigation controls in normal mode and moves with desktop keyboard arrows", async () => {
+    productMock.mockResolvedValue(product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    const gallery = screen.getByLabelText(/galería del producto letrero acrilico/i);
+    expect(screen.getByLabelText("Imagen anterior")).toBeInTheDocument();
+    expect(screen.getByLabelText("Imagen siguiente")).toBeInTheDocument();
+
+    fireEvent.focus(gallery);
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("img", { name: /foto pequeno dos/i }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("img", { name: /foto pequeno/i }).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("moves between images with desktop keyboard arrows while the zoom viewer is open", async () => {
+    productMock.mockResolvedValue(product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByLabelText("Ampliar imagen")[0]!);
+    await screen.findByRole("dialog");
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("img", { name: /foto pequeno dos/i }).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("does not render arrows when the product only has one image", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      media: [],
+      defaultVariant: {
+        ...defaultVariant,
+        media: [imageMedia("img-only", "/seed/only.jpg", "Foto unica", 0)],
+      },
+      variants: [
+        {
+          ...defaultVariant,
+          media: [imageMedia("img-only", "/seed/only.jpg", "Foto unica", 0)],
+        },
+      ],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText("Imagen anterior")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Imagen siguiente")).not.toBeInTheDocument();
+  });
+
+  it("shows arrows and navigates across preview groups when the active gallery has one item", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      defaultVariant: {
+        ...defaultVariant,
+        id: "gold-small",
+        name: "Dorado pequeno",
+        selectionKey: "color-gold|small",
+        visualGroupKey: "dorado",
+        media: [imageMedia("gold-small", "/seed/gold.jpg", "Escudo dorado", 0)],
+        selections: [
+          { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+          { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+        ],
+      },
+      defaultVariantId: "gold-small",
+      productOptions: [
+        {
+          id: "color",
+          productId: "p1",
+          name: "Color",
+          drivesVisualGroup: true,
+          position: 0,
+          values: [
+            { id: "gold", optionId: "color", value: "Dorado", position: 0, swatch: null },
+            { id: "silver", optionId: "color", value: "Plateado", position: 1, swatch: null },
+          ],
+        },
+        {
+          id: "size",
+          productId: "p1",
+          name: "Tamano",
+          drivesVisualGroup: false,
+          position: 1,
+          values: [
+            { id: "small", optionId: "size", value: "Pequeno", position: 0, swatch: null },
+            { id: "large", optionId: "size", value: "Grande", position: 1, swatch: null },
+          ],
+        },
+      ],
+      variants: [
+        {
+          ...defaultVariant,
+          id: "gold-small",
+          name: "Dorado pequeno",
+          selectionKey: "color-gold|small",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-small", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+        },
+        {
+          ...defaultVariant,
+          id: "gold-large",
+          name: "Dorado grande",
+          selectionKey: "color-gold|large",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-large", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 1 },
+          ],
+          basePrice: 24,
+          pricingSummary: { originalPrice: 24, finalPrice: 24, hasDiscount: false, discountType: null, discountValue: null },
+        },
+        {
+          ...defaultVariant,
+          id: "silver-small",
+          name: "Plateado pequeno",
+          selectionKey: "color-silver|small",
+          visualGroupKey: "plateado",
+          media: [imageMedia("silver-small", "/seed/silver.jpg", "Escudo plateado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "silver", value: "Plateado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+          basePrice: 23,
+          pricingSummary: { originalPrice: 23, finalPrice: 23, hasDiscount: false, discountType: null, discountValue: null },
+        },
+        {
+          ...defaultVariant,
+          id: "silver-large",
+          name: "Plateado grande",
+          selectionKey: "color-silver|large",
+          visualGroupKey: "plateado",
+          media: [imageMedia("silver-large", "/seed/silver.jpg", "Escudo plateado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "silver", value: "Plateado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 1 },
+          ],
+          basePrice: 25,
+          pricingSummary: { originalPrice: 25, finalPrice: 25, hasDiscount: false, discountType: null, discountValue: null },
+        },
+      ],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Letrero acrilico").length).toBeGreaterThan(0);
+    });
+
+    expect(screen.getByLabelText("Imagen anterior")).toBeInTheDocument();
+    expect(screen.getByLabelText("Imagen siguiente")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Imagen siguiente"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Plateado" })).toHaveClass("MuiChip-filled");
+    });
+    expect(screen.getAllByRole("img", { name: /escudo plateado/i }).length).toBeGreaterThan(0);
   });
 
   it("updates the selected visual option when the user chooses a thumbnail from another visual group", async () => {

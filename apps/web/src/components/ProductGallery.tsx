@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, ImageIcon, PlayCircle, X } from "lucide-react";
 import { resolveMediaStillUrl, resolvePreviewMode, type ProductMedia } from "@artenova/shared";
@@ -110,14 +110,16 @@ function InlineVideo({
       controlsList={controls ? "nodownload noplaybackrate" : "nofullscreen nodownload noplaybackrate"}
       aria-label={label}
       sx={{
-        width: "100%",
-        height: "100%",
-        aspectRatio: "4 / 5",
+        width: large ? "auto" : "100%",
+        height: large ? "auto" : "100%",
+        maxWidth: large ? "100%" : undefined,
+        maxHeight: large ? "100%" : undefined,
+        aspectRatio: large ? undefined : "4 / 5",
         objectFit: "contain",
         display: "block",
-        p: large ? { xs: 1, md: 1.5 } : { xs: 1.5, md: 2 },
-        bgcolor: "rgba(255,255,255,.45)",
-        borderRadius: large ? { xs: 2, md: 3 } : 0,
+        p: large ? 0 : { xs: 1.5, md: 2 },
+        bgcolor: large ? "transparent" : "rgba(255,255,255,.45)",
+        borderRadius: large ? 0 : 0,
       }}
     />
   );
@@ -188,14 +190,16 @@ function GalleryMediaFrame({
         alt={label}
         loading={large ? "eager" : "lazy"}
         sx={{
-          width: "100%",
-          height: "100%",
-          aspectRatio: "4 / 5",
+          width: large ? "auto" : "100%",
+          height: large ? "auto" : "100%",
+          maxWidth: large ? "100%" : undefined,
+          maxHeight: large ? "100%" : undefined,
+          aspectRatio: large ? undefined : "4 / 5",
           objectFit: "contain",
           display: "block",
-          p: large ? { xs: 1, md: 1.5 } : { xs: 1.5, md: 2 },
-          bgcolor: "rgba(255,255,255,.45)",
-          borderRadius: large ? { xs: 2, md: 3 } : 0,
+          p: large ? 0 : { xs: 1.5, md: 2 },
+          bgcolor: large ? "transparent" : "rgba(255,255,255,.45)",
+          borderRadius: large ? 0 : 0,
         }}
       />
     );
@@ -267,6 +271,7 @@ export function ProductGallery({
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerAutoplay, setViewerAutoplay] = useState(false);
+  const [galleryActive, setGalleryActive] = useState(false);
   const [activeIndex, setActiveIndex] = useState(() => Math.max(0, items.findIndex((item) => item.key === activeKey)));
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const activeItem = items[activeIndex];
@@ -275,6 +280,10 @@ export function ProductGallery({
   const previewItems = thumbnailItems && thumbnailItems.length > 0 ? thumbnailItems : items;
   const activePreviewKey = activeThumbnailKey ?? activeKey;
   const hasPreviewStrip = previewItems.length > 1;
+  const navigationItems = hasMany ? items : previewItems;
+  const activeNavigationKey = hasMany ? activeKey : activePreviewKey;
+  const navigationIndex = Math.max(0, navigationItems.findIndex((item) => item.key === activeNavigationKey));
+  const canNavigate = navigationItems.length > 1;
   const galleryViewport = useElementInView<HTMLDivElement>(Boolean(activeMedia && activeMedia.type === "video"));
   const viewerVideoShouldAutoplay = viewerOpen && viewerAutoplay && activeMedia?.type === "video";
   const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && galleryViewport.inView && !viewerOpen);
@@ -295,17 +304,25 @@ export function ProductGallery({
     [activeIndex, activeMedia, productName]
   );
 
-  function updateActiveIndex(nextIndex: number) {
-    const nextItem = items[nextIndex];
+  function goTo(offset: number) {
+    if (!navigationItems.length) return;
+    const nextIndex = (navigationIndex + offset + navigationItems.length) % navigationItems.length;
+    const nextItem = navigationItems[nextIndex];
     if (!nextItem) return;
-    setActiveIndex(nextIndex);
     onActiveKeyChange(nextItem.key);
   }
 
-  function goTo(offset: number) {
-    if (!items.length) return;
-    const nextIndex = (activeIndex + offset + items.length) % items.length;
-    updateActiveIndex(nextIndex);
+  function closeViewer() {
+    setViewerOpen(false);
+  }
+
+  function stopViewerPropagation(event: MouseEvent<HTMLElement>) {
+    event.stopPropagation();
+  }
+
+  function isDesktopGalleryKeyboardEnabled() {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(min-width: 900px)").matches;
   }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
@@ -318,7 +335,7 @@ export function ProductGallery({
     const start = touchStartRef.current;
     const touch = event.changedTouches[0];
     touchStartRef.current = null;
-    if (!start || !touch || !hasMany) return;
+    if (!start || !touch || !canNavigate) return;
 
     const deltaX = touch.clientX - start.x;
     const deltaY = touch.clientY - start.y;
@@ -330,14 +347,16 @@ export function ProductGallery({
   }
 
   useEffect(() => {
-    if (!viewerOpen) return;
+    const keyboardNavigationEnabled = viewerOpen || galleryActive;
+    if (!keyboardNavigationEnabled) return;
     function handleKeyDown(event: KeyboardEvent) {
+      if (!isDesktopGalleryKeyboardEnabled()) return;
       if (event.key === "ArrowLeft") goTo(-1);
       if (event.key === "ArrowRight") goTo(1);
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerOpen, activeIndex, items]);
+  }, [galleryActive, viewerOpen, activeIndex, items]);
 
   if (!activeMedia) {
     return (
@@ -363,12 +382,22 @@ export function ProductGallery({
   }
 
   const arrowSx = {
-    width: { xs: 38, md: 40 },
-    height: { xs: 38, md: 40 },
+    width: { xs: 40, md: 46 },
+    height: { xs: 40, md: 46 },
     bgcolor: "transparent",
-    color: "rgba(64,44,37,.52)",
+    color: "rgba(64,44,37,.88)",
+    border: 0,
     boxShadow: "none",
-    "&:hover": { bgcolor: "transparent", color: "rgba(64,44,37,.72)" }
+    backdropFilter: "none",
+    zIndex: 2,
+    "&:hover": {
+      bgcolor: "rgba(255,250,245,.18)",
+      color: "rgba(64,44,37,1)",
+    },
+    "&:focus-visible": {
+      outline: "2px solid rgba(196,110,78,.9)",
+      outlineOffset: 2,
+    },
   } as const;
 
   return (
@@ -376,6 +405,15 @@ export function ProductGallery({
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "flex-start" }}>
         <Box
           ref={galleryViewport.ref}
+          tabIndex={0}
+          aria-label={`Galería del producto ${productName}`}
+          onFocus={() => setGalleryActive(true)}
+          onBlur={(event) => {
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+            setGalleryActive(false);
+          }}
+          onMouseEnter={() => setGalleryActive(true)}
+          onMouseLeave={() => setGalleryActive(false)}
           sx={{
             order: { xs: 1, md: 2 },
             position: "relative",
@@ -416,19 +454,19 @@ export function ProductGallery({
               controls={activeMedia.type === "video"}
             />
           </Box>
-          {hasMany && (
+          {canNavigate && (
             <>
               <IconButton
                 aria-label="Imagen anterior"
                 onClick={() => goTo(-1)}
-                sx={{ ...arrowSx, position: "absolute", left: 12, top: "50%" }}
+                sx={{ ...arrowSx, position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}
               >
                 <ChevronLeft size={18} />
               </IconButton>
               <IconButton
                 aria-label="Imagen siguiente"
                 onClick={() => goTo(1)}
-                sx={{ ...arrowSx, position: "absolute", right: 12, top: "50%" }}
+                sx={{ ...arrowSx, position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}
               >
                 <ChevronRight size={18} />
               </IconButton>
@@ -505,7 +543,7 @@ export function ProductGallery({
 
       <Dialog
         open={viewerOpen}
-        onClose={() => setViewerOpen(false)}
+        onClose={closeViewer}
         maxWidth={false}
         fullScreen
         slotProps={{
@@ -523,47 +561,85 @@ export function ProductGallery({
           },
         }}
       >
-        <Box sx={{ minHeight: "100vh", color: "text.primary", display: "grid", gridTemplateRows: "auto 1fr", background: "rgba(255,247,239,.34)", backdropFilter: "blur(10px)" }}>
+        <Box
+          sx={{
+            minHeight: "100vh",
+            height: "100dvh",
+            color: "text.primary",
+            display: "grid",
+            gridTemplateRows: "auto minmax(0, 1fr)",
+            background: "rgba(255,247,239,.34)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: { xs: 1.5, md: 2 } }}>
             <Typography fontWeight={900} noWrap sx={{ maxWidth: "78vw" }}>{productName}</Typography>
-            <IconButton aria-label="Cerrar visor" onClick={() => setViewerOpen(false)} sx={{ ...arrowSx, color: "rgba(64,44,37,.74)" }}>
+            <IconButton aria-label="Cerrar visor" onClick={closeViewer} sx={{ ...arrowSx, color: "rgba(64,44,37,.74)" }}>
               <X size={18} />
             </IconButton>
           </Stack>
-          <Box sx={{ position: "relative", display: "grid", placeItems: "center", p: { xs: 1, md: 3 } }}>
+          <Box
+            onClick={closeViewer}
+            sx={{
+              position: "relative",
+              minHeight: 0,
+              overflowX: "hidden",
+              overflowY: { xs: "auto", md: "hidden" },
+              px: { xs: 0, md: 3 },
+              pb: { xs: 0, md: 3 },
+            }}
+          >
             <Box
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
               sx={{
-                width: "100%",
-                maxWidth: "min(100%, 980px)",
-                maxHeight: "calc(100vh - 96px)",
-                borderRadius: { xs: 2, md: 3 },
-                boxShadow: "0 28px 90px rgba(64,44,37,.26)",
-                bgcolor: "rgba(255,255,255,.55)",
-                touchAction: "pan-y",
-                overflow: "hidden",
+                height: "100%",
+                minHeight: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                py: { xs: 0, md: 0 },
               }}
             >
-              <GalleryMediaFrame
-                media={activeMedia}
-                label={activeMediaLabel}
-                shouldPlay={viewerVideoShouldAutoplay}
-                controls={activeMedia.type === "video"}
-                preload="metadata"
-                large
-              />
+              <Box
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onClick={stopViewerPropagation}
+                sx={{
+                  width: "100%",
+                  maxWidth: "min(100%, 980px)",
+                  height: "100%",
+                  maxHeight: "100%",
+                  minHeight: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 0,
+                  boxShadow: "none",
+                  bgcolor: "transparent",
+                  touchAction: "pan-y",
+                  overflow: "visible",
+                  p: 0,
+                }}
+              >
+                <GalleryMediaFrame
+                  media={activeMedia}
+                  label={activeMediaLabel}
+                  shouldPlay={viewerVideoShouldAutoplay}
+                  controls={activeMedia.type === "video"}
+                  preload="metadata"
+                  large
+                />
+              </Box>
             </Box>
-            {hasMany && (
+            {canNavigate && (
               <>
-                <IconButton aria-label="Imagen anterior" onClick={() => goTo(-1)} sx={{ ...arrowSx, position: "absolute", left: { xs: 8, md: 24 } }}>
+                <IconButton aria-label="Imagen anterior" onClick={(event) => { event.stopPropagation(); goTo(-1); }} sx={{ ...arrowSx, position: "absolute", left: { xs: 8, md: "max(12px, calc(50% - 490px))" }, top: "50%", transform: "translateY(-50%)" }}>
                   <ChevronLeft size={18} />
                 </IconButton>
-                <IconButton aria-label="Imagen siguiente" onClick={() => goTo(1)} sx={{ ...arrowSx, position: "absolute", right: { xs: 8, md: 24 } }}>
+                <IconButton aria-label="Imagen siguiente" onClick={(event) => { event.stopPropagation(); goTo(1); }} sx={{ ...arrowSx, position: "absolute", right: { xs: 8, md: "max(12px, calc(50% - 490px))" }, top: "50%", transform: "translateY(-50%)" }}>
                   <ChevronRight size={18} />
                 </IconButton>
-                <Typography sx={{ position: "absolute", bottom: 18, px: 1.5, py: 0.5, borderRadius: 999, bgcolor: "rgba(255,250,245,.82)", fontWeight: 900 }}>
-                  {activeIndex + 1} / {items.length}
+                <Typography sx={{ position: "absolute", bottom: 18, px: 1.5, py: 0.5, borderRadius: 999, bgcolor: "rgba(255,250,245,.82)", fontWeight: 900, zIndex: 2 }}>
+                  {navigationIndex + 1} / {navigationItems.length}
                 </Typography>
               </>
             )}

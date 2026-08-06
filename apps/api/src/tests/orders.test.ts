@@ -7,7 +7,7 @@ describe("order serialization", () => {
       id: "o1",
       code: "2608-001",
       source: "admin_manual",
-      status: "en_proceso",
+      status: "pendiente_fabricacion",
       customerName: "Gabriel",
       customerWhatsapp: "6217-2806",
       customerNote: "Pendiente entrega",
@@ -48,12 +48,12 @@ describe("order serialization", () => {
     expect(payload.items[0]?.units[1]?.label).toBe("Nala");
   });
 
-  it("marks completed orders with zero balance as paid", () => {
+  it("keeps completedAt for delivered orders with zero balance", () => {
     const payload = orderPayload({
       id: "o2",
       code: "2608-002",
       source: "admin_manual",
-      status: "completado",
+      status: "entregado",
       customerName: "Mackan",
       customerWhatsapp: "6962-5607",
       estimatedTotal: 35,
@@ -70,6 +70,29 @@ describe("order serialization", () => {
     expect(payload.isPaid).toBe(true);
     expect(payload.balance).toBe(0);
     expect(payload.completedAt).toBe("2026-08-06T18:00:00.000Z");
+  });
+
+  it("keeps non-delivered orders without completedAt", () => {
+    const payload = orderPayload({
+      id: "o4",
+      code: "2608-004",
+      source: "admin_manual",
+      status: "listo_entrega",
+      customerName: "Damaris",
+      customerWhatsapp: "6888-5511",
+      estimatedTotal: 18,
+      finalPrice: 18,
+      completedAt: null,
+      createdAt: new Date("2026-08-06T15:00:00Z"),
+      updatedAt: new Date("2026-08-06T16:00:00Z"),
+      items: [],
+      payments: [
+        { id: "pay-4", amount: 18, method: "transferencia", reference: "TRF-001", note: null, createdAt: new Date("2026-08-06T15:30:00Z") }
+      ]
+    });
+
+    expect(payload.isPaid).toBe(true);
+    expect(payload.completedAt).toBeNull();
   });
 
   it("keeps free items without catalog product id", () => {

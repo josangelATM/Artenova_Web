@@ -8,9 +8,12 @@ datasource db {
 
 enum OrderStatus {
   nuevo
-  en_proceso
-  completado
-  cancelado
+  pendiente_diseno
+  pendiente_aprobacion
+  pendiente_fabricacion
+  pendiente_imprimir
+  listo_entrega
+  entregado
 }
 
 enum OrderSource {

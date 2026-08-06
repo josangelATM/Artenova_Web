@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { adminCategoryInputSchema, adminExpenseQuerySchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminOrderPaymentInputSchema, createAdminExpenseSchema, createAdminOrderSchema, updateAdminExpenseSchema, updateAdminOrderSchema, updateAdminOrderStatusSchema, updateReviewApprovalSchema } from "@artenova/shared";
 import { createOrderCode } from "../lib/orderCode";
 import { prisma } from "../lib/prisma";
+import { propagateVariantMediaByVisualGroup, type ProductMediaInput } from "../lib/variantMediaSync";
 import { buildExpenseSummaryBounds, endOfUtcDay, parseDateOnly, startOfUtcDay } from "../lib/expenseDates";
 import { expensePayload, orderPayload, productPayload, reviewPayload } from "../lib/serialize";
 import { requireAdmin, signAdminToken } from "../middleware/auth";
@@ -13,8 +14,6 @@ import { UploadValidationError, uploadProductMedia } from "../services/uploadSer
 export const adminRouter = Router();
 const db = prisma as any;
 const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 40 * 1024 * 1024, files: 2 } });
-
-type ProductMediaInput = { url: string; type: "image" | "video"; alt: string; position: number; posterUrl?: string | null };
 
 const productInclude = {
   category: true,
@@ -811,10 +810,13 @@ adminRouter.post("/products", async (req, res) => {
   const input = adminProductInputSchema.parse(req.body);
   const product = await prisma.$transaction(async (tx) => {
     const hasOptions = input.productOptions.length > 0;
-    const variantPayload = hasOptions
+    const requestedVariantPayload = hasOptions
       ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
       : [buildCanonicalVariantInput(input)];
-    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, variantPayload);
+    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, requestedVariantPayload);
+    const variantPayload = hasOptions
+      ? propagateVariantMediaByVisualGroup(requestedVariantPayload, defaultVariantId)
+      : requestedVariantPayload;
     const defaultVariant = variantPayload.find((variant) => variant.id === defaultVariantId) ?? variantPayload[0]!;
     const commercialSnapshot = productCommercialSnapshot(defaultVariant);
     const created = await tx.product.create({
@@ -863,10 +865,13 @@ adminRouter.put("/products/:id", async (req, res) => {
     });
     const hasOptions = input.productOptions.length > 0;
     const canonicalVariantId = existingVariants.find((variant: { selectionKey: string | null }) => !variant.selectionKey)?.id;
-    const variantPayload = hasOptions
+    const requestedVariantPayload = hasOptions
       ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
       : [buildCanonicalVariantInput(input, canonicalVariantId)];
-    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, variantPayload);
+    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, requestedVariantPayload);
+    const variantPayload = hasOptions
+      ? propagateVariantMediaByVisualGroup(requestedVariantPayload, defaultVariantId)
+      : requestedVariantPayload;
     const defaultVariant = variantPayload.find((variant) => variant.id === defaultVariantId) ?? variantPayload[0]!;
     const commercialSnapshot = productCommercialSnapshot(defaultVariant);
 
@@ -958,7 +963,7 @@ adminRouter.post("/orders", async (req, res) => {
           data: {
             estimatedTotal,
             finalPrice: input.finalPrice ?? estimatedTotal,
-            completedAt: input.status === "completado" ? new Date() : null
+            completedAt: input.status === "entregado" ? new Date() : null
           }
         });
         return tx.order.findUniqueOrThrow({ where: { id: created.id }, include: orderInclude });
@@ -999,7 +1004,7 @@ adminRouter.put("/orders/:id", async (req, res) => {
         status: input.status,
         estimatedTotal,
         finalPrice: input.finalPrice ?? estimatedTotal,
-        completedAt: input.status === "completado" ? (input.completedAt ? new Date(input.completedAt) : new Date()) : null
+        completedAt: input.status === "entregado" ? (input.completedAt ? new Date(input.completedAt) : new Date()) : null
       }
     });
     return tx.order.findUniqueOrThrow({
@@ -1034,7 +1039,7 @@ adminRouter.put("/orders/:id/status", async (req, res) => {
     where: { id: req.params.id },
     data: {
       status: input.status,
-      completedAt: input.status === "completado" ? new Date() : null
+      completedAt: input.status === "entregado" ? new Date() : null
     },
     include: orderInclude
   });

@@ -2,9 +2,12 @@ import { z } from "zod";
 
 export const orderStatusValues = [
   "nuevo",
-  "en_proceso",
-  "completado",
-  "cancelado",
+  "pendiente_diseno",
+  "pendiente_aprobacion",
+  "pendiente_fabricacion",
+  "pendiente_imprimir",
+  "listo_entrega",
+  "entregado",
 ] as const;
 export const orderSourceValues = ["storefront", "admin_manual"] as const;
 export const orderPaymentMethodValues = ["efectivo", "yappy", "transferencia", "otro"] as const;
@@ -23,6 +26,15 @@ export const discountTypeValues = ["percentage", "fixed"] as const;
 export const productMediaTypeValues = ["image", "video"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
+export const orderStatusLabels: Record<OrderStatus, string> = {
+  nuevo: "Nuevo",
+  pendiente_diseno: "Pendiente por diseño",
+  pendiente_aprobacion: "Pendiente por aprobación",
+  pendiente_fabricacion: "Pendiente por fabricación",
+  pendiente_imprimir: "Pendiente por imprimir",
+  listo_entrega: "Listo para entrega",
+  entregado: "Entregado",
+};
 export type OrderSource = (typeof orderSourceValues)[number];
 export type OrderPaymentMethod = (typeof orderPaymentMethodValues)[number];
 export type ExpenseCategory = (typeof expenseCategoryValues)[number];
