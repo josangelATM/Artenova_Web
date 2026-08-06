@@ -60,7 +60,7 @@ describe("AdminQRCodeFormPage", () => {
   it("does not render the logo field and keeps preview manual", async () => {
     previewQRCodeMock.mockResolvedValue({
       resolvedTarget: "https://artenova.com/promos",
-      previewUrl: "https://artenova.com/q/preview",
+      previewUrl: "https://artenovapty.com/q/preview",
       svg: "<svg></svg>",
     });
 

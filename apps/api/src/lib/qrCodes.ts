@@ -2,12 +2,11 @@ import crypto from "node:crypto";
 import QRCode from "qrcode";
 import sharp from "sharp";
 import { qrCodeDesignSchema, qrCodeVCardDestinationSchema, type QRCodeDesign, type QRCodeVCardDestination } from "@artenova/shared";
-import { env } from "../env";
-
 const defaultPreviewToken = "preview";
+const qrPublicBaseUrl = "https://artenovapty.com";
 
 function baseUrl() {
-  return env.APP_BASE_URL.replace(/\/+$/, "");
+  return qrPublicBaseUrl.replace(/\/+$/, "");
 }
 
 export function createQrToken(length = 10) {

@@ -53,7 +53,7 @@ describe("QRCodePage", () => {
         type: "vcard",
         name: "Tarjeta Ana",
         targetUrl: null,
-        publicUrl: "https://artenova.test/q/token-demo",
+        publicUrl: "https://artenovapty.com/q/token-demo",
         vcard: {
           fullName: "Ana Pérez",
           company: "Artenova",
