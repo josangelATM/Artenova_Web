@@ -515,9 +515,14 @@ export function formatCurrency(value: number, currencySymbol = "B/."): string {
 export type ProductMediaRenderable = Pick<ProductMedia, "type" | "url" | "posterUrl">;
 export type ProductMediaSurface = "hero" | "card" | "thumbnail" | "viewer" | "seo";
 
+export function resolveVideoPosterUrl(media?: ProductMediaRenderable | null): string | undefined {
+  if (!media || media.type !== "video") return undefined;
+  return media.posterUrl ?? undefined;
+}
+
 export function resolveMediaStillUrl(media?: ProductMediaRenderable | null): string | undefined {
   if (!media) return undefined;
-  return media.type === "video" ? media.posterUrl ?? undefined : media.url;
+  return media.type === "video" ? resolveVideoPosterUrl(media) : media.url;
 }
 
 export function isRenderableInlineVideo(media?: ProductMediaRenderable | null): boolean {

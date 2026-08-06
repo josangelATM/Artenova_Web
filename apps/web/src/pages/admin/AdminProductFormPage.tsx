@@ -108,13 +108,29 @@ async function createPosterFromVideo(file: File) {
   video.src = objectUrl;
   video.muted = true;
   video.playsInline = true;
-  video.preload = "metadata";
+  video.preload = "auto";
 
   try {
     await new Promise<void>((resolve, reject) => {
-      video.onloadeddata = () => resolve();
+      video.onloadedmetadata = () => resolve();
       video.onerror = () => reject(new Error("No se pudo preparar la portada del video"));
     });
+
+    if (video.duration && Number.isFinite(video.duration)) {
+      const targetTime = Math.min(Math.max(video.duration * 0.08, 0.2), Math.max(video.duration - 0.1, 0));
+      if (targetTime > 0) {
+        await new Promise<void>((resolve, reject) => {
+          video.onseeked = () => resolve();
+          video.onerror = () => reject(new Error("No se pudo preparar la portada del video"));
+          video.currentTime = targetTime;
+        });
+      } else {
+        await new Promise<void>((resolve, reject) => {
+          video.onloadeddata = () => resolve();
+          video.onerror = () => reject(new Error("No se pudo preparar la portada del video"));
+        });
+      }
+    }
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 960;

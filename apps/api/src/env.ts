@@ -39,6 +39,7 @@ const envSchema = z.object({
     .enum(["local", "s3"])
     .default(process.env.NODE_ENV === "production" ? "s3" : "local"),
   LOCAL_UPLOAD_DIR: z.string().default("uploads"),
+  FFMPEG_PATH: z.string().optional(),
   S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default("us-east-1"),
   S3_BUCKET: z.string().optional(),

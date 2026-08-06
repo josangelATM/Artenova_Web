@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, ImageIcon, PlayCircle, X } from "lucide-react";
-import { resolveMediaStillUrl, resolvePreviewMode, type ProductMedia } from "@artenova/shared";
+import { resolveMediaStillUrl, resolvePreviewMode, resolveVideoPosterUrl, type ProductMedia } from "@artenova/shared";
 
 export type ProductGalleryItem = {
   key: string;
@@ -33,6 +33,33 @@ function playVideoElement(video: HTMLVideoElement | null) {
   }
 }
 
+async function createThumbnailFromVideoElement(video: HTMLVideoElement) {
+  const width = video.videoWidth || 0;
+  const height = video.videoHeight || 0;
+  if (!width || !height) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  try {
+    ctx.drawImage(video, 0, 0, width, height);
+    return await new Promise<string | null>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        resolve(URL.createObjectURL(blob));
+      }, "image/webp", 0.82);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function useElementInView<T extends Element>(enabled = true, rootMargin = "120px") {
   const ref = useRef<T | null>(null);
   const [inView, setInView] = useState(!enabled);
@@ -61,6 +88,62 @@ function useElementInView<T extends Element>(enabled = true, rootMargin = "120px
   }, [enabled, rootMargin]);
 
   return { ref, inView };
+}
+
+function BackgroundVideoPreloader({
+  media,
+  mediaKey,
+  onThumbnailReady,
+}: {
+  media: ProductMedia;
+  mediaKey: string;
+  onThumbnailReady: (key: string, url: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    const video = videoElement;
+
+    let cancelled = false;
+
+    function handleLoadedData() {
+      if (cancelled || resolveVideoPosterUrl(media)) return;
+      const currentVideo = video;
+      void createThumbnailFromVideoElement(currentVideo).then((thumbnailUrl) => {
+        if (!cancelled && thumbnailUrl) {
+          onThumbnailReady(mediaKey, thumbnailUrl);
+        }
+      });
+    }
+
+    video.addEventListener("loadeddata", handleLoadedData);
+    video.load();
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener("loadeddata", handleLoadedData);
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [media, mediaKey, onThumbnailReady]);
+
+  return (
+    <Box
+      component="video"
+      data-testid={`gallery-video-preloader-${mediaKey}`}
+      ref={videoRef}
+      src={media.url}
+      preload="auto"
+      muted
+      playsInline
+      crossOrigin="anonymous"
+      aria-hidden="true"
+      tabIndex={-1}
+      sx={{ display: "none" }}
+    />
+  );
 }
 
 function InlineVideo({
@@ -212,12 +295,14 @@ function ThumbnailPreview({
   media,
   label,
   isActive,
+  thumbnailUrl,
 }: {
   media: ProductMedia;
   label: string;
   isActive: boolean;
+  thumbnailUrl?: string;
 }) {
-  const stillUrl = resolveMediaStillUrl(media);
+  const stillUrl = resolveMediaStillUrl(media) ?? thumbnailUrl;
 
   if (stillUrl) {
     return (
@@ -237,17 +322,29 @@ function ThumbnailPreview({
     );
   }
 
-  if (media.type === "video" && isActive) {
+  if (media.type === "video") {
     return (
-      <Box sx={{ width: "100%", height: "100%" }}>
-        <InlineVideo
-          media={media}
-          label={label}
-          shouldPlay
-          preload="none"
-          loop
-        />
-      </Box>
+      <Stack
+        spacing={0.5}
+        alignItems="center"
+        justifyContent="center"
+        sx={{
+          width: "100%",
+          height: "100%",
+          borderRadius: 1.5,
+          color: "rgba(64,44,37,.82)",
+          textAlign: "center",
+          p: 1,
+          background: isActive
+            ? "linear-gradient(180deg, rgba(255,240,229,.94) 0%, rgba(247,223,207,.98) 100%)"
+            : "linear-gradient(180deg, rgba(255,248,243,.96) 0%, rgba(244,233,224,.98) 100%)",
+        }}
+      >
+        <PlayCircle size={20} />
+        <Typography variant="caption" fontWeight={900}>
+          Video
+        </Typography>
+      </Stack>
     );
   }
 
@@ -287,6 +384,8 @@ export function ProductGallery({
   const galleryViewport = useElementInView<HTMLDivElement>(Boolean(activeMedia && activeMedia.type === "video"));
   const viewerVideoShouldAutoplay = viewerOpen && viewerAutoplay && activeMedia?.type === "video";
   const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && galleryViewport.inView && !viewerOpen);
+  const [videoThumbnailUrls, setVideoThumbnailUrls] = useState<Record<string, string>>({});
+  const videoThumbnailUrlsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     const index = items.findIndex((item) => item.key === activeKey);
@@ -299,10 +398,49 @@ export function ProductGallery({
     }
   }, [viewerOpen]);
 
+  useEffect(() => () => {
+    Object.values(videoThumbnailUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
   const activeMediaLabel = useMemo(
     () => (activeMedia ? mediaLabel(activeMedia, productName, activeIndex) : productName),
     [activeIndex, activeMedia, productName]
   );
+
+  const nextVideoPreloadItem = useMemo(() => {
+    for (let index = navigationIndex + 1; index < navigationItems.length; index += 1) {
+      const candidate = navigationItems[index];
+      if (candidate?.media.type === "video") {
+        return candidate;
+      }
+    }
+    return null;
+  }, [navigationIndex, navigationItems]);
+
+  const preloadItems = useMemo(() => {
+    const nextItems: ProductGalleryItem[] = [];
+    if (activeItem?.media.type === "video") {
+      nextItems.push(activeItem);
+    }
+    if (nextVideoPreloadItem && nextVideoPreloadItem.key !== activeItem?.key) {
+      nextItems.push(nextVideoPreloadItem);
+    }
+    return nextItems;
+  }, [activeItem, nextVideoPreloadItem]);
+
+  function handleThumbnailReady(key: string, url: string) {
+    setVideoThumbnailUrls((current) => {
+      if (current[key] === url) return current;
+      const next = { ...current };
+      const previousUrl = next[key];
+      if (previousUrl && previousUrl !== url) {
+        URL.revokeObjectURL(previousUrl);
+      }
+      next[key] = url;
+      videoThumbnailUrlsRef.current = next;
+      return next;
+    });
+  }
 
   function goTo(offset: number) {
     if (!navigationItems.length) return;
@@ -402,6 +540,15 @@ export function ProductGallery({
 
   return (
     <>
+      {preloadItems.map((item) => (
+        <BackgroundVideoPreloader
+          key={item.key}
+          media={item.media}
+          mediaKey={item.key}
+          onThumbnailReady={handleThumbnailReady}
+        />
+      ))}
+
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "flex-start" }}>
         <Box
           ref={galleryViewport.ref}
@@ -452,6 +599,7 @@ export function ProductGallery({
               label={activeMediaLabel}
               shouldPlay={mainVideoShouldAutoplay}
               controls={activeMedia.type === "video"}
+              preload={activeMedia.type === "video" ? "auto" : "metadata"}
             />
           </Box>
           {canNavigate && (
@@ -527,6 +675,7 @@ export function ProductGallery({
                     media={item.media}
                     label={mediaLabel(item.media, productName, index)}
                     isActive={item.key === activePreviewKey}
+                    thumbnailUrl={videoThumbnailUrls[item.key]}
                   />
                   {item.media.type === "video" && (
                     <PlayCircle

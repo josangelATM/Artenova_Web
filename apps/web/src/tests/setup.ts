@@ -11,3 +11,9 @@ Object.defineProperty(HTMLMediaElement.prototype, "pause", {
   writable: true,
   value: () => undefined,
 });
+
+Object.defineProperty(HTMLMediaElement.prototype, "load", {
+  configurable: true,
+  writable: true,
+  value: () => undefined,
+});

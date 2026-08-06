@@ -1,0 +1,53 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
+
+const imageItem = (key: string, url: string, alt: string): ProductGalleryItem => ({
+  key,
+  media: { id: `${key}-id`, type: "image", url, alt, position: 0, posterUrl: null },
+});
+
+const videoItem = (key: string, url: string, alt: string, posterUrl: string | null = null): ProductGalleryItem => ({
+  key,
+  media: { id: `${key}-id`, type: "video", url, alt, position: 0, posterUrl },
+});
+
+describe("ProductGallery", () => {
+  it("precarga solo el siguiente video navegable cuando el activo no es video", () => {
+    render(
+      <ProductGallery
+        productName="Producto demo"
+        items={[
+          imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
+          videoItem("video-1", "/seed/demo.mp4", "Video uno"),
+          imageItem("img-2", "/seed/dos.jpg", "Imagen dos"),
+        ]}
+        activeKey="img-1"
+        onActiveKeyChange={vi.fn()}
+      />,
+    );
+
+    const preloader = screen.getByTestId("gallery-video-preloader-video-1");
+    expect(preloader).toHaveAttribute("preload", "auto");
+    expect(preloader).toHaveAttribute("src", "/seed/demo.mp4");
+  });
+
+  it("muestra un estado visual de video en miniatura cuando no existe poster persistido", () => {
+    render(
+      <ProductGallery
+        productName="Producto demo"
+        items={[
+          videoItem("video-1", "/seed/demo.mp4", "Video uno"),
+          imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
+        ]}
+        activeKey="video-1"
+        activeThumbnailKey="video-1"
+        onActiveKeyChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("Video").length).toBeGreaterThan(0);
+    const visibleVideo = screen.getAllByLabelText(/video uno/i).find((node) => node.tagName.toLowerCase() === "video");
+    expect(visibleVideo).toHaveAttribute("preload", "auto");
+  });
+});
