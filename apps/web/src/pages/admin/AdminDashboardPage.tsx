@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Grid, Paper, Stack, Typography } from "@mui/material";
-import { Boxes, FolderPlus, MessageSquareText, Plus } from "lucide-react";
+import { Boxes, FolderPlus, MessageSquareText, Plus, ReceiptText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminStat, adminSurfaceSx } from "./adminUi";
 
-type Dashboard = { counts: { products: number; categories: number; reviews?: number } };
+type Dashboard = { counts: { orders: number; products: number; categories: number; reviews?: number } };
 
 export function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -22,19 +22,22 @@ export function AdminDashboardPage() {
         title="Inicio"
         subtitle="Mantén visible el catálogo y entra rápido a los flujos más usados."
         action={
-          <Button component={Link} to="/admin/productos/nuevo" variant="contained" startIcon={<Plus size={18} />}>
-            Nuevo producto
+          <Button component={Link} to="/admin/pedidos/nuevo" variant="contained" startIcon={<Plus size={18} />}>
+            Nuevo pedido
           </Button>
         }
       />
       <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <AdminStat label="Pedidos" value={dashboard.counts.orders} detail="Expedientes activos o cerrados" />
+        </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <AdminStat label="Productos" value={dashboard.counts.products} detail="Piezas visibles o guardadas" />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <AdminStat label="Categorías" value={dashboard.counts.categories} detail="Colecciones principales" />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 12 }}>
           <AdminStat label="Reseñas" value={dashboard.counts.reviews ?? 0} detail="Opiniones publicadas u ocultas" />
         </Grid>
       </Grid>
@@ -44,17 +47,22 @@ export function AdminDashboardPage() {
             Accesos rápidos
           </Typography>
           <Grid container spacing={1.25}>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Button fullWidth component={Link} to="/admin/pedidos/nuevo" variant="outlined" startIcon={<ReceiptText size={18} />}>
+                Nuevo pedido
+              </Button>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/productos/nuevo" variant="outlined" startIcon={<Boxes size={18} />}>
                 Nuevo producto
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/resenas/nuevo" variant="outlined" startIcon={<MessageSquareText size={18} />}>
                 Nueva reseña
               </Button>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button fullWidth component={Link} to="/admin/categorias/nuevo" variant="outlined" startIcon={<FolderPlus size={18} />}>
                 Nueva categoría
               </Button>

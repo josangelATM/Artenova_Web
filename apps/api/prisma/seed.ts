@@ -278,18 +278,39 @@ async function resolveSeedMediaCollection(
 }
 
 async function syncSeedMedia(products: SeedProduct[]) {
+  const variantMediaSources = products.map((product) =>
+    product.variants.map((variant) => ({
+      variantId: variantId(product.slug, variant.key),
+      mediaSources: mediaSourcesForVariant(product, variant),
+    }))
+  );
+
+  const hasMediaSources = variantMediaSources.some((productVariants) =>
+    productVariants.some((variant) => variant.mediaSources.length > 0)
+  );
+
+  if (!hasMediaSources) {
+    return {
+      productMediaBySlug: new Map<string, SeedResolvedMedia[]>(),
+      variantMediaById: new Map<string, SeedResolvedMedia[]>(),
+    } satisfies SeedResolvedMediaCollections;
+  }
+
   assertSeedS3Config();
 
   const uploadCache = new Map<string, { url: string }>();
   const productMediaBySlug = new Map<string, SeedResolvedMedia[]>();
   const variantMediaById = new Map<string, SeedResolvedMedia[]>();
 
-  for (const product of products) {
-    const variantMediaSources = product.variants.map((variant) => ({
+  for (const [productIndex, product] of products.entries()) {
+    const productVariantMediaSources = variantMediaSources[productIndex] ?? [];
+    const variantMediaSourcesForProduct = productVariantMediaSources.map((variant) => ({
       variantId: variantId(product.slug, variant.key),
-      mediaSources: mediaSourcesForVariant(product, variant),
+      mediaSources: variant.mediaSources,
     }));
-    const sharedSources = sharedMediaSources(variantMediaSources.map((variant) => variant.mediaSources));
+    const sharedSources = sharedMediaSources(
+      variantMediaSourcesForProduct.map((variant) => variant.mediaSources),
+    );
     const sharedSignatures = new Set(sharedSources.map((media) => mediaSourceSignature(media)));
 
     productMediaBySlug.set(
@@ -297,7 +318,7 @@ async function syncSeedMedia(products: SeedProduct[]) {
       await resolveSeedMediaCollection(product.slug, sharedSources, uploadCache),
     );
 
-    for (const variant of variantMediaSources) {
+    for (const variant of variantMediaSourcesForProduct) {
       const residualSources = variant.mediaSources.filter(
         (media) => !sharedSignatures.has(mediaSourceSignature(media)),
       );
@@ -516,8 +537,6 @@ const products: SeedProduct[] = [
         name: "Cédulas personalizadas para mascotas",
         sku: "PET-ID-001",
         basePrice: 10,
-        image: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
-        imageUrl: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
         priceTiers: petIdTiers,
       },
     ],
@@ -537,8 +556,6 @@ const products: SeedProduct[] = [
         name: "Retrato grabado en láser en MDF",
         sku: "PET-RET-001",
         basePrice: 16,
-        image: "/seed/mascotas/mascotas-2.jpg",
-        imageUrl: "/seed/mascotas/mascotas-2.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -556,8 +573,6 @@ const products: SeedProduct[] = [
         name: "Retrato mediano grabado en MDF",
         sku: "PET-RET-002",
         basePrice: 13,
-        image: "/seed/mascotas/mascotas-3.jpg",
-        imageUrl: "/seed/mascotas/mascotas-3.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -575,8 +590,6 @@ const products: SeedProduct[] = [
         name: "Huellas que jamás se olvidan",
         sku: "PET-RET-003",
         basePrice: 18,
-        image: "/seed/mascotas/mascotas-4.jpg",
-        imageUrl: "/seed/mascotas/mascotas-4.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -594,8 +607,6 @@ const products: SeedProduct[] = [
         name: "Huella de amor",
         sku: "PET-RET-004",
         basePrice: 15,
-        image: "/seed/mascotas/mascotas-5.jpg",
-        imageUrl: "/seed/mascotas/mascotas-5.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -613,8 +624,6 @@ const products: SeedProduct[] = [
         name: "Recuerdo en acrílico transparente",
         sku: "PET-RET-005",
         basePrice: 16,
-        image: "/seed/mascotas/mascotas-6.jpg",
-        imageUrl: "/seed/mascotas/mascotas-6.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -632,8 +641,6 @@ const products: SeedProduct[] = [
         name: "Llavero personalizado en acrílico dorado espejo",
         sku: "PET-KEY-001",
         basePrice: 6,
-        image: "/seed/mascotas/mascotas-7.jpg",
-        imageUrl: "/seed/mascotas/mascotas-7.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -651,8 +658,6 @@ const products: SeedProduct[] = [
         name: "Portallaves personalizado",
         sku: "PET-HOME-001",
         basePrice: 20,
-        image: "/seed/mascotas/mascotas-8.jpg",
-        imageUrl: "/seed/mascotas/mascotas-8.jpg",
       },
     ],
     defaultVariantKey: "default",
@@ -661,60 +666,52 @@ const products: SeedProduct[] = [
     [
       "recordatorio-bodas-carton-comprimido-arco",
       "Recordatorio de bodas arco floral",
-      "/seed/bodas/bodas-2.jpg",
       weddingTiersMdf,
       4.5,
     ],
     [
       "recordatorio-bodas-acrilico-negro-dorado",
       "Recordatorio acrílico negro con dorado espejo",
-      "/seed/bodas/bodas-3.jpg",
       weddingTiersAcrylic,
       5,
     ],
     [
       "recordatorio-bodas-carton-marco",
       "Recordatorio de bodas marco ornamental",
-      "/seed/bodas/bodas-4.jpg",
       weddingTiersMdf,
       4.5,
     ],
     [
       "recordatorio-bodas-acrilico-blanco",
       "Recordatorio de bodas acrílico blanco",
-      "/seed/bodas/bodas-5.jpg",
       weddingTiersAcrylic,
       5,
     ],
     [
       "recordatorio-bodas-mdf-corazon",
       "Recordatorio de bodas corazón MDF",
-      "/seed/bodas/bodas-6.jpg",
       weddingTiersMdf,
       4.5,
     ],
     [
       "recordatorio-bodas-puzzle",
       "Recordatorio de bodas pieza faltante",
-      "/seed/bodas/bodas-7.jpg",
       weddingTiersAcrylic,
       5,
     ],
     [
       "recordatorio-bodas-corazon-negro",
       "Recordatorio de bodas corazón negro",
-      "/seed/bodas/bodas-8.jpg",
       weddingTiersAcrylic,
       5,
     ],
     [
       "recordatorio-bodas-tarjeta-acrilica",
       "Recordatorio de bodas tarjeta floral",
-      "/seed/bodas/bodas-9.jpg",
       weddingTiersAcrylic,
       5,
     ],
-  ].map(([slug, name, image, tiers, basePrice], index) => ({
+  ].map(([slug, name, tiers, basePrice], index) => ({
     categorySlug: "bodas",
     name: name as string,
     slug: slug as string,
@@ -730,8 +727,6 @@ const products: SeedProduct[] = [
         name: name as string,
         sku: `BOD-${String(index + 1).padStart(3, "0")}`,
         basePrice: basePrice as number,
-        image: image as string,
-        imageUrl: image as string,
         priceTiers: tiers as SeedTier[],
       },
     ],
@@ -762,8 +757,6 @@ const products: SeedProduct[] = [
         sku: "MEM-SNC-10",
         visualGroupKey: "principal",
         basePrice: 3,
-        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
-        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -772,8 +765,6 @@ const products: SeedProduct[] = [
         sku: "MEM-SNC-13",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
-        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
         optionValueKeys: ["tamano:13cm"],
       },
       {
@@ -782,8 +773,6 @@ const products: SeedProduct[] = [
         sku: "MEM-SNC-15",
         visualGroupKey: "principal",
         basePrice: 5,
-        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
-        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -814,8 +803,6 @@ const products: SeedProduct[] = [
         sku: "MEM-OVA-10",
         visualGroupKey: "principal",
         basePrice: 3,
-        image: "/seed/memoriales/memorial-ovalado.png",
-        imageUrl: "/seed/memoriales/memorial-ovalado.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -824,8 +811,6 @@ const products: SeedProduct[] = [
         sku: "MEM-OVA-13",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/memorial-ovalado.png",
-        imageUrl: "/seed/memoriales/memorial-ovalado.png",
         optionValueKeys: ["tamano:13cm"],
       },
       {
@@ -834,8 +819,6 @@ const products: SeedProduct[] = [
         sku: "MEM-OVA-15",
         visualGroupKey: "principal",
         basePrice: 5,
-        image: "/seed/memoriales/memorial-ovalado.png",
-        imageUrl: "/seed/memoriales/memorial-ovalado.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -866,8 +849,6 @@ const products: SeedProduct[] = [
         sku: "MEM-ORA-10",
         visualGroupKey: "principal",
         basePrice: 3,
-        image: "/seed/memoriales/memorial-de-oracion.png",
-        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -876,8 +857,6 @@ const products: SeedProduct[] = [
         sku: "MEM-ORA-13",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/memorial-de-oracion.png",
-        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
         optionValueKeys: ["tamano:13cm"],
       },
       {
@@ -886,8 +865,6 @@ const products: SeedProduct[] = [
         sku: "MEM-ORA-15",
         visualGroupKey: "principal",
         basePrice: 5,
-        image: "/seed/memoriales/memorial-de-oracion.png",
-        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -918,8 +895,6 @@ const products: SeedProduct[] = [
         sku: "MEM-COR-10",
         visualGroupKey: "principal",
         basePrice: 3,
-        image: "/seed/memoriales/memorial-corazon.png",
-        imageUrl: "/seed/memoriales/memorial-corazon.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -928,8 +903,6 @@ const products: SeedProduct[] = [
         sku: "MEM-COR-13",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/memorial-corazon.png",
-        imageUrl: "/seed/memoriales/memorial-corazon.png",
         optionValueKeys: ["tamano:13cm"],
       },
       {
@@ -938,8 +911,6 @@ const products: SeedProduct[] = [
         sku: "MEM-COR-15",
         visualGroupKey: "principal",
         basePrice: 5,
-        image: "/seed/memoriales/memorial-corazon.png",
-        imageUrl: "/seed/memoriales/memorial-corazon.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -969,8 +940,6 @@ const products: SeedProduct[] = [
         sku: "MEM-JN-10",
         visualGroupKey: "principal",
         basePrice: 2.5,
-        image: "/seed/memoriales/jesus-nazareno.png",
-        imageUrl: "/seed/memoriales/jesus-nazareno.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -979,8 +948,6 @@ const products: SeedProduct[] = [
         sku: "MEM-JN-15",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/jesus-nazareno.png",
-        imageUrl: "/seed/memoriales/jesus-nazareno.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -1011,8 +978,6 @@ const products: SeedProduct[] = [
         sku: "MEM-REC-10",
         visualGroupKey: "principal",
         basePrice: 3,
-        image: "/seed/memoriales/memorial-rectangulo.png",
-        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -1021,8 +986,6 @@ const products: SeedProduct[] = [
         sku: "MEM-REC-13",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/memorial-rectangulo.png",
-        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
         optionValueKeys: ["tamano:13cm"],
       },
       {
@@ -1031,8 +994,6 @@ const products: SeedProduct[] = [
         sku: "MEM-REC-15",
         visualGroupKey: "principal",
         basePrice: 5,
-        image: "/seed/memoriales/memorial-rectangulo.png",
-        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -1071,8 +1032,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-A-12",
         visualGroupKey: "acrilico-blanco",
         basePrice: 4,
-        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
         optionValueKeys: ["material:acrilico-blanco", "tamano:12cm"],
       },
       {
@@ -1081,8 +1040,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-A-15",
         visualGroupKey: "acrilico-blanco",
         basePrice: 6,
-        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
         optionValueKeys: ["material:acrilico-blanco", "tamano:15cm"],
       },
       {
@@ -1091,8 +1048,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-A-18",
         visualGroupKey: "acrilico-blanco",
         basePrice: 8,
-        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
         optionValueKeys: ["material:acrilico-blanco", "tamano:18cm"],
       },
       {
@@ -1101,8 +1056,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-C-12",
         visualGroupKey: "carton-comprimido",
         basePrice: 2.5,
-        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
         optionValueKeys: ["material:carton-comprimido", "tamano:12cm"],
       },
       {
@@ -1111,8 +1064,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-C-15",
         visualGroupKey: "carton-comprimido",
         basePrice: 4.5,
-        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
         optionValueKeys: ["material:carton-comprimido", "tamano:15cm"],
       },
       {
@@ -1121,8 +1072,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRU-C-18",
         visualGroupKey: "carton-comprimido",
         basePrice: 6.5,
-        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
-        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
         optionValueKeys: ["material:carton-comprimido", "tamano:18cm"],
       },
     ],
@@ -1152,8 +1101,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRM-10",
         visualGroupKey: "principal",
         basePrice: 2.5,
-        image: "/seed/memoriales/cruces-memoriales.png",
-        imageUrl: "/seed/memoriales/cruces-memoriales.png",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -1162,8 +1109,6 @@ const products: SeedProduct[] = [
         sku: "MEM-CRM-15",
         visualGroupKey: "principal",
         basePrice: 4,
-        image: "/seed/memoriales/cruces-memoriales.png",
-        imageUrl: "/seed/memoriales/cruces-memoriales.png",
         optionValueKeys: ["tamano:15cm"],
       },
     ],
@@ -1185,21 +1130,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 30,
         optionValueKeys: ["tamano:17-5cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
-            url: "/seed/deportes/escudo-arsenal.jpg",
-            alt: "Escudo Arsenal",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
-            url: "/seed/deportes/escudo-arsenal.mp4",
-            alt: "Video del escudo Arsenal",
-            position: 1,
-          },
-        ],
       },
       {
         key: "10cm",
@@ -1208,21 +1138,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 14,
         optionValueKeys: ["tamano:10cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
-            url: "/seed/deportes/escudo-arsenal.jpg",
-            alt: "Escudo Arsenal",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
-            url: "/seed/deportes/escudo-arsenal.mp4",
-            alt: "Video del escudo Arsenal",
-            position: 1,
-          },
-        ],
       },
       {
         key: "6-8cm",
@@ -1231,21 +1146,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 8,
         optionValueKeys: ["tamano:6-8cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
-            url: "/seed/deportes/escudo-arsenal.jpg",
-            alt: "Escudo Arsenal",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
-            url: "/seed/deportes/escudo-arsenal.mp4",
-            alt: "Video del escudo Arsenal",
-            position: 1,
-          },
-        ],
       },
     ],
     defaultVariantKey: "10cm",
@@ -1265,8 +1165,6 @@ const products: SeedProduct[] = [
         sku: "DEP-BAR-175",
         visualGroupKey: "principal",
         basePrice: 30,
-        image: "/seed/deportes/escudo-barcelona.jpeg",
-        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
         optionValueKeys: ["tamano:17-5cm"],
       },
       {
@@ -1275,8 +1173,6 @@ const products: SeedProduct[] = [
         sku: "DEP-BAR-100",
         visualGroupKey: "principal",
         basePrice: 14,
-        image: "/seed/deportes/escudo-barcelona.jpeg",
-        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
         optionValueKeys: ["tamano:10cm"],
       },
       {
@@ -1285,8 +1181,42 @@ const products: SeedProduct[] = [
         sku: "DEP-BAR-068",
         visualGroupKey: "principal",
         basePrice: 8,
-        image: "/seed/deportes/escudo-barcelona.jpeg",
-        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
+        optionValueKeys: ["tamano:6-8cm"],
+      },
+    ],
+    defaultVariantKey: "10cm",
+  },
+  {
+    categorySlug: "deportes",
+    name: "Escudo Yankees",
+    slug: "escudo-yankees",
+    description:
+      "Emblema decorativo de los Yankees con acabado espejo para escritorio, repisa o vitrina.",
+    featured: true,
+    options: [escudoTamanos],
+    variants: [
+      {
+        key: "17-5cm",
+        name: "17.5 cm",
+        sku: "DEP-YAN-175",
+        visualGroupKey: "principal",
+        basePrice: 30,
+        optionValueKeys: ["tamano:17-5cm"],
+      },
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "DEP-YAN-100",
+        visualGroupKey: "principal",
+        basePrice: 14,
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "6-8cm",
+        name: "6.8 cm",
+        sku: "DEP-YAN-068",
+        visualGroupKey: "principal",
+        basePrice: 8,
         optionValueKeys: ["tamano:6-8cm"],
       },
     ],
@@ -1308,21 +1238,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 30,
         optionValueKeys: ["tamano:17-5cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
-            url: "/seed/deportes/escudo-real-madrid.jpeg",
-            alt: "Escudo Real Madrid",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
-            url: "/seed/deportes/escudo-real-madrid.mp4",
-            alt: "Video del escudo Real Madrid",
-            position: 1,
-          },
-        ],
       },
       {
         key: "10cm",
@@ -1331,21 +1246,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 14,
         optionValueKeys: ["tamano:10cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
-            url: "/seed/deportes/escudo-real-madrid.jpeg",
-            alt: "Escudo Real Madrid",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
-            url: "/seed/deportes/escudo-real-madrid.mp4",
-            alt: "Video del escudo Real Madrid",
-            position: 1,
-          },
-        ],
       },
       {
         key: "6-8cm",
@@ -1354,21 +1254,6 @@ const products: SeedProduct[] = [
         visualGroupKey: "principal",
         basePrice: 8,
         optionValueKeys: ["tamano:6-8cm"],
-        media: [
-          {
-            type: "image",
-            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
-            url: "/seed/deportes/escudo-real-madrid.jpeg",
-            alt: "Escudo Real Madrid",
-          },
-          {
-            type: "video",
-            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
-            url: "/seed/deportes/escudo-real-madrid.mp4",
-            alt: "Video del escudo Real Madrid",
-            position: 1,
-          },
-        ],
       },
     ],
     defaultVariantKey: "10cm",
@@ -1399,8 +1284,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-O-175",
         visualGroupKey: "original",
         basePrice: 30,
-        image: "/seed/deportes/escudo-panama-original.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
         optionValueKeys: ["color:original", "tamano:17-5cm"],
       },
       {
@@ -1409,8 +1292,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-O-100",
         visualGroupKey: "original",
         basePrice: 14,
-        image: "/seed/deportes/escudo-panama-original.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
         optionValueKeys: ["color:original", "tamano:10cm"],
       },
       {
@@ -1419,8 +1300,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-O-068",
         visualGroupKey: "original",
         basePrice: 8,
-        image: "/seed/deportes/escudo-panama-original.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
         optionValueKeys: ["color:original", "tamano:6-8cm"],
       },
       {
@@ -1429,8 +1308,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-D-175",
         visualGroupKey: "dorado",
         basePrice: 30,
-        image: "/seed/deportes/escudo-panama-dorado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
         optionValueKeys: ["color:dorado", "tamano:17-5cm"],
       },
       {
@@ -1439,8 +1316,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-D-100",
         visualGroupKey: "dorado",
         basePrice: 14,
-        image: "/seed/deportes/escudo-panama-dorado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
         optionValueKeys: ["color:dorado", "tamano:10cm"],
       },
       {
@@ -1449,8 +1324,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-D-068",
         visualGroupKey: "dorado",
         basePrice: 8,
-        image: "/seed/deportes/escudo-panama-dorado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
         optionValueKeys: ["color:dorado", "tamano:6-8cm"],
       },
       {
@@ -1459,8 +1332,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-P-175",
         visualGroupKey: "plateado",
         basePrice: 30,
-        image: "/seed/deportes/escudo-panama-plateado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
         optionValueKeys: ["color:plateado", "tamano:17-5cm"],
       },
       {
@@ -1469,8 +1340,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-P-100",
         visualGroupKey: "plateado",
         basePrice: 14,
-        image: "/seed/deportes/escudo-panama-plateado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
         optionValueKeys: ["color:plateado", "tamano:10cm"],
       },
       {
@@ -1479,8 +1348,6 @@ const products: SeedProduct[] = [
         sku: "DEP-PAN-P-068",
         visualGroupKey: "plateado",
         basePrice: 8,
-        image: "/seed/deportes/escudo-panama-plateado.jpeg",
-        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
         optionValueKeys: ["color:plateado", "tamano:6-8cm"],
       },
     ],

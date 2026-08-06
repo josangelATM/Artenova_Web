@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Box, Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { Pencil } from "lucide-react";
-import { formatCurrency, resolveMediaStillUrl, type Product } from "@artenova/shared";
+import { formatCurrency, type Product } from "@artenova/shared";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip } from "./adminUi";
@@ -32,7 +32,7 @@ export function AdminProductDetailPage() {
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Productos", to: "/admin/productos" }, { label: product?.name ?? "Detalle" }]} />
       <AdminPageHeader
         title={product?.name ?? "Producto"}
-        subtitle="Resumen util para revisar la variante visible, las combinaciones y el estado."
+        subtitle="Resumen útil para revisar la variante visible, las combinaciones y el estado."
         action={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <AdminBackButton to="/admin/productos" />
@@ -64,13 +64,13 @@ export function AdminProductDetailPage() {
                       <AdminField label="Estado" value={<StatusChip status={product.isPublished ? "published" : "draft"} />} />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                      <AdminField label="Destacado" value={product.isFeatured ? "Si" : "No"} />
+                      <AdminField label="Destacado" value={product.isFeatured ? "Sí" : "No"} />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
                       <AdminField label="Precio visible" value={formatCurrency(defaultVariant?.pricingSummary.finalPrice ?? product.pricingSummary.finalPrice, product.currencySymbol)} />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                      <AdminField label="Descripcion" value={product.description} />
+                      <AdminField label="Descripción" value={product.description} />
                     </Grid>
                   </Grid>
                 </AdminDetailSection>
@@ -96,7 +96,7 @@ export function AdminProductDetailPage() {
                   )}
                 </AdminDetailSection>
 
-                <AdminDetailSection title={hasOptions ? "Galeria descriptiva del producto" : "Galeria de la variante unica"}>
+                <AdminDetailSection title={hasOptions ? "Galería descriptiva del producto" : "Galería de la variante única"}>
                   <Stack direction="row" gap={1} flexWrap="wrap">
                     {product.media.length === 0 && !defaultVariant?.media.length && <Typography color="text.secondary">Sin media.</Typography>}
                     {(hasOptions ? product.media : defaultVariant?.media ?? []).map((item) => (
@@ -115,7 +115,7 @@ export function AdminProductDetailPage() {
                 </AdminDetailSection>
 
                 <AdminDetailSection title="Variantes">
-                  {!hasOptions && <Typography color="text.secondary">Producto simple con una sola variante automatica.</Typography>}
+                  {!hasOptions && <Typography color="text.secondary">Producto simple con una sola variante automática.</Typography>}
                   {hasOptions && (
                     <Stack direction="row" gap={0.75} flexWrap="wrap" mb={2}>
                       {product.productOptions.map((option) => (

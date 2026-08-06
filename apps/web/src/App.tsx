@@ -4,8 +4,14 @@ import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminCategoryDetailPage } from "./pages/admin/AdminCategoryDetailPage";
 import { AdminCategoryFormPage } from "./pages/admin/AdminCategoryFormPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminExpenseDetailPage } from "./pages/admin/AdminExpenseDetailPage";
+import { AdminExpenseFormPage } from "./pages/admin/AdminExpenseFormPage";
+import { AdminExpensesPage } from "./pages/admin/AdminExpensesPage";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
+import { AdminOrderDetailPage } from "./pages/admin/AdminOrderDetailPage";
+import { AdminOrderFormPage } from "./pages/admin/AdminOrderFormPage";
+import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
 import { AdminProductDetailPage } from "./pages/admin/AdminProductDetailPage";
 import { AdminProductFormPage } from "./pages/admin/AdminProductFormPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
@@ -36,6 +42,10 @@ const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminDashboardPage /> },
+          { path: "gastos", element: <AdminExpensesPage /> },
+          { path: "gastos/nuevo", element: <AdminExpenseFormPage /> },
+          { path: "gastos/:id", element: <AdminExpenseDetailPage /> },
+          { path: "gastos/:id/editar", element: <AdminExpenseFormPage /> },
           { path: "categorias", element: <AdminCategoriesPage /> },
           { path: "categorias/nuevo", element: <AdminCategoryFormPage /> },
           { path: "categorias/:id", element: <AdminCategoryDetailPage /> },
@@ -48,7 +58,10 @@ const router = createBrowserRouter([
           { path: "productos/nuevo", element: <AdminProductFormPage /> },
           { path: "productos/:id", element: <AdminProductDetailPage /> },
           { path: "productos/:id/editar", element: <AdminProductFormPage /> },
-          { path: "pedidos", element: <Navigate to="/admin" replace /> }
+          { path: "pedidos", element: <AdminOrdersPage /> },
+          { path: "pedidos/nuevo", element: <AdminOrderFormPage /> },
+          { path: "pedidos/:id", element: <AdminOrderDetailPage /> },
+          { path: "pedidos/:id/editar", element: <AdminOrderDetailPage /> }
         ]
       }
     ]

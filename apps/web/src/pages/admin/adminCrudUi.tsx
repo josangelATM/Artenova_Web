@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Box, Breadcrumbs, Button, Paper, Stack, TextField, Typography } from "@mui/material";
-import { DataGrid, type GridColDef, type GridRowsProp } from "@mui/x-data-grid";
+import { DataGrid, type GridColDef, type GridPaginationModel, type GridRowsProp } from "@mui/x-data-grid";
 import { ArrowLeft, Eye, Pencil } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { AdminEmptyState, adminSurfaceSx } from "./adminUi";
@@ -55,7 +55,12 @@ export function AdminDataGrid({
   loading,
   emptyTitle,
   emptyDescription,
-  getRowId
+  getRowId,
+  paginationMode,
+  paginationModel,
+  onPaginationModelChange,
+  rowCount,
+  pageSizeOptions
 }: {
   rows: GridRowsProp;
   columns: GridColDef[];
@@ -63,6 +68,11 @@ export function AdminDataGrid({
   emptyTitle: string;
   emptyDescription: string;
   getRowId?: (row: any) => string;
+  paginationMode?: "client" | "server";
+  paginationModel?: GridPaginationModel;
+  onPaginationModelChange?: (model: GridPaginationModel) => void;
+  rowCount?: number;
+  pageSizeOptions?: number[];
 }) {
   return (
     <Paper sx={{ ...adminSurfaceSx, p: 1 }}>
@@ -72,9 +82,13 @@ export function AdminDataGrid({
           columns={columns}
           loading={loading}
           getRowId={getRowId}
+          paginationMode={paginationMode}
+          paginationModel={paginationModel}
+          onPaginationModelChange={onPaginationModelChange}
+          rowCount={rowCount}
           disableRowSelectionOnClick
-          pageSizeOptions={[10, 25, 50]}
-          initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+          pageSizeOptions={pageSizeOptions ?? [10, 25, 50]}
+          initialState={paginationModel ? undefined : { pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
           slots={{
             noRowsOverlay: () => <AdminEmptyState title={emptyTitle} description={emptyDescription} />,
             noResultsOverlay: () => <AdminEmptyState title="Sin resultados" description="Ajusta los filtros o la búsqueda." />

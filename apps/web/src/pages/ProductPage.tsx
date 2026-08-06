@@ -30,6 +30,11 @@ function matchesSelection(variant: ProductVariant, selection: SelectionState) {
   return Object.entries(selection).every(([optionId, optionValueId]) => !optionValueId || byOptionId[optionId] === optionValueId);
 }
 
+function matchesSelectionForOptionIds(variant: ProductVariant, selection: SelectionState, optionIds: Set<string>) {
+  const byOptionId = variantSelectionMap(variant);
+  return Object.entries(selection).every(([optionId, optionValueId]) => !optionIds.has(optionId) || !optionValueId || byOptionId[optionId] === optionValueId);
+}
+
 function completeSelectionFromVariant(variant: ProductVariant) {
   return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
 }
@@ -100,6 +105,14 @@ export function ProductPage() {
 
   const productOptions = product?.productOptions ?? [];
   const activeVariants = useMemo(() => product?.variants.filter((variant) => variant.isActive) ?? [], [product?.variants]);
+  const visualOptionIds = useMemo(
+    () => new Set(productOptions.filter((option) => option.drivesVisualGroup).map((option) => option.id)),
+    [productOptions],
+  );
+  const nonVisualOptionIds = useMemo(
+    () => new Set(productOptions.filter((option) => !option.drivesVisualGroup).map((option) => option.id)),
+    [productOptions],
+  );
   const hasOptionSelection = useMemo(() => productOptions.some((option) => Boolean(selectedOptions[option.id])), [productOptions, selectedOptions]);
 
   const selectedVariant = useMemo(() => {
@@ -190,9 +203,33 @@ export function ProductPage() {
     if (!nextThumbnailItem) return;
 
     const nextVisualGroup = nextThumbnailItem.visualGroupKey;
-    const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
-    const nextGalleryItem = nextGalleryItems[0];
+    if (nextVisualGroup === "base" || visualOptionIds.size === 0) {
+      const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
+      const nextGalleryItem = nextGalleryItems[0];
+      setActiveVisualGroup(nextVisualGroup);
+      if (nextGalleryItem) {
+        setActiveGalleryKey(nextGalleryItem.key);
+      }
+      return;
+    }
 
+    const groupVariants = activeVariants.filter((variant) => resolveVisualGroupKey(variant) === nextVisualGroup);
+    const preferredVariant = nextThumbnailItem.variantId
+      ? groupVariants.find((variant) => variant.id === nextThumbnailItem.variantId)
+      : null;
+    const compatibleVariant = groupVariants.find((variant) => matchesSelectionForOptionIds(variant, selectedOptions, nonVisualOptionIds));
+    const defaultVariantInGroup = groupVariants.find((variant) => variant.id === product?.defaultVariant?.id) ?? groupVariants[0] ?? null;
+    const nextVariant =
+      (preferredVariant && matchesSelectionForOptionIds(preferredVariant, selectedOptions, nonVisualOptionIds) ? preferredVariant : null)
+      ?? compatibleVariant
+      ?? defaultVariantInGroup;
+
+    const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
+    const nextGalleryItem = nextGalleryItems.find((item) => item.key === nextKey) ?? nextGalleryItems[0];
+
+    if (nextVariant) {
+      setSelectedOptions(completeSelectionFromVariant(nextVariant));
+    }
     setActiveVisualGroup(nextVisualGroup);
     if (nextGalleryItem) {
       setActiveGalleryKey(nextGalleryItem.key);

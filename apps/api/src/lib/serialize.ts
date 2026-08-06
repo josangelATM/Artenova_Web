@@ -59,6 +59,7 @@ export function productPayload(product: any) {
 
   const productOptions = (product.options ?? []).map((option: any) => ({
     ...option,
+    drivesVisualGroup: option.drivesVisualGroup ?? false,
     values: (option.values ?? []).map((value: any) => ({
       ...value,
       swatch: value.swatch ?? null,
@@ -129,19 +130,63 @@ export function reviewPayload(review: any) {
 }
 
 export function orderPayload(order: any) {
+  const items = order.items?.map((item: any) => ({
+    ...item,
+    unitPrice: toNumber(item.unitPrice),
+    extrasTotal: toNumber(item.extrasTotal),
+    lineTotal: toNumber(item.lineTotal),
+    skuSnapshot: item.skuSnapshot ?? null,
+    variantNameSnapshot: item.variantNameSnapshot ?? null,
+    unitLabel: item.unitLabel ?? null,
+    selectedExtraIds: Array.isArray(item.selectedExtraIds) ? item.selectedExtraIds : [],
+    personalization: item.personalization ?? {},
+    units: (item.units ?? []).map((unit: any) => ({
+      ...unit,
+      label: unit.label ?? null,
+      personalization: unit.personalization ?? {}
+    }))
+  })) ?? [];
+  const payments = order.payments?.map((payment: any) => ({
+    ...payment,
+    amount: toNumber(payment.amount),
+    reference: payment.reference ?? null,
+    note: payment.note ?? null,
+    createdAt: payment.createdAt?.toISOString?.() ?? payment.createdAt
+  })) ?? [];
+  const itemsTotal = Number(items.reduce((sum: number, item: any) => sum + (item.lineTotal ?? 0), 0).toFixed(2));
+  const paidTotal = Number(payments.reduce((sum: number, payment: any) => sum + (payment.amount ?? 0), 0).toFixed(2));
+  const explicitFinalPrice = toNumber(order.finalPrice);
+  const operationalTotal = explicitFinalPrice ?? itemsTotal;
+  const balance = Number(Math.max(0, operationalTotal - paidTotal).toFixed(2));
+
   return {
     ...order,
     estimatedTotal: toNumber(order.estimatedTotal),
-    finalPrice: toNumber(order.finalPrice),
+    finalPrice: explicitFinalPrice ?? null,
+    source: order.source ?? "storefront",
+    adminNote: order.adminNote ?? null,
+    internalNote: order.internalNote ?? null,
     createdAt: order.createdAt?.toISOString?.() ?? order.createdAt,
     updatedAt: order.updatedAt?.toISOString?.() ?? order.updatedAt,
-    items: order.items?.map((item: any) => ({
-      ...item,
-      unitPrice: toNumber(item.unitPrice),
-      extrasTotal: toNumber(item.extrasTotal),
-      lineTotal: toNumber(item.lineTotal),
-      selectedExtraIds: Array.isArray(item.selectedExtraIds) ? item.selectedExtraIds : [],
-      personalization: item.personalization ?? {}
-    })) ?? []
+    completedAt: order.completedAt?.toISOString?.() ?? order.completedAt ?? null,
+    itemsTotal,
+    paidTotal,
+    balance,
+    isPaid: balance <= 0,
+    items,
+    payments
+  };
+}
+
+export function expensePayload(expense: any) {
+  return {
+    ...expense,
+    amount: toNumber(expense.amount) ?? 0,
+    paymentMethod: expense.paymentMethod ?? null,
+    reference: expense.reference ?? null,
+    notes: expense.notes ?? null,
+    expenseDate: expense.expenseDate?.toISOString?.() ?? expense.expenseDate,
+    createdAt: expense.createdAt?.toISOString?.() ?? expense.createdAt,
+    updatedAt: expense.updatedAt?.toISOString?.() ?? expense.updatedAt
   };
 }

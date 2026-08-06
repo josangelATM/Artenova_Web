@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
-import { Pencil, PauseCircle } from "lucide-react";
+import { PauseCircle, Pencil } from "lucide-react";
 import type { Category } from "@artenova/shared";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { api } from "../../lib/api";

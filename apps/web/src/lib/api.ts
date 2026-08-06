@@ -1,4 +1,4 @@
-import type { AdminCategoryInput, AdminProductReviewInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateOrderInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminOrderPaymentInput, AdminProductReviewInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput } from "@artenova/shared";
 
 type AdminProductPayload = Omit<Partial<Product>, "media" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
   id?: string;
@@ -76,6 +76,14 @@ export const api = {
       body: JSON.stringify(category)
     }),
   pauseAdminCategory: (id: string) => request<Category>(`/api/admin/categories/${id}`, { method: "DELETE" }),
+  adminExpenses: (params: URLSearchParams) => request<AdminExpenseListResponse>(`/api/admin/expenses?${params.toString()}`),
+  adminExpense: (id: string) => request<AdminExpense>(`/api/admin/expenses/${id}`),
+  saveAdminExpense: (expense: AdminExpenseInput & { id?: string }) =>
+    request<AdminExpense>(expense.id ? `/api/admin/expenses/${expense.id}` : "/api/admin/expenses", {
+      method: expense.id ? "PUT" : "POST",
+      body: JSON.stringify(expense)
+    }),
+  deleteAdminExpense: (id: string) => request<void>(`/api/admin/expenses/${id}`, { method: "DELETE" }),
   adminProducts: () => request<Product[]>("/api/admin/products"),
   adminProduct: (id: string) => request<Product>(`/api/admin/products/${id}`),
   saveAdminProduct: (product: AdminProductPayload) =>
@@ -93,7 +101,14 @@ export const api = {
   setAdminReviewApproval: (id: string, isApproved: boolean) =>
     request<ProductReview>(`/api/admin/reviews/${id}/approval`, { method: "PATCH", body: JSON.stringify({ isApproved }) }),
   deleteAdminReview: (id: string) => request<void>(`/api/admin/reviews/${id}`, { method: "DELETE" }),
-  adminOrders: () => request<Order[]>("/api/admin/orders"),
-  updateOrder: (id: string, input: UpdateOrderInput) =>
-    request<Order>(`/api/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(input) })
+  adminOrders: (params?: URLSearchParams) => request<Order[]>(`/api/admin/orders${params ? `?${params.toString()}` : ""}`),
+  adminOrder: (id: string) => request<Order>(`/api/admin/orders/${id}`),
+  createAdminOrder: (input: CreateAdminOrderInput) =>
+    request<Order>("/api/admin/orders", { method: "POST", body: JSON.stringify(input) }),
+  updateAdminOrder: (id: string, input: UpdateAdminOrderInput) =>
+    request<Order>(`/api/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  createOrderPayment: (id: string, input: AdminOrderPaymentInput) =>
+    request<Order>(`/api/admin/orders/${id}/payments`, { method: "POST", body: JSON.stringify(input) }),
+  updateAdminOrderStatus: (id: string, input: UpdateAdminOrderStatusInput) =>
+    request<Order>(`/api/admin/orders/${id}/status`, { method: "PUT", body: JSON.stringify(input) })
 };

@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Product, SiteSettings } from "@artenova/shared";
 import { ProductPage } from "../pages/ProductPage";
 import { theme } from "../theme/theme";
@@ -102,6 +102,7 @@ const product: Product = {
       id: "size",
       productId: "p1",
       name: "Tamano",
+      drivesVisualGroup: false,
       position: 0,
       values: [
         { id: "small", optionId: "size", value: "Pequeno", position: 0, swatch: null },
@@ -153,6 +154,10 @@ describe("ProductPage", () => {
     productMock.mockReset();
     settingsMock.mockReset();
     applySeoMock.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("starts from the default variant and only changes the variant when the user changes options", async () => {
@@ -240,5 +245,230 @@ describe("ProductPage", () => {
       expect(screen.getAllByLabelText(/video base/i).length).toBeGreaterThan(0);
     });
     expect(screen.getAllByLabelText(/video base/i)[0]?.tagName.toLowerCase()).toBe("video");
+  });
+
+  it("updates the selected visual option when the user chooses a thumbnail from another visual group", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      defaultVariant: {
+        ...defaultVariant,
+        id: "gold-small",
+        name: "Dorado pequeno",
+        selectionKey: "color-gold|small",
+        visualGroupKey: "dorado",
+        selections: [
+          { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+          { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+        ],
+      },
+      defaultVariantId: "gold-small",
+      productOptions: [
+        {
+          id: "color",
+          productId: "p1",
+          name: "Color",
+          drivesVisualGroup: true,
+          position: 0,
+          values: [
+            { id: "gold", optionId: "color", value: "Dorado", position: 0, swatch: null },
+            { id: "silver", optionId: "color", value: "Plateado", position: 1, swatch: null },
+          ],
+        },
+        {
+          id: "size",
+          productId: "p1",
+          name: "Tamano",
+          drivesVisualGroup: false,
+          position: 1,
+          values: [
+            { id: "small", optionId: "size", value: "Pequeno", position: 0, swatch: null },
+            { id: "large", optionId: "size", value: "Grande", position: 1, swatch: null },
+          ],
+        },
+      ],
+      variants: [
+        {
+          ...defaultVariant,
+          id: "gold-small",
+          name: "Dorado pequeno",
+          selectionKey: "color-gold|small",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-small", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+        },
+        {
+          ...defaultVariant,
+          id: "gold-large",
+          name: "Dorado grande",
+          selectionKey: "color-gold|large",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-large", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 1 },
+          ],
+          basePrice: 24,
+          pricingSummary: { originalPrice: 24, finalPrice: 24, hasDiscount: false, discountType: null, discountValue: null },
+        },
+        {
+          ...defaultVariant,
+          id: "silver-small",
+          name: "Plateado pequeno",
+          selectionKey: "color-silver|small",
+          visualGroupKey: "plateado",
+          media: [imageMedia("silver-small", "/seed/silver.jpg", "Escudo plateado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "silver", value: "Plateado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+          basePrice: 23,
+          pricingSummary: { originalPrice: 23, finalPrice: 23, hasDiscount: false, discountType: null, discountValue: null },
+        },
+        {
+          ...defaultVariant,
+          id: "silver-large",
+          name: "Plateado grande",
+          selectionKey: "color-silver|large",
+          visualGroupKey: "plateado",
+          media: [imageMedia("silver-large", "/seed/silver.jpg", "Escudo plateado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "silver", value: "Plateado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 1 },
+          ],
+          basePrice: 25,
+          pricingSummary: { originalPrice: 25, finalPrice: 25, hasDiscount: false, discountType: null, discountValue: null },
+        },
+      ],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Letrero acrilico").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Grande" })[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByText("$24.00")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /ver elemento 3/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("$25.00")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Plateado" })).toHaveClass("MuiChip-filled");
+    expect(screen.getByRole("button", { name: "Grande" })).toHaveClass("MuiChip-filled");
+    expect(screen.getAllByRole("img", { name: /escudo plateado/i }).length).toBeGreaterThan(0);
+  });
+
+  it("falls back to the first active variant in the chosen visual group when the current non-visual selection is unavailable", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      defaultVariant: {
+        ...defaultVariant,
+        id: "gold-small",
+        name: "Dorado pequeno",
+        selectionKey: "color-gold|small",
+        visualGroupKey: "dorado",
+        selections: [
+          { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+          { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+        ],
+      },
+      defaultVariantId: "gold-small",
+      productOptions: [
+        {
+          id: "color",
+          productId: "p1",
+          name: "Color",
+          drivesVisualGroup: true,
+          position: 0,
+          values: [
+            { id: "gold", optionId: "color", value: "Dorado", position: 0, swatch: null },
+            { id: "silver", optionId: "color", value: "Plateado", position: 1, swatch: null },
+          ],
+        },
+        {
+          id: "size",
+          productId: "p1",
+          name: "Tamano",
+          drivesVisualGroup: false,
+          position: 1,
+          values: [
+            { id: "small", optionId: "size", value: "Pequeno", position: 0, swatch: null },
+            { id: "large", optionId: "size", value: "Grande", position: 1, swatch: null },
+          ],
+        },
+      ],
+      variants: [
+        {
+          ...defaultVariant,
+          id: "gold-small",
+          name: "Dorado pequeno",
+          selectionKey: "color-gold|small",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-small", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+        },
+        {
+          ...defaultVariant,
+          id: "gold-large",
+          name: "Dorado grande",
+          selectionKey: "color-gold|large",
+          visualGroupKey: "dorado",
+          media: [imageMedia("gold-large", "/seed/gold.jpg", "Escudo dorado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "gold", value: "Dorado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 1 },
+          ],
+          basePrice: 24,
+          pricingSummary: { originalPrice: 24, finalPrice: 24, hasDiscount: false, discountType: null, discountValue: null },
+        },
+        {
+          ...defaultVariant,
+          id: "silver-small",
+          name: "Plateado pequeno",
+          selectionKey: "color-silver|small",
+          visualGroupKey: "plateado",
+          media: [imageMedia("silver-small", "/seed/silver.jpg", "Escudo plateado", 0)],
+          selections: [
+            { optionId: "color", optionName: "Color", optionValueId: "silver", value: "Plateado", position: 0 },
+            { optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 1 },
+          ],
+          basePrice: 23,
+          pricingSummary: { originalPrice: 23, finalPrice: 23, hasDiscount: false, discountType: null, discountValue: null },
+        },
+      ],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Letrero acrilico").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Grande" })[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByText("$24.00")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /ver elemento 3/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("$23.00")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Plateado" })).toHaveClass("MuiChip-filled");
+    expect(screen.getByRole("button", { name: "Pequeno" })).toHaveClass("MuiChip-filled");
   });
 });

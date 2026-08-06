@@ -1,9 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
-import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, updateOrderSchema, updateReviewApprovalSchema } from "@artenova/shared";
+import type { Prisma } from "@prisma/client";
+import { adminCategoryInputSchema, adminExpenseQuerySchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminOrderPaymentInputSchema, createAdminExpenseSchema, createAdminOrderSchema, updateAdminExpenseSchema, updateAdminOrderSchema, updateAdminOrderStatusSchema, updateReviewApprovalSchema } from "@artenova/shared";
+import { createOrderCode } from "../lib/orderCode";
 import { prisma } from "../lib/prisma";
-import { orderPayload, productPayload, reviewPayload } from "../lib/serialize";
+import { buildExpenseSummaryBounds, endOfUtcDay, parseDateOnly, startOfUtcDay } from "../lib/expenseDates";
+import { expensePayload, orderPayload, productPayload, reviewPayload } from "../lib/serialize";
 import { requireAdmin, signAdminToken } from "../middleware/auth";
 import { UploadValidationError, uploadProductMedia } from "../services/uploadService";
 
@@ -42,6 +45,148 @@ const productInclude = {
   customFields: { orderBy: { position: "asc" as const } },
   reviews: { orderBy: { createdAt: "desc" as const } }
 };
+
+const orderInclude = {
+  items: {
+    include: {
+      units: { orderBy: { position: "asc" as const } }
+    },
+    orderBy: { id: "asc" as const }
+  },
+  payments: { orderBy: { createdAt: "asc" as const } }
+};
+
+function roundMoney(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function toNumber(value: { toString(): string } | number | null | undefined) {
+  return value == null ? value : Number(value.toString());
+}
+
+function computeAdminLineTotal(quantity: number, unitPrice: number, extrasTotal: number) {
+  return roundMoney((unitPrice + extrasTotal) * quantity);
+}
+
+function toOptionalString(value?: string | null) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+async function syncOrderItems(tx: any, orderId: string, items: Array<{
+  productId?: string | null;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  extrasTotal: number;
+  skuSnapshot?: string | null;
+  variantNameSnapshot?: string | null;
+  unitLabel?: string | null;
+  selectedExtraIds: string[];
+  personalization: Record<string, string | string[]>;
+  units: Array<{ position?: number; label?: string | null; personalization: Record<string, string | string[]> }>;
+}>) {
+  await tx.orderItemUnit.deleteMany({ where: { orderItem: { orderId } } });
+  await tx.orderItem.deleteMany({ where: { orderId } });
+
+  if (items.length === 0) return 0;
+
+  const catalogItems = items.filter((item) => item.productId);
+  const products = await tx.product.findMany({
+    where: { id: { in: catalogItems.map((item) => item.productId) } },
+    include: {
+      customFields: true,
+      variants: {
+        where: { isActive: true },
+        orderBy: { position: "asc" as const },
+        select: { name: true, sku: true }
+      }
+    }
+  }) as Array<{
+    id: string;
+    name: string;
+    customFields: Array<{ id?: string | null; required: boolean }>;
+    variants: Array<{ name: string; sku: string | null }>;
+  }>;
+  const productById = new Map<string, (typeof products)[number]>(products.map((product) => [product.id, product]));
+
+  let estimatedTotal = 0;
+  for (const item of items) {
+    const product = item.productId ? productById.get(item.productId) : null;
+    if (item.productId && !product) {
+      throw new Error(`Producto no encontrado: ${item.productId}`);
+    }
+
+    const missingRequired = (product?.customFields ?? []).filter((field: any) => field.required && !item.personalization?.[field.id]);
+    if (missingRequired.length > 0 && product) {
+      throw new Error(`Faltan datos requeridos para ${product.name}`);
+    }
+
+    const trimmedProductName = item.productName.trim();
+    if (!trimmedProductName) {
+      throw new Error("Cada item debe tener un nombre.");
+    }
+
+    const variantSnapshot = product?.variants.find((variant: any) => variant.name === item.variantNameSnapshot || variant.sku === item.skuSnapshot) ?? product?.variants[0] ?? null;
+    const lineTotal = computeAdminLineTotal(item.quantity, item.unitPrice, item.extrasTotal);
+    estimatedTotal += lineTotal;
+
+    await tx.orderItem.create({
+      data: {
+        orderId,
+        productId: item.productId ?? null,
+        productName: product?.name ?? trimmedProductName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        extrasTotal: item.extrasTotal,
+        lineTotal,
+        skuSnapshot: toOptionalString(item.skuSnapshot) ?? variantSnapshot?.sku ?? null,
+        variantNameSnapshot: toOptionalString(item.variantNameSnapshot) ?? variantSnapshot?.name ?? null,
+        unitLabel: toOptionalString(item.unitLabel),
+        selectedExtraIds: item.selectedExtraIds as Prisma.InputJsonValue,
+        personalization: item.personalization as Prisma.InputJsonValue,
+        units: item.units.length > 0 ? {
+          create: item.units.map((unit, index) => ({
+            position: unit.position ?? index,
+            label: toOptionalString(unit.label),
+            personalization: unit.personalization as Prisma.InputJsonValue
+          }))
+        } : undefined
+      }
+    });
+  }
+
+  return roundMoney(estimatedTotal);
+}
+
+async function createOrderPayments(tx: any, orderId: string, payments: Array<{
+  amount: number;
+  method: "efectivo" | "yappy" | "transferencia" | "otro";
+  reference?: string | null;
+  note?: string | null;
+}>) {
+  for (const payment of payments) {
+    await tx.orderPayment.create({
+      data: {
+        orderId,
+        amount: payment.amount,
+        method: payment.method,
+        reference: toOptionalString(payment.reference),
+        note: toOptionalString(payment.note)
+      }
+    });
+  }
+}
+
+function isCodeConflict(error: unknown) {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "P2002"
+    && "meta" in error
+    && Array.isArray((error as { meta?: { target?: string[] } }).meta?.target)
+    && (error as { meta?: { target?: string[] } }).meta?.target?.includes("code");
+}
 
 function normalizeSelectionKey(ids: string[]) {
   return ids.slice().sort().join("|");
@@ -180,7 +325,7 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
 async function syncProductOptions(
   tx: any,
   productId: string,
-  inputOptions: Array<{ id: string; name: string; position: number; values: Array<{ id: string; value: string; position: number; swatch?: string | null }> }>
+  inputOptions: Array<{ id: string; name: string; drivesVisualGroup?: boolean; position: number; values: Array<{ id: string; value: string; position: number; swatch?: string | null }> }>
 ) {
   const existingOptions = await tx.productOption.findMany({
     where: { productId },
@@ -198,11 +343,11 @@ async function syncProductOptions(
     if (existingOptionIds.has(option.id)) {
       await tx.productOption.update({
         where: { id: option.id },
-        data: { name: option.name, position: option.position }
+        data: { name: option.name, drivesVisualGroup: option.drivesVisualGroup ?? false, position: option.position }
       });
     } else {
       await tx.productOption.create({
-        data: { id: option.id, productId, name: option.name, position: option.position }
+        data: { id: option.id, productId, name: option.name, drivesVisualGroup: option.drivesVisualGroup ?? false, position: option.position }
       });
     }
 
@@ -376,7 +521,7 @@ adminRouter.get("/dashboard", async (_req, res) => {
     db.productReview.count()
   ]);
   const latestOrders = await prisma.order.findMany({
-    include: { items: true },
+    include: orderInclude,
     orderBy: { createdAt: "desc" },
     take: 6
   });
@@ -414,6 +559,119 @@ adminRouter.delete("/categories/:id", async (req, res) => {
     data: { isActive: false }
   });
   res.json(category);
+});
+
+adminRouter.get("/expenses", async (req, res) => {
+  const input = adminExpenseQuerySchema.parse(req.query);
+  const { todayStart, todayEnd, monthStart } = buildExpenseSummaryBounds(new Date());
+  const q = input.q?.trim() ?? "";
+  const filters: Prisma.ExpenseWhereInput = {
+    category: input.category,
+    expenseDate: input.dateFrom || input.dateTo
+      ? {
+          gte: input.dateFrom ? startOfUtcDay(parseDateOnly(input.dateFrom)) : undefined,
+          lte: input.dateTo ? endOfUtcDay(parseDateOnly(input.dateTo)) : undefined
+        }
+      : undefined,
+    OR: q
+      ? [
+          { description: { contains: q, mode: "insensitive" as const } },
+          { reference: { contains: q, mode: "insensitive" as const } }
+        ]
+      : undefined
+  };
+
+  const [items, totalItems, filteredAggregate, todayAggregate, monthAggregate] = await Promise.all([
+    db.expense.findMany({
+      where: filters,
+      orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
+      skip: (input.page - 1) * input.pageSize,
+      take: input.pageSize
+    }),
+    db.expense.count({ where: filters }),
+    db.expense.aggregate({
+      where: filters,
+      _sum: { amount: true }
+    }),
+    db.expense.aggregate({
+      where: {
+        expenseDate: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      },
+      _sum: { amount: true }
+    }),
+    db.expense.aggregate({
+      where: {
+        expenseDate: {
+          gte: monthStart,
+          lte: todayEnd
+        }
+      },
+      _sum: { amount: true }
+    })
+  ]);
+
+  res.json({
+    items: items.map(expensePayload),
+    page: input.page,
+    pageSize: input.pageSize,
+    totalItems,
+    totalPages: Math.ceil(totalItems / input.pageSize),
+    summary: {
+      todayTotal: toNumber(todayAggregate._sum.amount) ?? 0,
+      monthTotal: toNumber(monthAggregate._sum.amount) ?? 0,
+      filteredTotal: toNumber(filteredAggregate._sum.amount) ?? 0
+    }
+  });
+});
+
+adminRouter.get("/expenses/:id", async (req, res) => {
+  const expense = await db.expense.findUnique({ where: { id: req.params.id } });
+  if (!expense) {
+    res.status(404).json({ message: "Gasto no encontrado" });
+    return;
+  }
+  res.json(expensePayload(expense));
+});
+
+adminRouter.post("/expenses", async (req, res) => {
+  const input = createAdminExpenseSchema.parse(req.body);
+  const expense = await db.expense.create({
+    data: {
+      category: input.category,
+      amount: input.amount,
+      expenseDate: parseDateOnly(input.expenseDate),
+      description: input.description.trim(),
+      paymentMethod: input.paymentMethod ?? null,
+      reference: toOptionalString(input.reference),
+      notes: toOptionalString(input.notes)
+    }
+  });
+  res.status(201).json(expensePayload(expense));
+});
+
+adminRouter.put("/expenses/:id", async (req, res) => {
+  const input = updateAdminExpenseSchema.parse(req.body);
+  const expense = await db.expense.update({
+    where: { id: req.params.id },
+    data: {
+      category: input.category,
+      amount: input.amount,
+      expenseDate: parseDateOnly(input.expenseDate),
+      description: input.description.trim(),
+      paymentMethod: input.paymentMethod ?? null,
+      reference: toOptionalString(input.reference),
+      notes: toOptionalString(input.notes)
+    }
+  });
+  res.json(expensePayload(expense));
+});
+
+adminRouter.delete("/expenses/:id", async (req, res) => {
+  await db.expense.delete({ where: { id: req.params.id } });
+  res.status(204).end();
 });
 
 adminRouter.get("/products", async (_req, res) => {
@@ -648,20 +906,137 @@ adminRouter.put("/products/:id", async (req, res) => {
   res.json(productPayload(product));
 });
 
-adminRouter.get("/orders", async (_req, res) => {
+adminRouter.get("/orders", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const status = typeof req.query.status === "string" ? req.query.status : "all";
+  const hasBalance = req.query.hasBalance === "true";
+  const dateFrom = typeof req.query.dateFrom === "string" && req.query.dateFrom ? new Date(req.query.dateFrom) : null;
+  const dateTo = typeof req.query.dateTo === "string" && req.query.dateTo ? new Date(req.query.dateTo) : null;
   const orders = await prisma.order.findMany({
-    include: { items: true },
+    where: {
+      OR: q ? [
+        { code: { contains: q, mode: "insensitive" } },
+        { customerName: { contains: q, mode: "insensitive" } },
+        { customerWhatsapp: { contains: q, mode: "insensitive" } }
+      ] : undefined,
+      status: status === "all" ? undefined : status as any,
+      createdAt: dateFrom || dateTo ? {
+        gte: dateFrom ?? undefined,
+        lte: dateTo ?? undefined
+      } : undefined
+    },
+    include: orderInclude,
     orderBy: { createdAt: "desc" }
   });
-  res.json(orders.map(orderPayload));
+  res.json(orders.map(orderPayload).filter((order) => !hasBalance || order.balance > 0));
+});
+
+adminRouter.post("/orders", async (req, res) => {
+  const input = createAdminOrderSchema.parse(req.body);
+  let order = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      order = await prisma.$transaction(async (tx) => {
+        const code = await createOrderCode(tx);
+        const created = await tx.order.create({
+          data: {
+            code,
+            source: "admin_manual",
+            status: input.status,
+            customerName: input.customerName,
+            customerWhatsapp: input.customerWhatsapp,
+            customerNote: input.customerNote,
+            internalNote: input.internalNote ?? null,
+            estimatedTotal: 0,
+            finalPrice: input.finalPrice ?? null
+          }
+        });
+        const estimatedTotal = await syncOrderItems(tx, created.id, input.items);
+        await createOrderPayments(tx, created.id, input.payments);
+        await tx.order.update({
+          where: { id: created.id },
+          data: {
+            estimatedTotal,
+            finalPrice: input.finalPrice ?? estimatedTotal,
+            completedAt: input.status === "completado" ? new Date() : null
+          }
+        });
+        return tx.order.findUniqueOrThrow({ where: { id: created.id }, include: orderInclude });
+      });
+      break;
+    } catch (error) {
+      if (!isCodeConflict(error) || attempt === 4) {
+        throw error;
+      }
+    }
+  }
+  res.status(201).json(orderPayload(order));
+});
+
+adminRouter.get("/orders/:id", async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: orderInclude
+  });
+  if (!order) {
+    res.status(404).json({ message: "Pedido no encontrado" });
+    return;
+  }
+  res.json(orderPayload(order));
 });
 
 adminRouter.put("/orders/:id", async (req, res) => {
-  const input = updateOrderSchema.parse(req.body);
+  const input = updateAdminOrderSchema.parse(req.body);
+  const order = await prisma.$transaction(async (tx) => {
+    const estimatedTotal = await syncOrderItems(tx, req.params.id, input.items);
+    await tx.order.update({
+      where: { id: req.params.id },
+      data: {
+        customerName: input.customerName,
+        customerWhatsapp: input.customerWhatsapp,
+        customerNote: input.customerNote,
+        internalNote: input.internalNote ?? null,
+        status: input.status,
+        estimatedTotal,
+        finalPrice: input.finalPrice ?? estimatedTotal,
+        completedAt: input.status === "completado" ? (input.completedAt ? new Date(input.completedAt) : new Date()) : null
+      }
+    });
+    return tx.order.findUniqueOrThrow({
+      where: { id: req.params.id },
+      include: orderInclude
+    });
+  });
+  res.json(orderPayload(order));
+});
+
+adminRouter.post("/orders/:id/payments", async (req, res) => {
+  const input = adminOrderPaymentInputSchema.parse(req.body);
+  await prisma.orderPayment.create({
+    data: {
+      orderId: req.params.id,
+      amount: input.amount,
+      method: input.method,
+      reference: toOptionalString(input.reference),
+      note: toOptionalString(input.note)
+    }
+  });
+  const order = await prisma.order.findUniqueOrThrow({
+    where: { id: req.params.id },
+    include: orderInclude
+  });
+  res.status(201).json(orderPayload(order));
+});
+
+adminRouter.put("/orders/:id/status", async (req, res) => {
+  const input = updateAdminOrderStatusSchema.parse(req.body);
   const order = await prisma.order.update({
     where: { id: req.params.id },
-    data: input,
-    include: { items: true }
+    data: {
+      status: input.status,
+      completedAt: input.status === "completado" ? new Date() : null
+    },
+    include: orderInclude
   });
   res.json(orderPayload(order));
 });

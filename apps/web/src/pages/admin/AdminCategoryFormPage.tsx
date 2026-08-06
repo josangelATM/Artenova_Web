@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField } from "@mui/material";
+import { Alert, Button, Checkbox, FormControlLabel, Grid, Stack, TextField } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminSection } from "./adminUi";
@@ -70,15 +70,27 @@ export function AdminCategoryFormPage() {
       />
       <AdminSection title="Datos generales" description="Define cómo se agrupan los productos en el catálogo.">
         {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-        <TextField disabled={loading} label="Nombre" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        <TextField disabled={loading} label="Enlace corto" value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} helperText="Ejemplo: mascotas" />
-        <TextField disabled={loading} label="Descripción" multiline minRows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
-        <FormControlLabel disabled={loading} control={<Checkbox checked={draft.isActive} onChange={(event) => setDraft({ ...draft, isActive: event.target.checked })} />} label="Activa en tienda" />
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="contained" onClick={() => void save()} disabled={loading || saving}>
-            {saving ? "Guardando..." : "Guardar categoría"}
-          </Button>
-          <AdminBackButton to={id ? `/admin/categorias/${id}` : "/admin/categorias"} label="Cancelar" />
+        <Stack spacing={2}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth disabled={loading} label="Nombre" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth disabled={loading} label="Enlace corto" value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} helperText="Ejemplo: mascotas" />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormControlLabel disabled={loading} control={<Checkbox checked={draft.isActive} onChange={(event) => setDraft({ ...draft, isActive: event.target.checked })} />} label="Activa en tienda" />
+            </Grid>
+            <Grid size={12}>
+              <TextField fullWidth disabled={loading} label="Descripción" multiline minRows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
+            </Grid>
+          </Grid>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={loading || saving}>
+              {saving ? "Guardando..." : "Guardar categoría"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/categorias/${id}` : "/admin/categorias"} label="Cancelar" />
+          </Stack>
         </Stack>
       </AdminSection>
     </Stack>

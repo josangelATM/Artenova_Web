@@ -13,6 +13,35 @@ enum OrderStatus {
   cancelado
 }
 
+enum OrderSource {
+  storefront
+  admin_manual
+}
+
+enum OrderPaymentMethod {
+  efectivo
+  yappy
+  transferencia
+  otro
+}
+
+enum ExpenseCategory {
+  materia_prima
+  servicios
+  publicidad
+  salario
+  viaticos
+  otros
+}
+
+enum ExpensePaymentMethod {
+  efectivo
+  yappy
+  transferencia
+  tarjeta_credito
+  otro
+}
+
 enum CustomFieldType {
   text
   date
@@ -111,6 +140,7 @@ model ProductOption {
   productId String
   product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   name      String
+  drivesVisualGroup Boolean      @default(false)
   position  Int                  @default(0)
   values    ProductOptionValue[]
   createdAt DateTime             @default(now())
@@ -238,6 +268,7 @@ model CustomField {
 model Order {
   id               String        @id @default(cuid())
   code             String        @unique
+  source           OrderSource   @default(storefront)
   status           OrderStatus   @default(nuevo)
   customerName     String
   customerWhatsapp String
@@ -245,24 +276,75 @@ model Order {
   estimatedTotal   Decimal       @db.Decimal(10, 2)
   finalPrice       Decimal?      @db.Decimal(10, 2)
   adminNote        String?
+  internalNote     String?
+  completedAt      DateTime?
   items            OrderItem[]
+  payments         OrderPayment[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+
+  @@index([source, createdAt])
+  @@index([status, createdAt])
 }
 
 model OrderItem {
   id               String        @id @default(cuid())
   orderId          String
   order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId        String
-  product          Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId        String?
+  product          Product?      @relation(fields: [productId], references: [id], onDelete: Restrict)
   productName      String
   quantity         Int
   unitPrice        Decimal       @db.Decimal(10, 2)
   extrasTotal      Decimal       @db.Decimal(10, 2)
   lineTotal        Decimal       @db.Decimal(10, 2)
+  skuSnapshot      String?
+  variantNameSnapshot String?
+  unitLabel        String?
   selectedExtraIds Json          @default("[]")
   personalization  Json          @default("{}")
+  units            OrderItemUnit[]
+}
+
+model OrderItemUnit {
+  id             String    @id @default(cuid())
+  orderItemId     String
+  orderItem       OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  position        Int       @default(0)
+  label           String?
+  personalization Json      @default("{}")
+  createdAt       DateTime  @default(now())
+
+  @@index([orderItemId, position])
+}
+
+model OrderPayment {
+  id         String             @id @default(cuid())
+  orderId     String
+  order       Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount      Decimal            @db.Decimal(10, 2)
+  method      OrderPaymentMethod @default(otro)
+  reference   String?
+  note        String?
+  createdAt   DateTime           @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model Expense {
+  id            String               @id @default(cuid())
+  category      ExpenseCategory
+  amount        Decimal              @db.Decimal(10, 2)
+  expenseDate   DateTime
+  description   String
+  paymentMethod ExpensePaymentMethod?
+  reference     String?
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([expenseDate, createdAt])
+  @@index([category, expenseDate])
 }
 
 model SiteSettings {

@@ -6,6 +6,10 @@ export const orderStatusValues = [
   "completado",
   "cancelado",
 ] as const;
+export const orderSourceValues = ["storefront", "admin_manual"] as const;
+export const orderPaymentMethodValues = ["efectivo", "yappy", "transferencia", "otro"] as const;
+export const expenseCategoryValues = ["materia_prima", "servicios", "publicidad", "salario", "viaticos", "otros"] as const;
+export const expensePaymentMethodValues = ["efectivo", "yappy", "transferencia", "tarjeta_credito", "otro"] as const;
 export const customFieldTypes = [
   "text",
   "date",
@@ -19,6 +23,10 @@ export const discountTypeValues = ["percentage", "fixed"] as const;
 export const productMediaTypeValues = ["image", "video"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
+export type OrderSource = (typeof orderSourceValues)[number];
+export type OrderPaymentMethod = (typeof orderPaymentMethodValues)[number];
+export type ExpenseCategory = (typeof expenseCategoryValues)[number];
+export type ExpensePaymentMethod = (typeof expensePaymentMethodValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
@@ -92,6 +100,7 @@ export const productOptionSchema = z.object({
   id: z.string(),
   productId: z.string().optional(),
   name: z.string().min(1),
+  drivesVisualGroup: z.boolean().default(false),
   position: z.number().int().nonnegative(),
   values: z.array(productOptionValueSchema).default([]),
 });
@@ -208,6 +217,92 @@ export const orderItemInputSchema = z.object({
     .default({}),
 });
 
+export const orderItemUnitSchema = z.object({
+  id: z.string().optional(),
+  position: z.number().int().nonnegative().optional(),
+  label: z.string().max(120).optional().nullable(),
+  personalization: z
+    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .default({}),
+});
+
+export const adminOrderItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().min(1).nullable().optional(),
+  productName: z.string().trim().min(1).max(200),
+  quantity: z.number().int().positive(),
+  unitPrice: moneySchema,
+  extrasTotal: moneySchema.default(0),
+  skuSnapshot: z.string().max(120).optional().nullable(),
+  variantNameSnapshot: z.string().max(160).optional().nullable(),
+  unitLabel: z.string().max(120).optional().nullable(),
+  selectedExtraIds: z.array(z.string()).default([]),
+  personalization: z
+    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .default({}),
+  units: z.array(orderItemUnitSchema).default([]),
+});
+
+export const adminOrderPaymentInputSchema = z.object({
+  amount: moneySchema,
+  method: z.enum(orderPaymentMethodValues).default("otro"),
+  reference: z.string().max(160).optional().nullable(),
+  note: z.string().max(1200).optional().nullable(),
+});
+
+export const expenseCategorySchema = z.enum(expenseCategoryValues);
+export const expensePaymentMethodSchema = z.enum(expensePaymentMethodValues);
+
+export const adminExpenseInputSchema = z.object({
+  category: expenseCategorySchema,
+  amount: z.coerce.number().positive().finite(),
+  expenseDate: z.string().date(),
+  description: z.string().trim().min(1).max(200),
+  paymentMethod: expensePaymentMethodSchema.optional().nullable(),
+  reference: z.string().trim().max(80).optional().nullable(),
+  notes: z.string().trim().max(500).optional().nullable(),
+});
+
+export const createAdminExpenseSchema = adminExpenseInputSchema;
+export const updateAdminExpenseSchema = adminExpenseInputSchema;
+
+export const adminExpenseQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+  category: expenseCategorySchema.optional(),
+  dateFrom: z.string().date().optional(),
+  dateTo: z.string().date().optional(),
+  q: z.string().trim().max(200).optional(),
+});
+
+export const expenseSchema = z.object({
+  id: z.string(),
+  category: expenseCategorySchema,
+  amount: moneySchema,
+  expenseDate: z.string(),
+  description: z.string(),
+  paymentMethod: expensePaymentMethodSchema.optional().nullable(),
+  reference: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const adminExpenseSummarySchema = z.object({
+  todayTotal: moneySchema,
+  monthTotal: moneySchema,
+  filteredTotal: moneySchema,
+});
+
+export const adminExpenseListResponseSchema = z.object({
+  items: z.array(expenseSchema),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  totalItems: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  summary: adminExpenseSummarySchema,
+});
+
 export const createOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerWhatsapp: z.string().min(6).max(40),
@@ -219,6 +314,32 @@ export const updateOrderSchema = z.object({
   status: z.enum(orderStatusValues).optional(),
   finalPrice: moneySchema.optional().nullable(),
   adminNote: z.string().max(1200).optional().nullable(),
+});
+
+export const createAdminOrderSchema = z.object({
+  customerName: z.string().min(2).max(120),
+  customerWhatsapp: z.string().min(6).max(40),
+  customerNote: z.string().max(1200).optional().default(""),
+  internalNote: z.string().max(4000).optional().nullable(),
+  status: z.enum(orderStatusValues).default("nuevo"),
+  finalPrice: moneySchema.optional().nullable(),
+  items: z.array(adminOrderItemSchema).default([]),
+  payments: z.array(adminOrderPaymentInputSchema).default([]),
+});
+
+export const updateAdminOrderSchema = z.object({
+  customerName: z.string().min(2).max(120),
+  customerWhatsapp: z.string().min(6).max(40),
+  customerNote: z.string().max(1200).optional().default(""),
+  internalNote: z.string().max(4000).optional().nullable(),
+  status: z.enum(orderStatusValues).default("nuevo"),
+  finalPrice: moneySchema.optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  items: z.array(adminOrderItemSchema).default([]),
+});
+
+export const updateAdminOrderStatusSchema = z.object({
+  status: z.enum(orderStatusValues),
 });
 
 export const adminLoginSchema = z.object({
@@ -292,22 +413,70 @@ export type ProductExtra = z.infer<typeof productExtraSchema>;
 export type CustomField = z.infer<typeof customFieldSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
+export type CreateAdminOrderInput = z.infer<typeof createAdminOrderSchema>;
+export type UpdateAdminOrderInput = z.infer<typeof updateAdminOrderSchema>;
+export type UpdateAdminOrderStatusInput = z.infer<typeof updateAdminOrderStatusSchema>;
+export type AdminOrderPaymentInput = z.infer<typeof adminOrderPaymentInputSchema>;
+export type AdminExpenseInput = z.infer<typeof adminExpenseInputSchema>;
+export type AdminExpenseQuery = z.infer<typeof adminExpenseQuerySchema>;
+export type AdminExpense = z.infer<typeof expenseSchema>;
+export type AdminExpenseSummary = z.infer<typeof adminExpenseSummarySchema>;
+export type AdminExpenseListResponse = z.infer<typeof adminExpenseListResponseSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
+
+export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  materia_prima: "Materia Prima",
+  servicios: "Servicios",
+  publicidad: "Publicidad",
+  salario: "Salario",
+  viaticos: "Viáticos",
+  otros: "Otros",
+};
+
+export const expensePaymentMethodLabels: Record<ExpensePaymentMethod, string> = {
+  efectivo: "Efectivo",
+  yappy: "Yappy",
+  transferencia: "Transferencia",
+  tarjeta_credito: "Tarjeta de Crédito",
+  otro: "Otro",
+};
+
+export type OrderItemUnit = {
+  id: string;
+  position: number;
+  label?: string | null;
+  personalization: Record<string, string | string[]>;
+};
 
 export type OrderItem = {
   id: string;
-  productId: string;
+  productId?: string | null;
   productName: string;
   quantity: number;
   unitPrice: number;
   extrasTotal: number;
   lineTotal: number;
+  skuSnapshot?: string | null;
+  variantNameSnapshot?: string | null;
+  unitLabel?: string | null;
+  selectedExtraIds?: string[];
   personalization: Record<string, string | string[]>;
+  units: OrderItemUnit[];
+};
+
+export type OrderPayment = {
+  id: string;
+  amount: number;
+  method: OrderPaymentMethod;
+  reference?: string | null;
+  note?: string | null;
+  createdAt: string;
 };
 
 export type Order = {
   id: string;
   code: string;
+  source: OrderSource;
   status: OrderStatus;
   customerName: string;
   customerWhatsapp: string;
@@ -315,8 +484,16 @@ export type Order = {
   estimatedTotal: number;
   finalPrice?: number | null;
   adminNote?: string | null;
+  internalNote?: string | null;
   createdAt: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+  itemsTotal: number;
+  paidTotal: number;
+  balance: number;
+  isPaid: boolean;
   items: OrderItem[];
+  payments?: OrderPayment[];
 };
 
 export function formatCurrency(value: number, currencySymbol = "B/."): string {
