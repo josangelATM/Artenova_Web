@@ -89,6 +89,13 @@ type SeedVariant = {
   priceTiers?: SeedTier[];
 };
 
+type SeedMediaSource = {
+  type: "image" | "video";
+  sourcePath: string;
+  alt: string;
+  position: number;
+};
+
 type SeedProduct = {
   categorySlug: string;
   name: string;
@@ -110,6 +117,11 @@ type SeedResolvedMedia = {
   alt: string;
   position: number;
   posterUrl: string | null;
+};
+
+type SeedResolvedMediaCollections = {
+  productMediaBySlug: Map<string, SeedResolvedMedia[]>;
+  variantMediaById: Map<string, SeedResolvedMedia[]>;
 };
 
 function assertSeedS3Config() {
@@ -184,6 +196,28 @@ function mediaSourcesForVariant(product: SeedProduct, variant: SeedVariant) {
   return [];
 }
 
+function mediaSourceSignature(media: SeedMediaSource) {
+  return JSON.stringify([media.type, media.sourcePath, media.alt, media.position]);
+}
+
+function sharedMediaSources(variantMediaCollections: SeedMediaSource[][]) {
+  if (variantMediaCollections.length === 0) return [];
+
+  const orderedSignatures = variantMediaCollections[0]!.map((media) => mediaSourceSignature(media));
+  const sharedSignatures = new Set(orderedSignatures);
+
+  for (const mediaCollection of variantMediaCollections.slice(1)) {
+    const nextSignatures = new Set(mediaCollection.map((media) => mediaSourceSignature(media)));
+    for (const signature of Array.from(sharedSignatures)) {
+      if (!nextSignatures.has(signature)) {
+        sharedSignatures.delete(signature);
+      }
+    }
+  }
+
+  return variantMediaCollections[0]!.filter((media) => sharedSignatures.has(mediaSourceSignature(media)));
+}
+
 async function uploadSeedObject(objectKey: string, buffer: Buffer, contentType: string) {
   assertSeedS3Config();
   await s3!.send(
@@ -218,37 +252,66 @@ async function uploadSeedAsset(
   return { objectKey, url };
 }
 
+async function resolveSeedMediaCollection(
+  productSlug: string,
+  mediaSources: SeedMediaSource[],
+  uploadCache: Map<string, { url: string }>,
+) {
+  const resolvedMedia: SeedResolvedMedia[] = [];
+
+  for (const media of mediaSources) {
+    const assetCacheKey = `${productSlug}|media|${media.sourcePath}`;
+    const uploadedMedia = uploadCache.get(assetCacheKey)
+      ?? { url: (await uploadSeedAsset(productSlug, media.sourcePath)).url };
+    uploadCache.set(assetCacheKey, uploadedMedia);
+
+    resolvedMedia.push({
+      type: media.type,
+      url: uploadedMedia.url,
+      alt: media.alt,
+      position: media.position,
+      posterUrl: null,
+    });
+  }
+
+  return resolvedMedia;
+}
+
 async function syncSeedMedia(products: SeedProduct[]) {
   assertSeedS3Config();
 
   const uploadCache = new Map<string, { url: string }>();
-  const resolvedByVariantId = new Map<string, SeedResolvedMedia[]>();
+  const productMediaBySlug = new Map<string, SeedResolvedMedia[]>();
+  const variantMediaById = new Map<string, SeedResolvedMedia[]>();
 
   for (const product of products) {
-    for (const variant of product.variants) {
-      const variantSources = mediaSourcesForVariant(product, variant);
-      const resolvedMedia: SeedResolvedMedia[] = [];
+    const variantMediaSources = product.variants.map((variant) => ({
+      variantId: variantId(product.slug, variant.key),
+      mediaSources: mediaSourcesForVariant(product, variant),
+    }));
+    const sharedSources = sharedMediaSources(variantMediaSources.map((variant) => variant.mediaSources));
+    const sharedSignatures = new Set(sharedSources.map((media) => mediaSourceSignature(media)));
 
-      for (const media of variantSources) {
-        const assetCacheKey = `${product.slug}|media|${media.sourcePath}`;
-        const uploadedMedia = uploadCache.get(assetCacheKey)
-          ?? { url: (await uploadSeedAsset(product.slug, media.sourcePath)).url };
-        uploadCache.set(assetCacheKey, uploadedMedia);
+    productMediaBySlug.set(
+      product.slug,
+      await resolveSeedMediaCollection(product.slug, sharedSources, uploadCache),
+    );
 
-        resolvedMedia.push({
-          type: media.type,
-          url: uploadedMedia.url,
-          alt: media.alt,
-          position: media.position,
-          posterUrl: null,
-        });
-      }
-
-      resolvedByVariantId.set(variantId(product.slug, variant.key), resolvedMedia);
+    for (const variant of variantMediaSources) {
+      const residualSources = variant.mediaSources.filter(
+        (media) => !sharedSignatures.has(mediaSourceSignature(media)),
+      );
+      variantMediaById.set(
+        variant.variantId,
+        await resolveSeedMediaCollection(product.slug, residualSources, uploadCache),
+      );
     }
   }
 
-  return resolvedByVariantId;
+  return {
+    productMediaBySlug,
+    variantMediaById,
+  } satisfies SeedResolvedMediaCollections;
 }
 
 const escudoTamanos: SeedOption = {
@@ -1497,7 +1560,7 @@ async function cleanupSeedProductsByCategorySlugs(categorySlugs: readonly string
 async function seedProduct(
   product: SeedProduct,
   categoryId: string,
-  resolvedMediaByVariantId: Map<string, SeedResolvedMedia[]>,
+  resolvedSeedMedia: SeedResolvedMediaCollections,
 ) {
   const existing = await prisma.product.findUnique({
     where: { slug: product.slug },
@@ -1526,6 +1589,7 @@ async function seedProduct(
     null;
   const defaultVariant =
     variants.find((variant) => variant.id === defaultVariantId) ?? variants[0];
+  const productMedia = resolvedSeedMedia.productMediaBySlug.get(product.slug) ?? [];
 
   const persisted = await prisma.product.upsert({
     where: { slug: product.slug },
@@ -1543,6 +1607,9 @@ async function seedProduct(
       isHero: product.isHero ?? false,
       heroSlot: product.isHero ? product.heroSlot ?? "primary" : null,
       categoryId,
+      images: {
+        create: productMedia,
+      },
     },
     update: {
       name: product.name,
@@ -1557,6 +1624,9 @@ async function seedProduct(
       isHero: product.isHero ?? false,
       heroSlot: product.isHero ? product.heroSlot ?? "primary" : null,
       categoryId,
+      images: {
+        create: productMedia,
+      },
     },
   });
 
@@ -1600,7 +1670,7 @@ async function seedProduct(
   }
 
   for (const variant of variants) {
-    const media = resolvedMediaByVariantId.get(variant.id) ?? [];
+    const media = resolvedSeedMedia.variantMediaById.get(variant.id) ?? [];
 
     await prisma.productVariant.create({
       data: {
