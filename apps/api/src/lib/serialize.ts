@@ -1,4 +1,5 @@
 import { resolvePricingSummary, resolveVariantPricing } from "@artenova/shared";
+import { buildQrResolvedTarget, getQrPublicUrl, normalizeQrDesign } from "./qrCodes";
 
 type DecimalLike = { toString(): string };
 
@@ -188,5 +189,23 @@ export function expensePayload(expense: any) {
     expenseDate: expense.expenseDate?.toISOString?.() ?? expense.expenseDate,
     createdAt: expense.createdAt?.toISOString?.() ?? expense.createdAt,
     updatedAt: expense.updatedAt?.toISOString?.() ?? expense.updatedAt
+  };
+}
+
+export function qrCodePayload(qrCode: any) {
+  return {
+    ...qrCode,
+    status: qrCode.status ?? "active",
+    destinationConfig: qrCode.destinationConfig ?? {},
+    designConfig: normalizeQrDesign(qrCode.designConfig),
+    publicUrl: getQrPublicUrl(qrCode.token),
+    resolvedTarget: buildQrResolvedTarget({
+      type: qrCode.type,
+      destinationConfig: qrCode.destinationConfig ?? {},
+    }),
+    scanCount: qrCode.scanCount ?? 0,
+    lastScannedAt: qrCode.lastScannedAt?.toISOString?.() ?? qrCode.lastScannedAt ?? null,
+    createdAt: qrCode.createdAt?.toISOString?.() ?? qrCode.createdAt,
+    updatedAt: qrCode.updatedAt?.toISOString?.() ?? qrCode.updatedAt,
   };
 }

@@ -15,6 +15,9 @@ import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
 import { AdminProductDetailPage } from "./pages/admin/AdminProductDetailPage";
 import { AdminProductFormPage } from "./pages/admin/AdminProductFormPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
+import { AdminQRCodeDetailPage } from "./pages/admin/AdminQRCodeDetailPage";
+import { AdminQRCodeFormPage } from "./pages/admin/AdminQRCodeFormPage";
+import { AdminQRCodesPage } from "./pages/admin/AdminQRCodesPage";
 import { AdminReviewDetailPage } from "./pages/admin/AdminReviewDetailPage";
 import { AdminReviewFormPage } from "./pages/admin/AdminReviewFormPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
@@ -24,6 +27,7 @@ import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { ContactPage } from "./pages/ContactPage";
 import { HomePage } from "./pages/HomePage";
 import { ProductPage } from "./pages/ProductPage";
+import { QRCodePage } from "./pages/QRCodePage";
 
 const router = createBrowserRouter([
   {
@@ -33,6 +37,7 @@ const router = createBrowserRouter([
       { path: "/catalogo", element: <CatalogPage /> },
       { path: "/catalogo/:categorySlug", element: <CatalogPage /> },
       { path: "/producto/:slug", element: <ProductPage /> },
+      { path: "/q/:token", element: <QRCodePage /> },
       { path: "/carrito", element: <CartPage /> },
       { path: "/pedido/:code", element: <ConfirmationPage /> },
       { path: "/contacto", element: <ContactPage /> },
@@ -58,6 +63,10 @@ const router = createBrowserRouter([
           { path: "productos/nuevo", element: <AdminProductFormPage /> },
           { path: "productos/:id", element: <AdminProductDetailPage /> },
           { path: "productos/:id/editar", element: <AdminProductFormPage /> },
+          { path: "qrs", element: <AdminQRCodesPage /> },
+          { path: "qrs/nuevo", element: <AdminQRCodeFormPage /> },
+          { path: "qrs/:id", element: <AdminQRCodeDetailPage /> },
+          { path: "qrs/:id/editar", element: <AdminQRCodeFormPage /> },
           { path: "pedidos", element: <AdminOrdersPage /> },
           { path: "pedidos/nuevo", element: <AdminOrderFormPage /> },
           { path: "pedidos/:id", element: <AdminOrderDetailPage /> },

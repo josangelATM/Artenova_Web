@@ -1,4 +1,4 @@
-import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminOrderPaymentInput, AdminProductReviewInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
 
 type AdminProductPayload = Omit<Partial<Product>, "media" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
   id?: string;
@@ -39,6 +39,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function requestAllowNotOk<T>(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T | { message?: string; status?: string } }> {
+  const response = await fetch(`${baseUrl}${path}`, {
+    credentials: "include",
+    headers: init?.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
+    ...init
+  });
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, data: data as T };
+}
+
+function assetUrl(path: string) {
+  return `${baseUrl}${path}`;
 }
 
 export const api = {
@@ -110,5 +124,20 @@ export const api = {
   createOrderPayment: (id: string, input: AdminOrderPaymentInput) =>
     request<Order>(`/api/admin/orders/${id}/payments`, { method: "POST", body: JSON.stringify(input) }),
   updateAdminOrderStatus: (id: string, input: UpdateAdminOrderStatusInput) =>
-    request<Order>(`/api/admin/orders/${id}/status`, { method: "PUT", body: JSON.stringify(input) })
+    request<Order>(`/api/admin/orders/${id}/status`, { method: "PUT", body: JSON.stringify(input) }),
+  adminQRCodes: () => request<QRCode[]>("/api/admin/qrs"),
+  adminQRCode: (id: string) => request<QRCode>(`/api/admin/qrs/${id}`),
+  saveAdminQRCode: (id: string | undefined, input: AdminQRCodeInput) =>
+    request<QRCode>(id ? `/api/admin/qrs/${id}` : "/api/admin/qrs", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(input)
+    }),
+  updateAdminQRCodeStatus: (id: string, input: UpdateQRCodeStatusInput) =>
+    request<QRCode>(`/api/admin/qrs/${id}/status`, { method: "PUT", body: JSON.stringify(input) }),
+  previewQRCode: (input: QRCodePreviewInput) =>
+    request<QRCodePreviewResponse>("/api/admin/qrs/preview", { method: "POST", body: JSON.stringify(input) }),
+  qrCodeSvgUrl: (id: string, download = false) => assetUrl(`/api/admin/qrs/${id}/code.svg${download ? "?download=1" : ""}`),
+  qrCodePngUrl: (id: string, download = false) => assetUrl(`/api/admin/qrs/${id}/code.png${download ? "?download=1" : ""}`),
+  resolveQRCode: (token: string) => requestAllowNotOk<QRCodeResolveResponse>(`/api/qrs/${token}/resolve`),
+  qrVCardUrl: (token: string) => assetUrl(`/api/qrs/${token}/contact.vcf`)
 };

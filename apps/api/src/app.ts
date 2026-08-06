@@ -7,6 +7,7 @@ import { env } from "./env";
 import { adminRouter } from "./routes/admin";
 import { catalogRouter } from "./routes/catalog";
 import { ordersRouter } from "./routes/orders";
+import { adminQrRouter, qrRouter } from "./routes/qrs";
 import { seoRouter } from "./routes/seo";
 import { errorHandler } from "./middleware/errors";
 
@@ -67,6 +68,8 @@ export function createApp() {
   app.use(seoRouter);
   app.use("/api/catalog", catalogRouter);
   app.use("/api/orders", ordersRouter);
+  app.use("/api/qrs", qrRouter);
+  app.use("/api/admin/qrs", adminQrRouter);
   app.use("/api/admin", adminRouter);
   app.use(errorHandler);
 

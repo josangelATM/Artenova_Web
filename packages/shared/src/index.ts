@@ -13,6 +13,8 @@ export const orderSourceValues = ["storefront", "admin_manual"] as const;
 export const orderPaymentMethodValues = ["efectivo", "yappy", "transferencia", "otro"] as const;
 export const expenseCategoryValues = ["materia_prima", "servicios", "publicidad", "salario", "viaticos", "otros"] as const;
 export const expensePaymentMethodValues = ["efectivo", "yappy", "transferencia", "tarjeta_credito", "otro"] as const;
+export const qrCodeTypeValues = ["url", "whatsapp", "vcard"] as const;
+export const qrCodeStatusValues = ["active", "inactive"] as const;
 export const customFieldTypes = [
   "text",
   "date",
@@ -39,6 +41,8 @@ export type OrderSource = (typeof orderSourceValues)[number];
 export type OrderPaymentMethod = (typeof orderPaymentMethodValues)[number];
 export type ExpenseCategory = (typeof expenseCategoryValues)[number];
 export type ExpensePaymentMethod = (typeof expensePaymentMethodValues)[number];
+export type QRCodeType = (typeof qrCodeTypeValues)[number];
+export type QRCodeStatus = (typeof qrCodeStatusValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
@@ -306,6 +310,118 @@ export const adminExpenseSummarySchema = z.object({
   filteredTotal: moneySchema,
 });
 
+export const qrCodeDesignSchema = z.object({
+  foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1F2937"),
+  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#FFFFFF"),
+  margin: z.number().int().min(0).max(8).default(2),
+});
+const defaultQRCodeDesign = {
+  foregroundColor: "#1F2937",
+  backgroundColor: "#FFFFFF",
+  margin: 2,
+} as const;
+
+export const qrCodeUrlDestinationSchema = z.object({
+  url: z.string().url(),
+});
+
+export const qrCodeWhatsappDestinationSchema = z.object({
+  phone: z.string().trim().min(6).max(32),
+  message: z.string().trim().max(500).optional().nullable().default(null),
+});
+
+export const qrCodeVCardDestinationSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  company: z.string().trim().max(120).optional().nullable().default(null),
+  jobTitle: z.string().trim().max(120).optional().nullable().default(null),
+  phone: z.string().trim().min(6).max(32).optional().nullable().default(null),
+  email: z.string().email().optional().or(z.literal("")).nullable().default(null),
+  website: z.string().url().optional().or(z.literal("")).nullable().default(null),
+  address: z.string().trim().max(240).optional().nullable().default(null),
+});
+
+export const qrCodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  token: z.string(),
+  type: z.enum(qrCodeTypeValues),
+  status: z.enum(qrCodeStatusValues),
+  destinationConfig: z.union([
+    qrCodeUrlDestinationSchema,
+    qrCodeWhatsappDestinationSchema,
+    qrCodeVCardDestinationSchema,
+  ]),
+  designConfig: qrCodeDesignSchema,
+  publicUrl: z.string().url(),
+  resolvedTarget: z.string().url().optional().nullable(),
+  scanCount: z.number().int().nonnegative(),
+  lastScannedAt: z.string().datetime().optional().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const adminQRCodeInputSchema = z.discriminatedUnion("type", [
+  z.object({
+    name: z.string().trim().min(2).max(120),
+    type: z.literal("url"),
+    status: z.enum(qrCodeStatusValues).default("active"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeUrlDestinationSchema,
+  }),
+  z.object({
+    name: z.string().trim().min(2).max(120),
+    type: z.literal("whatsapp"),
+    status: z.enum(qrCodeStatusValues).default("active"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeWhatsappDestinationSchema,
+  }),
+  z.object({
+    name: z.string().trim().min(2).max(120),
+    type: z.literal("vcard"),
+    status: z.enum(qrCodeStatusValues).default("active"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeVCardDestinationSchema,
+  }),
+]);
+
+export const updateQRCodeStatusSchema = z.object({
+  status: z.enum(qrCodeStatusValues),
+});
+
+export const qrCodePreviewSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("url"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeUrlDestinationSchema,
+  }),
+  z.object({
+    type: z.literal("whatsapp"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeWhatsappDestinationSchema,
+  }),
+  z.object({
+    type: z.literal("vcard"),
+    designConfig: qrCodeDesignSchema.default(defaultQRCodeDesign),
+    destinationConfig: qrCodeVCardDestinationSchema,
+  }),
+]);
+
+export const qrCodePreviewResponseSchema = z.object({
+  resolvedTarget: z.string().url().optional().nullable(),
+  previewUrl: z.string().url(),
+  svg: z.string(),
+});
+
+export const qrCodeResolveSchema = z.object({
+  token: z.string(),
+  status: z.enum(qrCodeStatusValues),
+  type: z.enum(qrCodeTypeValues),
+  name: z.string(),
+  targetUrl: z.string().url().optional().nullable(),
+  publicUrl: z.string().url(),
+  vcard: qrCodeVCardDestinationSchema.optional(),
+});
+
 export const adminExpenseListResponseSchema = z.object({
   items: z.array(expenseSchema),
   page: z.number().int().positive(),
@@ -435,6 +551,16 @@ export type AdminExpense = z.infer<typeof expenseSchema>;
 export type AdminExpenseSummary = z.infer<typeof adminExpenseSummarySchema>;
 export type AdminExpenseListResponse = z.infer<typeof adminExpenseListResponseSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
+export type QRCode = z.infer<typeof qrCodeSchema>;
+export type QRCodeDesign = z.infer<typeof qrCodeDesignSchema>;
+export type QRCodeUrlDestination = z.infer<typeof qrCodeUrlDestinationSchema>;
+export type QRCodeWhatsappDestination = z.infer<typeof qrCodeWhatsappDestinationSchema>;
+export type QRCodeVCardDestination = z.infer<typeof qrCodeVCardDestinationSchema>;
+export type AdminQRCodeInput = z.infer<typeof adminQRCodeInputSchema>;
+export type UpdateQRCodeStatusInput = z.infer<typeof updateQRCodeStatusSchema>;
+export type QRCodePreviewInput = z.infer<typeof qrCodePreviewSchema>;
+export type QRCodePreviewResponse = z.infer<typeof qrCodePreviewResponseSchema>;
+export type QRCodeResolveResponse = z.infer<typeof qrCodeResolveSchema>;
 
 export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
   materia_prima: "Materia Prima",

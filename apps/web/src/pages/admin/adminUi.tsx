@@ -91,6 +91,7 @@ const statusMeta: Record<string, { label: string; color: "default" | "primary" |
   listo_entrega: { label: orderStatusLabels.listo_entrega, color: "success" },
   entregado: { label: orderStatusLabels.entregado, color: "success" },
   active: { label: "Activo", color: "success" },
+  inactive: { label: "Inactivo", color: "default" },
   paused: { label: "Pausado", color: "default" },
   published: { label: "Publicado", color: "success" },
   draft: { label: "Oculto", color: "default" },
