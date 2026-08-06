@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { formatCurrency } from "@artenova/shared";
+import { formatCurrency, resolveMediaStillUrl } from "@artenova/shared";
 import { env } from "../env";
 import { productPayload } from "../lib/serialize";
 import { prisma } from "../lib/prisma";
@@ -90,12 +90,18 @@ function compact<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== null && item !== "")) as T;
 }
 
-function productDescription(product: { name: string; description: string; pricingSummary: { finalPrice: number } }) {
-  const suffix = ` Desde ${formatCurrency(product.pricingSummary.finalPrice)}.`;
+function productDescription(product: { name: string; description: string; pricingSummary: { finalPrice: number }; currencySymbol?: string }) {
+  const suffix = ` Desde ${formatCurrency(product.pricingSummary.finalPrice, product.currencySymbol ?? "B/.")}.`;
   const clean = product.description.trim().replace(/\s+/g, " ");
   const maxLength = 155 - suffix.length;
   const trimmed = clean.length > maxLength ? `${clean.slice(0, Math.max(0, maxLength - 1)).trim()}...` : clean;
   return `${trimmed || product.name}.${suffix}`.replace("..", ".");
+}
+
+function currencyCodeFromSymbol(symbol?: string | null) {
+  if (symbol === "$") return "USD";
+  if (symbol === "B/.") return "PAB";
+  return "USD";
 }
 
 function settingsDescription() {
@@ -223,7 +229,7 @@ function localBusinessJsonLd() {
   });
 }
 
-function itemListJsonLd(products: Array<{ name: string; slug: string; images: Array<{ url: string }> }>, basePath: string) {
+function itemListJsonLd(products: Array<{ name: string; slug: string; media: Array<{ url: string; type: "image" | "video"; posterUrl?: string | null }> }>, basePath: string) {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -233,16 +239,16 @@ function itemListJsonLd(products: Array<{ name: string; slug: string; images: Ar
       position: index + 1,
       url: absoluteUrl(`/producto/${product.slug}`),
       name: product.name,
-      image: product.images[0]?.url ? absoluteUrl(product.images[0].url) : undefined
+      image: resolveMediaStillUrl(product.media[0]) ? absoluteUrl(resolveMediaStillUrl(product.media[0])!) : undefined
     }))
   };
 }
 
 function productJsonLd(product: ReturnType<typeof productPayload>) {
   const images = [
-    ...product.images.map((image: { url: string }) => image.url),
-    ...product.variants.flatMap((variant: { images: Array<{ url: string }> }) => variant.images.map((image) => image.url)),
-  ].map(absoluteUrl);
+    ...product.media.map((item: { type: "image" | "video"; url: string; posterUrl?: string | null }) => resolveMediaStillUrl(item)),
+    ...product.variants.flatMap((variant: { media: Array<{ type: "image" | "video"; url: string; posterUrl?: string | null }> }) => variant.media.map((item) => resolveMediaStillUrl(item))),
+  ].filter(Boolean).map((value) => absoluteUrl(value!));
 
   return compact({
     "@context": "https://schema.org",
@@ -256,7 +262,7 @@ function productJsonLd(product: ReturnType<typeof productPayload>) {
     offers: {
       "@type": "Offer",
       url: absoluteUrl(`/producto/${product.slug}`),
-      priceCurrency: "USD",
+      priceCurrency: currencyCodeFromSymbol(product.currencySymbol),
       price: product.pricingSummary.finalPrice.toFixed(2),
       availability: "https://schema.org/InStock",
       itemCondition: "https://schema.org/NewCondition"
@@ -352,7 +358,7 @@ seoRouter.get("/", async (_req, res) => {
     title: env.SITE_HERO_TITLE || "Regalos personalizados en Panamá",
     description: settingsDescription(),
     canonical: absoluteUrl("/"),
-    image: products[0]?.images[0]?.url,
+    image: resolveMediaStillUrl(products[0]?.defaultVariant?.media[0] ?? products[0]?.media[0]),
     type: "website",
     jsonLd: [websiteJsonLd(), organizationJsonLd()],
     fallbackLabel: "Ver Artenova",
@@ -373,7 +379,7 @@ seoRouter.get("/catalogo", async (req, res) => {
     title: "Catálogo de regalos personalizados",
     description: "Explora regalos personalizados, recuerdos y piezas de corte y grabado láser hechas por Artenova en Panamá.",
     canonical: absoluteUrl("/catalogo"),
-    image: products[0]?.images[0]?.url,
+    image: resolveMediaStillUrl(products[0]?.defaultVariant?.media[0] ?? products[0]?.media[0]),
     robots: q ? "noindex,follow" : "index,follow",
     type: "website",
     jsonLd: q ? [websiteJsonLd()] : [itemListJsonLd(products, "/catalogo"), websiteJsonLd()],
@@ -397,7 +403,7 @@ seoRouter.get("/catalogo/:categorySlug", async (req, res, next) => {
     title: `${category.name} personalizados`,
     description: category.description || `Modelos personalizados de ${category.name.toLowerCase()} con corte y grabado láser hechos por Artenova en Panamá.`,
     canonical: absoluteUrl(`/catalogo/${category.slug}`),
-    image: products[0]?.images[0]?.url,
+    image: resolveMediaStillUrl(products[0]?.defaultVariant?.media[0] ?? products[0]?.media[0]),
     type: "website",
     jsonLd: [itemListJsonLd(products, `/catalogo/${category.slug}`), websiteJsonLd()],
     fallbackLabel: `Ver ${category.name} en Artenova`,
@@ -428,7 +434,7 @@ seoRouter.get("/producto/:slug", async (req, res, next) => {
   }
 
   const payload = productPayload(product);
-  const image = payload.variants[0]?.images[0]?.url ?? payload.images[0]?.url ?? defaultImage;
+  const image = resolveMediaStillUrl(payload.defaultVariant?.media[0] ?? payload.media[0] ?? payload.variants[0]?.media[0]) ?? defaultImage;
 
   await sendSeoHtml(res, {
     title: `${payload.name} | ${siteName}`,

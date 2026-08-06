@@ -5,7 +5,8 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 import { env, hasS3Config } from "../env";
 
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedVideoTypes = new Set(["video/mp4", "video/webm"]);
 
 export class UploadValidationError extends Error {
   constructor(message: string) {
@@ -21,44 +22,96 @@ const s3 = hasS3Config
       forcePathStyle: true,
       credentials: {
         accessKeyId: env.S3_ACCESS_KEY_ID!,
-        secretAccessKey: env.S3_SECRET_ACCESS_KEY!
-      }
+        secretAccessKey: env.S3_SECRET_ACCESS_KEY!,
+      },
     })
   : null;
 
-export function assertImageUpload(file: Express.Multer.File) {
-  if (!allowedTypes.has(file.mimetype)) {
-    throw new UploadValidationError("Solo se aceptan imágenes JPG, PNG o WEBP");
+function sanitizeBaseName(name: string, fallback: string) {
+  const safe = path.basename(name, path.extname(name)).replace(/[^a-z0-9_-]+/gi, "-").slice(0, 60);
+  return safe || fallback;
+}
+
+function safeProductKey(productSlugOrId: string) {
+  return productSlugOrId.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "product";
+}
+
+function isImageUpload(file: Express.Multer.File) {
+  return allowedImageTypes.has(file.mimetype);
+}
+
+function isVideoUpload(file: Express.Multer.File) {
+  return allowedVideoTypes.has(file.mimetype);
+}
+
+export function assertMediaUpload(file: Express.Multer.File, posterFile?: Express.Multer.File) {
+  if (!isImageUpload(file) && !isVideoUpload(file)) {
+    throw new UploadValidationError("Solo se aceptan imagenes JPG, PNG o WEBP, o videos MP4/WebM");
   }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new UploadValidationError("Cada imagen debe pesar máximo 10 MB");
+
+  if (isImageUpload(file) && file.size > 10 * 1024 * 1024) {
+    throw new UploadValidationError("Cada imagen debe pesar maximo 10 MB");
+  }
+
+  if (isVideoUpload(file) && file.size > 40 * 1024 * 1024) {
+    throw new UploadValidationError("Cada video debe pesar maximo 40 MB");
+  }
+
+  if (!isVideoUpload(file)) return;
+
+  if (!posterFile) {
+    throw new UploadValidationError("Cada video debe incluir una portada");
+  }
+
+  if (!isImageUpload(posterFile)) {
+    throw new UploadValidationError("La portada del video debe ser JPG, PNG o WEBP");
+  }
+
+  if (posterFile.size > 10 * 1024 * 1024) {
+    throw new UploadValidationError("La portada del video debe pesar maximo 10 MB");
   }
 }
 
-export async function uploadProductImage(file: Express.Multer.File, productSlugOrId: string) {
-  assertImageUpload(file);
+export async function uploadProductMedia(file: Express.Multer.File, productSlugOrId: string, posterFile?: Express.Multer.File) {
+  assertMediaUpload(file, posterFile);
 
-  const extension = file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg";
-  const safeBase = path.basename(file.originalname, path.extname(file.originalname)).replace(/[^a-z0-9_-]+/gi, "-").slice(0, 60);
-  const safeProduct = productSlugOrId.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "product";
+  const mediaType = isVideoUpload(file) ? "video" : "image";
+  const safeBase = sanitizeBaseName(file.originalname, mediaType);
+  const safeProduct = safeProductKey(productSlugOrId);
   const id = randomUUID();
+  const extension =
+    file.mimetype === "image/png"
+      ? ".png"
+      : file.mimetype === "image/webp"
+        ? ".webp"
+        : file.mimetype === "video/webm"
+          ? ".webm"
+          : ".mp4";
   const key = `products/${safeProduct}/${id}-${safeBase}${extension}`;
-  const thumbnailKey = `products/${safeProduct}/${id}-${safeBase}-thumb.webp`;
-  const thumbnail = await sharp(file.buffer).rotate().resize({ width: 480, height: 480, fit: "inside" }).webp({ quality: 78 }).toBuffer();
+
+  let posterKey: string | null = null;
+  let posterBuffer: Buffer | null = null;
+  if (mediaType === "image") {
+    posterKey = `products/${safeProduct}/${id}-${safeBase}-thumb.webp`;
+    posterBuffer = await sharp(file.buffer).rotate().resize({ width: 480, height: 480, fit: "inside" }).webp({ quality: 78 }).toBuffer();
+  } else if (posterFile) {
+    posterKey = `products/${safeProduct}/${id}-${safeBase}-poster.webp`;
+    posterBuffer = await sharp(posterFile.buffer).rotate().resize({ width: 960, height: 960, fit: "inside" }).webp({ quality: 82 }).toBuffer();
+  }
 
   if (env.UPLOAD_DRIVER === "local") {
     const uploadRoot = path.resolve(env.LOCAL_UPLOAD_DIR);
     const filePath = path.join(uploadRoot, key);
-    const thumbnailPath = path.join(uploadRoot, thumbnailKey);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, file.buffer);
-    await writeFile(thumbnailPath, thumbnail);
+    if (posterKey && posterBuffer) {
+      await writeFile(path.join(uploadRoot, posterKey), posterBuffer);
+    }
     const baseUrl = env.API_BASE_URL.replace(/\/$/, "");
     return {
-      key,
-      thumbnailKey,
+      type: mediaType,
       url: `${baseUrl}/uploads/${key}`,
-      thumbnailUrl: `${baseUrl}/uploads/${thumbnailKey}`
+      posterUrl: posterKey ? `${baseUrl}/uploads/${posterKey}` : null,
     };
   }
 
@@ -71,24 +124,25 @@ export async function uploadProductImage(file: Express.Multer.File, productSlugO
       Bucket: env.S3_BUCKET!,
       Key: key,
       Body: file.buffer,
-      ContentType: file.mimetype
-    })
+      ContentType: file.mimetype,
+    }),
   );
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: env.S3_BUCKET!,
-      Key: thumbnailKey,
-      Body: thumbnail,
-      ContentType: "image/webp"
-    })
-  );
+  if (posterKey && posterBuffer) {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET!,
+        Key: posterKey,
+        Body: posterBuffer,
+        ContentType: "image/webp",
+      }),
+    );
+  }
 
   const baseUrl = env.S3_PUBLIC_BASE_URL!.replace(/\/$/, "");
   return {
-    key,
-    thumbnailKey,
+    type: mediaType,
     url: `${baseUrl}/${key}`,
-    thumbnailUrl: `${baseUrl}/${thumbnailKey}`
+    posterUrl: posterKey ? `${baseUrl}/${posterKey}` : null,
   };
 }

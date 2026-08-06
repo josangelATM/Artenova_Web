@@ -6,7 +6,33 @@ export async function priceOrderItems(items: Array<{ productId: string; quantity
   const productIds = items.map((item) => item.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isPublished: true },
-    include: { priceTiers: true, extras: true, customFields: true, images: true }
+    include: {
+      priceTiers: true,
+      extras: true,
+      customFields: true,
+      images: true,
+      options: {
+        orderBy: { position: "asc" as const },
+        include: { values: { orderBy: { position: "asc" as const } } }
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: { position: "asc" as const },
+        include: {
+          images: { orderBy: { position: "asc" as const } },
+          optionValues: {
+            include: {
+              optionValue: {
+                include: {
+                  option: true
+                }
+              }
+            }
+          },
+          priceTiers: { orderBy: { minQuantity: "asc" as const } }
+        }
+      }
+    }
   });
 
   const byId = new Map(products.map((product) => [product.id, productPayload(product)]));

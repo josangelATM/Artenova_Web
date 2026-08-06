@@ -79,9 +79,9 @@ export function applySeo(input: SeoInput) {
   upsertJsonLd(input.jsonLd);
 }
 
-export function productSeoDescription(input: { name: string; description: string; price: number }) {
+export function productSeoDescription(input: { name: string; description: string; price: number; currencySymbol?: string }) {
   const cleanDescription = input.description.trim().replace(/\s+/g, " ");
-  const suffix = ` Desde $${input.price.toFixed(2)}.`;
+  const suffix = ` Desde ${(input.currencySymbol ?? "B/.")}${input.price.toFixed(2)}.`;
   const maxLength = 155 - suffix.length;
   const trimmed = cleanDescription.length > maxLength ? `${cleanDescription.slice(0, Math.max(0, maxLength - 1)).trim()}...` : cleanDescription;
   return `${trimmed || input.name}.${suffix}`.replace("..", ".");

@@ -5,11 +5,13 @@ import { adminCategoryInputSchema, adminLoginSchema, adminProductInputSchema, ad
 import { prisma } from "../lib/prisma";
 import { orderPayload, productPayload, reviewPayload } from "../lib/serialize";
 import { requireAdmin, signAdminToken } from "../middleware/auth";
-import { uploadProductImage } from "../services/uploadService";
+import { UploadValidationError, uploadProductMedia } from "../services/uploadService";
 
 export const adminRouter = Router();
 const db = prisma as any;
-const imageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 40 * 1024 * 1024, files: 2 } });
+
+type ProductMediaInput = { url: string; type: "image" | "video"; alt: string; position: number; posterUrl?: string | null };
 
 const productInclude = {
   category: true,
@@ -56,20 +58,46 @@ function buildCanonicalVariantInput(input: {
   basePrice: number;
   discountType?: "percentage" | "fixed" | null;
   discountValue?: number | null;
+  media: ProductMediaInput[];
   priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
 }, variantId?: string) {
   return {
     id: variantId ?? crypto.randomUUID(),
     name: input.name,
     sku: input.sku || null,
+    visualGroupKey: "default",
     basePrice: input.basePrice,
     discountType: input.discountType || null,
     discountValue: input.discountValue ?? null,
     isActive: true,
     position: 0,
     optionValueIds: [],
-    images: [],
+    media: input.media,
     priceTiers: input.priceTiers
+  };
+}
+
+function resolveDefaultVariantId(
+  inputDefaultVariantId: string | null | undefined,
+  variants: Array<{ id: string; isActive: boolean }>
+) {
+  if (inputDefaultVariantId && variants.some((variant) => variant.id === inputDefaultVariantId && variant.isActive)) {
+    return inputDefaultVariantId;
+  }
+  return variants.find((variant) => variant.isActive)?.id ?? variants[0]?.id ?? null;
+}
+
+function productCommercialSnapshot(variant: {
+  sku?: string | null;
+  basePrice: number;
+  discountType?: "percentage" | "fixed" | null;
+  discountValue?: number | null;
+}) {
+  return {
+    sku: variant.sku || null,
+    basePrice: variant.basePrice,
+    discountType: variant.discountType || null,
+    discountValue: variant.discountValue ?? null,
   };
 }
 
@@ -98,8 +126,24 @@ function ensureUniqueVariantSelections(
   }
 }
 
+function validateMediaCollection(media: ProductMediaInput[], label: string) {
+  const videoCount = media.filter((item) => item.type === "video").length;
+  if (videoCount > 1) {
+    throw new Error(`${label} solo permite un video en esta version.`);
+  }
+
+  media.forEach((item) => {
+    if (!item.alt?.trim()) {
+      throw new Error(`${label} requiere texto alternativo en cada elemento.`);
+    }
+    if (item.type === "video" && !item.posterUrl) {
+      throw new Error(`${label} requiere portada para cada video.`);
+    }
+  });
+}
+
 async function replaceProductCollections(tx: any, productId: string, payload: {
-    images: Array<{ url: string; alt: string; position: number }>;
+    media: ProductMediaInput[];
     priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
     extras: Array<{ name: string; type: string; priceDelta: number }>;
     customFields: Array<{ label: string; type: "text" | "date" | "select" | "image" | "note"; required: boolean; options: string[]; helpText?: string | null }>;
@@ -110,8 +154,10 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
   await tx.productExtra.deleteMany({ where: { productId } });
   await tx.customField.deleteMany({ where: { productId } });
 
-  if (payload.images.length > 0) {
-    await tx.productImage.createMany({ data: payload.images.map((image) => ({ ...image, productId })) });
+  validateMediaCollection(payload.media, "La galeria del producto");
+
+  if (payload.media.length > 0) {
+    await tx.productImage.createMany({ data: payload.media.map((item) => ({ ...item, productId, posterUrl: item.posterUrl ?? null })) });
   }
   if (payload.priceTiers.length > 0) {
     await tx.priceTier.createMany({ data: payload.priceTiers.map((tier) => ({ ...tier, productId })) });
@@ -208,13 +254,14 @@ async function syncVariants(
     id: string;
     name: string;
     sku?: string | null;
+    visualGroupKey?: string | null;
     basePrice: number;
     discountType?: "percentage" | "fixed" | null;
     discountValue?: number | null;
     isActive: boolean;
     position: number;
     optionValueIds: string[];
-    images: Array<{ url: string; alt: string; position: number }>;
+    media: ProductMediaInput[];
     priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
   }>,
   optionValueIds: Set<string>,
@@ -233,6 +280,7 @@ async function syncVariants(
   for (const variant of inputVariants) {
     const selectionKey = normalizeSelectionKey(variant.optionValueIds);
     const nextName = variant.name.trim() || buildVariantName(variant.optionValueIds, optionValueLabelById);
+    validateMediaCollection(variant.media, `La galeria de la variante ${nextName}`);
 
     if (existingVariantIds.has(variant.id)) {
       await tx.productVariant.update({
@@ -241,6 +289,7 @@ async function syncVariants(
           name: nextName,
           sku: variant.sku || null,
           selectionKey: selectionKey || null,
+          visualGroupKey: variant.visualGroupKey?.trim() || null,
           basePrice: variant.basePrice,
           discountType: variant.discountType || null,
           discountValue: variant.discountValue ?? null,
@@ -256,6 +305,7 @@ async function syncVariants(
           name: nextName,
           sku: variant.sku || null,
           selectionKey: selectionKey || null,
+          visualGroupKey: variant.visualGroupKey?.trim() || null,
           basePrice: variant.basePrice,
           discountType: variant.discountType || null,
           discountValue: variant.discountValue ?? null,
@@ -270,8 +320,8 @@ async function syncVariants(
     await tx.productVariantOptionValue.deleteMany({ where: { variantId: variant.id } });
     await tx.productVariantAttribute.deleteMany({ where: { variantId: variant.id } });
 
-    if (variant.images.length > 0) {
-      await tx.productVariantImage.createMany({ data: variant.images.map((image) => ({ ...image, variantId: variant.id })) });
+    if (variant.media.length > 0) {
+      await tx.productVariantImage.createMany({ data: variant.media.map((item) => ({ ...item, variantId: variant.id, posterUrl: item.posterUrl ?? null })) });
     }
     if (variant.priceTiers.length > 0) {
       await tx.priceTier.createMany({ data: variant.priceTiers.map((tier) => ({ ...tier, variantId: variant.id })) });
@@ -367,7 +417,11 @@ adminRouter.delete("/categories/:id", async (req, res) => {
 });
 
 adminRouter.get("/products", async (_req, res) => {
-  const products = await prisma.product.findMany({ include: productInclude, orderBy: { createdAt: "desc" } });
+  const products = await prisma.product.findMany({
+    where: { category: { slug: { not: "legacy-interno" } } },
+    include: productInclude,
+    orderBy: { createdAt: "desc" },
+  });
   res.json(products.map(productPayload));
 });
 
@@ -469,18 +523,31 @@ adminRouter.delete("/reviews/:id", async (req, res) => {
   res.status(204).end();
 });
 
-adminRouter.post("/products/images", imageUpload.single("file"), async (req, res) => {
-  const file = req.file;
+async function handleProductMediaUpload(req: any, res: any) {
+  const file = req.files?.file?.[0];
+  const poster = req.files?.poster?.[0];
   if (!file) {
-    res.status(400).json({ message: "Debe subir una imagen" });
+    res.status(400).json({ message: "Debe subir una imagen o video" });
     return;
   }
   const slug = typeof req.body.slug === "string" ? req.body.slug : "product";
   const alt = typeof req.body.alt === "string" && req.body.alt.trim() ? req.body.alt.trim() : file.originalname;
   const position = Number.isFinite(Number(req.body.position)) ? Number(req.body.position) : 0;
-  const stored = await uploadProductImage(file, slug);
-  res.status(201).json({ url: stored.url, alt, position });
-});
+
+  try {
+    const stored = await uploadProductMedia(file, slug, poster);
+    res.status(201).json({ url: stored.url, type: stored.type, alt, position, posterUrl: stored.posterUrl });
+  } catch (error) {
+    if (error instanceof UploadValidationError) {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+    throw error;
+  }
+}
+
+adminRouter.post("/products/media", mediaUpload.fields([{ name: "file", maxCount: 1 }, { name: "poster", maxCount: 1 }]), handleProductMediaUpload);
+adminRouter.post("/products/images", mediaUpload.fields([{ name: "file", maxCount: 1 }, { name: "poster", maxCount: 1 }]), handleProductMediaUpload);
 
 adminRouter.post("/products", async (req, res) => {
   const input = adminProductInputSchema.parse(req.body);
@@ -489,28 +556,39 @@ adminRouter.post("/products", async (req, res) => {
     const variantPayload = hasOptions
       ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
       : [buildCanonicalVariantInput(input)];
+    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, variantPayload);
+    const defaultVariant = variantPayload.find((variant) => variant.id === defaultVariantId) ?? variantPayload[0]!;
+    const commercialSnapshot = productCommercialSnapshot(defaultVariant);
     const created = await tx.product.create({
       data: {
         name: input.name,
         slug: input.slug,
-        sku: input.sku || null,
+        sku: commercialSnapshot.sku,
         description: input.description,
         categoryId: input.categoryId,
-        basePrice: input.basePrice,
-        discountType: input.discountType || null,
-        discountValue: input.discountValue ?? null,
+        basePrice: commercialSnapshot.basePrice,
+        discountType: commercialSnapshot.discountType,
+        discountValue: commercialSnapshot.discountValue,
         isPublished: input.isPublished,
         isFeatured: input.isFeatured,
         isHero: input.isHero,
-        heroSlot: input.isHero ? input.heroSlot ?? "primary" : null
+        heroSlot: input.isHero ? input.heroSlot ?? "primary" : null,
+        defaultVariantId: null
       }
     });
     await replaceProductCollections(tx, created.id, {
       ...input,
-      priceTiers: hasOptions ? [] : []
+      priceTiers: []
     });
     const { optionValueIds, optionValueLabelById } = await syncProductOptions(tx, created.id, input.productOptions);
     await syncVariants(tx, created.id, variantPayload, optionValueIds, optionValueLabelById);
+    await tx.product.update({
+      where: { id: created.id },
+      data: {
+        defaultVariantId,
+        ...commercialSnapshot
+      }
+    });
     return tx.product.findUniqueOrThrow({ where: { id: created.id }, include: productInclude });
   });
   res.status(201).json(productPayload(product));
@@ -530,30 +608,41 @@ adminRouter.put("/products/:id", async (req, res) => {
     const variantPayload = hasOptions
       ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
       : [buildCanonicalVariantInput(input, canonicalVariantId)];
+    const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, variantPayload);
+    const defaultVariant = variantPayload.find((variant) => variant.id === defaultVariantId) ?? variantPayload[0]!;
+    const commercialSnapshot = productCommercialSnapshot(defaultVariant);
 
     await tx.product.update({
       where: { id },
       data: {
         name: input.name,
         slug: input.slug,
-        sku: input.sku || null,
+        sku: commercialSnapshot.sku,
         description: input.description,
         categoryId: input.categoryId,
-        basePrice: input.basePrice,
-        discountType: input.discountType || null,
-        discountValue: input.discountValue ?? null,
+        basePrice: commercialSnapshot.basePrice,
+        discountType: commercialSnapshot.discountType,
+        discountValue: commercialSnapshot.discountValue,
         isPublished: input.isPublished,
         isFeatured: input.isFeatured,
         isHero: input.isHero,
-        heroSlot: input.isHero ? input.heroSlot ?? "primary" : null
+        heroSlot: input.isHero ? input.heroSlot ?? "primary" : null,
+        defaultVariantId: null
       }
     });
     await replaceProductCollections(tx, id, {
       ...input,
-      priceTiers: hasOptions ? [] : []
+      priceTiers: []
     });
     const { optionValueIds, optionValueLabelById } = await syncProductOptions(tx, id, input.productOptions);
     await syncVariants(tx, id, variantPayload, optionValueIds, optionValueLabelById);
+    await tx.product.update({
+      where: { id },
+      data: {
+        defaultVariantId,
+        ...commercialSnapshot
+      }
+    });
     return tx.product.findUniqueOrThrow({ where: { id }, include: productInclude });
   });
   res.json(productPayload(product));

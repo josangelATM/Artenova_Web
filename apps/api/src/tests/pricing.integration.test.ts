@@ -7,11 +7,30 @@ vi.mock("../lib/prisma", () => ({
         {
           id: "p1",
           name: "Retrato grabado",
+          defaultVariantId: "v1",
           basePrice: 16,
-          priceTiers: [{ id: "t1", minQuantity: 6, unitPrice: 4.5 }],
+          priceTiers: [],
           extras: [{ id: "e1", name: "Dorado", type: "material", priceDelta: 2 }],
           customFields: [{ id: "name", label: "Nombre", required: true }],
-          images: []
+          images: [],
+          options: [],
+          variants: [
+            {
+              id: "v1",
+              productId: "p1",
+              name: "Retrato grabado",
+              sku: "RET-01",
+              selectionKey: null,
+              basePrice: 16,
+              discountType: null,
+              discountValue: null,
+              isActive: true,
+              position: 0,
+              images: [],
+              optionValues: [],
+              priceTiers: [{ id: "t1", minQuantity: 6, unitPrice: 4.5 }],
+            }
+          ]
         }
       ])
     }
@@ -35,4 +54,3 @@ describe("priceOrderItems", () => {
     ).rejects.toThrow("Faltan datos requeridos");
   });
 });
-

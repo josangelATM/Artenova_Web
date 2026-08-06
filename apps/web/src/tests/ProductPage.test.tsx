@@ -22,35 +22,77 @@ vi.mock("../lib/seo", () => ({
   productSeoDescription: ({ name, price }: { name: string; price: number }) => `${name} ${price}`,
 }));
 
+const imageMedia = (id: string, url: string, alt: string, position = 0) => ({
+  id,
+  type: "image" as const,
+  url,
+  alt,
+  position,
+  posterUrl: null,
+});
+
+const videoMedia = (id: string, url: string, alt: string, posterUrl: string | null = null, position = 0) => ({
+  id,
+  type: "video" as const,
+  url,
+  alt,
+  position,
+  posterUrl,
+});
+
 const settings: SiteSettings = {
   brandName: "Artenova",
   heroTitle: "Regalos personalizados que guardan historias",
-  heroSubtitle: "Taller creativo de corte y grabado láser.",
+  heroSubtitle: "Taller creativo de corte y grabado laser.",
   whatsapp: "50760000000",
   email: "hola@artenova.test",
-  address: "Panamá",
+  address: "Panama",
   businessHours: "Lunes a viernes",
   mapsUrl: "",
   bannerText: "",
   personalizationNotice: "",
 };
 
+const defaultVariant = {
+  id: "v1",
+  productId: "p1",
+  name: "Pequeno",
+  sku: "PEQ-01",
+  selectionKey: "small",
+  visualGroupKey: "same-shape",
+  basePrice: 20,
+  discountType: null,
+  discountValue: null,
+  isActive: true,
+  position: 0,
+  media: [
+    imageMedia("img-small", "/seed/small.jpg", "Foto pequeno", 0),
+    imageMedia("img-small-2", "/seed/small-2.jpg", "Foto pequeno dos", 1),
+  ],
+  attributes: [],
+  selections: [{ optionId: "size", optionName: "Tamano", optionValueId: "small", value: "Pequeno", position: 0 }],
+  priceTiers: [],
+  pricingSummary: { originalPrice: 20, finalPrice: 20, hasDiscount: false, discountType: null, discountValue: null },
+};
+
 const product: Product = {
   id: "p1",
-  name: "Letrero acrílico",
+  name: "Letrero acrilico",
   slug: "letrero-acrilico",
+  defaultVariantId: "v1",
+  currencySymbol: "$",
   description: "Ideal para recuerdos personalizados.",
   categoryId: "c1",
-  basePrice: 15,
+  basePrice: 20,
   discountType: null,
   discountValue: null,
   isPublished: true,
   isFeatured: false,
   isHero: false,
   heroSlot: null,
-  images: [
-    { id: "img-base", url: "/seed/base.jpg", alt: "Foto base", position: 0 },
-    { id: "img-base-2", url: "/seed/base-2.jpg", alt: "Foto base dos", position: 1 },
+  media: [
+    imageMedia("img-base", "/seed/base.jpg", "Foto base", 0),
+    imageMedia("img-base-2", "/seed/base-2.jpg", "Foto base dos", 1),
   ],
   priceTiers: [],
   extras: [],
@@ -59,54 +101,37 @@ const product: Product = {
     {
       id: "size",
       productId: "p1",
-      name: "Tamaño",
+      name: "Tamano",
       position: 0,
       values: [
-        { id: "small", optionId: "size", value: "Pequeño", position: 0, swatch: null },
+        { id: "small", optionId: "size", value: "Pequeno", position: 0, swatch: null },
         { id: "large", optionId: "size", value: "Grande", position: 1, swatch: null },
       ],
     },
   ],
   variants: [
-    {
-      id: "v1",
-      productId: "p1",
-      name: "Pequeño",
-      sku: "PEQ-01",
-      selectionKey: "small",
-      basePrice: 20,
-      discountType: null,
-      discountValue: null,
-      isActive: true,
-      position: 0,
-      images: [
-        { id: "img-small", url: "/seed/small.jpg", alt: "Foto pequeño", position: 0 },
-        { id: "img-small-2", url: "/seed/small-2.jpg", alt: "Foto pequeño dos", position: 1 },
-      ],
-      attributes: [],
-      selections: [{ optionId: "size", optionName: "Tamaño", optionValueId: "small", value: "Pequeño", position: 0 }],
-      priceTiers: [],
-      pricingSummary: { originalPrice: 20, finalPrice: 20, hasDiscount: false, discountType: null, discountValue: null },
-    },
+    defaultVariant,
     {
       id: "v2",
       productId: "p1",
       name: "Grande",
       sku: "GDE-01",
       selectionKey: "large",
+      visualGroupKey: "large-shape",
       basePrice: 22,
       discountType: null,
       discountValue: null,
       isActive: true,
       position: 1,
-      images: [{ id: "img-large", url: "/seed/large.jpg", alt: "Foto grande", position: 0 }],
+      media: [imageMedia("img-large", "/seed/large.jpg", "Foto grande", 0)],
       attributes: [],
-      selections: [{ optionId: "size", optionName: "Tamaño", optionValueId: "large", value: "Grande", position: 0 }],
+      selections: [{ optionId: "size", optionName: "Tamano", optionValueId: "large", value: "Grande", position: 0 }],
       priceTiers: [],
       pricingSummary: { originalPrice: 22, finalPrice: 22, hasDiscount: false, discountType: null, discountValue: null },
     },
   ],
-  pricingSummary: { originalPrice: 15, finalPrice: 15, hasDiscount: false, discountType: null, discountValue: null },
+  defaultVariant,
+  pricingSummary: { originalPrice: 20, finalPrice: 20, hasDiscount: false, discountType: null, discountValue: null },
   reviews: [],
   reviewSummary: { averageRating: 0, reviewCount: 0 },
 };
@@ -119,7 +144,7 @@ function renderProductPage() {
           <Route path="/producto/:slug" element={<ProductPage />} />
         </Routes>
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -130,43 +155,90 @@ describe("ProductPage", () => {
     applySeoMock.mockReset();
   });
 
-  it("navigates across base and variant images while syncing the selected variant", async () => {
+  it("starts from the default variant and only changes the variant when the user changes options", async () => {
     productMock.mockResolvedValue(product);
     settingsMock.mockResolvedValue(settings);
 
     renderProductPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Letrero acrílico")).toBeInTheDocument();
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
     });
 
-    expect(screen.queryByText("Presentación elegida")).not.toBeInTheDocument();
-    expect(screen.getByText("$15.00")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Imagen anterior")).toHaveLength(1);
-    expect(screen.getAllByLabelText("Imagen siguiente")).toHaveLength(1);
-    expect(screen.getAllByRole("img", { name: /foto base/i }).length).toBeGreaterThan(0);
+    expect(screen.getByText("$20.00")).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: /foto pequeno/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Pequeno" })).toHaveClass("MuiChip-filled");
 
     fireEvent.click(screen.getByLabelText("Imagen siguiente"));
 
     await waitFor(() => {
-      expect(screen.getAllByRole("img", { name: /foto base dos/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("img", { name: /foto pequeno dos/i }).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("$15.00")).toBeInTheDocument();
+    expect(screen.getByText("$20.00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pequeno" })).toHaveClass("MuiChip-filled");
 
-    fireEvent.click(screen.getByLabelText("Imagen siguiente"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Grande" })[0]!);
 
     await waitFor(() => {
-      expect(screen.getByText("$20.00")).toBeInTheDocument();
+      expect(screen.getAllByRole("img", { name: /foto grande/i }).length).toBeGreaterThan(0);
     });
-    expect(screen.getAllByRole("img", { name: /foto pequeño/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Pequeño" })).toHaveClass("MuiChip-filled");
-    expect(screen.queryByText("Presentación elegida")).not.toBeInTheDocument();
+    expect(screen.getByText("$22.00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Grande" })).toHaveClass("MuiChip-filled");
 
-    fireEvent.click(screen.getByLabelText("Imagen anterior"));
+    expect(screen.queryByLabelText("Imagen anterior")).not.toBeInTheDocument();
+    expect(screen.getByText("$22.00")).toBeInTheDocument();
+  });
+
+  it("keeps the active image when the selected variant changes inside the same visual group", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      variants: [
+        defaultVariant,
+        {
+          ...product.variants[1]!,
+          id: "v2-same",
+          name: "Grande mismo visual",
+          sku: "GDE-02",
+          selectionKey: "large",
+          visualGroupKey: "same-shape",
+          media: [imageMedia("img-small", "/seed/small.jpg", "Foto pequeno", 0)],
+          pricingSummary: { originalPrice: 22, finalPrice: 22, hasDiscount: false, discountType: null, discountValue: null },
+        },
+      ],
+      defaultVariant,
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
 
     await waitFor(() => {
-      expect(screen.getByText("$15.00")).toBeInTheDocument();
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
     });
-    expect(screen.getAllByRole("img", { name: /foto base dos/i }).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Grande" })[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByText("$22.00")).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole("img", { name: /foto pequeno/i }).length).toBeGreaterThan(0);
+  });
+
+  it("renders the public gallery correctly when the product only has video media", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      media: [videoMedia("video-base", "/seed/base-video.mp4", "Video base")],
+      variants: [],
+      defaultVariant: null,
+      defaultVariantId: null,
+      productOptions: [],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText(/video base/i).length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByLabelText(/video base/i)[0]?.tagName.toLowerCase()).toBe("video");
   });
 });

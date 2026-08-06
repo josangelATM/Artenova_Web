@@ -1,26 +1,270 @@
 import "dotenv/config";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  "postgresql://artenova:artenova_dev@localhost:5432/artenova?schema=public";
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
-const s3PublicBaseUrl = (
-  process.env.S3_PUBLIC_BASE_URL ??
-  "https://artenova-uploads-002863053504.s3.us-east-1.amazonaws.com"
-).replace(/\/$/, "");
-const productImageUrl = (slug: string, sourcePath: string) =>
-  `${s3PublicBaseUrl}/products/${slug}/${sourcePath.split("/").pop()}`;
-const resolveProductImageUrl = (product: {
-  slug: string;
-  image: string;
-  imageUrl?: string;
-}) => product.imageUrl ?? productImageUrl(product.slug, product.image);
 
-const weddingFields = [
+const uploadDriver = process.env.UPLOAD_DRIVER ?? (process.env.NODE_ENV === "production" ? "s3" : "local");
+const s3Endpoint = process.env.S3_ENDPOINT;
+const s3Region = process.env.S3_REGION ?? "us-east-1";
+const s3Bucket = process.env.S3_BUCKET;
+const s3AccessKeyId = process.env.S3_ACCESS_KEY_ID;
+const s3SecretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+const s3PublicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.replace(/\/$/, "");
+const seedAssetsRoot = fileURLToPath(new URL("./seed-assets/", import.meta.url));
+const s3 = uploadDriver === "s3" && s3Endpoint && s3Bucket && s3AccessKeyId && s3SecretAccessKey
+  ? new S3Client({
+      endpoint: s3Endpoint,
+      region: s3Region,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: s3AccessKeyId,
+        secretAccessKey: s3SecretAccessKey,
+      },
+    })
+  : null;
+
+type SeedTier = {
+  minQuantity: number;
+  unitPrice: number;
+  totalPrice?: number | null;
+  label?: string | null;
+};
+
+type SeedExtra = {
+  name: string;
+  type: string;
+  priceDelta: number;
+};
+
+type SeedCustomField = {
+  label: string;
+  type: "text" | "date" | "select" | "image" | "note";
+  required: boolean;
+  options: string[];
+  helpText?: string | null;
+  position: number;
+};
+
+type SeedOptionValue = {
+  key: string;
+  value: string;
+  swatch?: string | null;
+};
+
+type SeedOption = {
+  key: string;
+  name: string;
+  values: SeedOptionValue[];
+};
+
+type SeedVariant = {
+  key: string;
+  name: string;
+  sku?: string | null;
+  visualGroupKey?: string;
+  basePrice: number;
+  discountType?: "percentage" | "fixed" | null;
+  discountValue?: number | null;
+  isActive?: boolean;
+  image?: string;
+  imageUrl?: string;
+  media?: Array<{
+    type: "image" | "video";
+    sourcePath: string;
+    url?: string;
+    alt?: string;
+    position?: number;
+  }>;
+  optionValueKeys?: string[];
+  priceTiers?: SeedTier[];
+};
+
+type SeedProduct = {
+  categorySlug: string;
+  name: string;
+  slug: string;
+  description: string;
+  featured: boolean;
+  isHero?: boolean;
+  heroSlot?: "primary" | "secondary" | null;
+  extras?: SeedExtra[];
+  customFields?: SeedCustomField[];
+  options?: SeedOption[];
+  variants: SeedVariant[];
+  defaultVariantKey?: string;
+};
+
+type SeedResolvedMedia = {
+  type: "image" | "video";
+  url: string;
+  alt: string;
+  position: number;
+  posterUrl: string | null;
+};
+
+function assertSeedS3Config() {
+  const missing: string[] = [];
+  if (uploadDriver !== "s3") missing.push("UPLOAD_DRIVER=s3");
+  if (!s3Endpoint) missing.push("S3_ENDPOINT");
+  if (!s3Bucket) missing.push("S3_BUCKET");
+  if (!s3AccessKeyId) missing.push("S3_ACCESS_KEY_ID");
+  if (!s3SecretAccessKey) missing.push("S3_SECRET_ACCESS_KEY");
+  if (!s3PublicBaseUrl) missing.push("S3_PUBLIC_BASE_URL");
+
+  if (missing.length > 0 || !s3) {
+    throw new Error(`El seed comercial requiere S3 real. Configuración faltante: ${missing.join(", ")}`);
+  }
+}
+
+function sanitizeObjectSegment(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function contentTypeForExtension(extension: string) {
+  switch (extension.toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".mp4":
+      return "video/mp4";
+    case ".webm":
+      return "video/webm";
+    default:
+      throw new Error(`Tipo de archivo no soportado para seed: ${extension}`);
+  }
+}
+
+function resolveSeedAssetPath(sourcePath: string) {
+  const normalized = sourcePath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const relative = normalized.startsWith("seed/") ? normalized.slice("seed/".length) : normalized;
+  return path.resolve(seedAssetsRoot, relative);
+}
+
+function mediaSourcesForVariant(product: SeedProduct, variant: SeedVariant) {
+  if (variant.media && variant.media.length > 0) {
+    return variant.media.map((item, index) => ({
+      type: item.type,
+      sourcePath: item.sourcePath,
+      alt: item.alt ?? product.name,
+      position: item.position ?? index,
+    }));
+  }
+
+  if (variant.image) {
+    return [
+      {
+        type: "image" as const,
+        sourcePath: variant.image,
+        alt: product.name,
+        position: 0,
+      },
+    ];
+  }
+
+  return [];
+}
+
+async function uploadSeedObject(objectKey: string, buffer: Buffer, contentType: string) {
+  assertSeedS3Config();
+  await s3!.send(
+    new PutObjectCommand({
+      Bucket: s3Bucket!,
+      Key: objectKey,
+      Body: buffer,
+      ContentType: contentType,
+    }),
+  );
+
+  return `${s3PublicBaseUrl!}/${objectKey}`;
+}
+
+async function uploadSeedAsset(
+  productSlug: string,
+  sourcePath: string,
+) {
+  const localPath = resolveSeedAssetPath(sourcePath);
+  const buffer = await readFile(localPath).catch((error) => {
+    throw new Error(`No se encontró el asset seed "${sourcePath}" para ${productSlug}: ${String(error)}`);
+  });
+
+  const parsed = path.parse(localPath);
+  const safeProductSlug = sanitizeObjectSegment(productSlug);
+  const safeName = sanitizeObjectSegment(parsed.name) || "asset";
+
+  const extension = parsed.ext.toLowerCase();
+  const normalizedFileName = `${safeName}${extension}`;
+  const objectKey = `products/${safeProductSlug}/${normalizedFileName}`;
+  const url = await uploadSeedObject(objectKey, buffer, contentTypeForExtension(extension));
+  return { objectKey, url };
+}
+
+async function syncSeedMedia(products: SeedProduct[]) {
+  assertSeedS3Config();
+
+  const uploadCache = new Map<string, { url: string }>();
+  const resolvedByVariantId = new Map<string, SeedResolvedMedia[]>();
+
+  for (const product of products) {
+    for (const variant of product.variants) {
+      const variantSources = mediaSourcesForVariant(product, variant);
+      const resolvedMedia: SeedResolvedMedia[] = [];
+
+      for (const media of variantSources) {
+        const assetCacheKey = `${product.slug}|media|${media.sourcePath}`;
+        const uploadedMedia = uploadCache.get(assetCacheKey)
+          ?? { url: (await uploadSeedAsset(product.slug, media.sourcePath)).url };
+        uploadCache.set(assetCacheKey, uploadedMedia);
+
+        resolvedMedia.push({
+          type: media.type,
+          url: uploadedMedia.url,
+          alt: media.alt,
+          position: media.position,
+          posterUrl: null,
+        });
+      }
+
+      resolvedByVariantId.set(variantId(product.slug, variant.key), resolvedMedia);
+    }
+  }
+
+  return resolvedByVariantId;
+}
+
+const escudoTamanos: SeedOption = {
+  key: "tamano",
+  name: "Tamaño",
+  values: [
+    { key: "17-5cm", value: "17.5 cm" },
+    { key: "10cm", value: "10 cm" },
+    { key: "6-8cm", value: "6.8 cm" },
+  ],
+};
+
+const weddingFields: SeedCustomField[] = [
   {
     label: "Nombres",
-    type: "text" as const,
+    type: "text",
     required: true,
     options: [],
     helpText: "Ejemplo: Max & Milagros",
@@ -28,7 +272,7 @@ const weddingFields = [
   },
   {
     label: "Fecha del evento",
-    type: "date" as const,
+    type: "date",
     required: true,
     options: [],
     helpText: "Fecha que irá grabada",
@@ -36,7 +280,7 @@ const weddingFields = [
   },
   {
     label: "Texto o dedicatoria",
-    type: "note" as const,
+    type: "note",
     required: false,
     options: [],
     helpText: "Mensaje corto si aplica",
@@ -44,10 +288,10 @@ const weddingFields = [
   },
 ];
 
-const petFields = [
+const petFields: SeedCustomField[] = [
   {
     label: "Nombre de la mascota",
-    type: "text" as const,
+    type: "text",
     required: true,
     options: [],
     helpText: "Nombre que irá grabado",
@@ -55,7 +299,7 @@ const petFields = [
   },
   {
     label: "Foto de referencia",
-    type: "image" as const,
+    type: "image",
     required: false,
     options: [],
     helpText: "Compártela por WhatsApp al coordinar el pedido",
@@ -63,7 +307,7 @@ const petFields = [
   },
   {
     label: "Detalle especial",
-    type: "note" as const,
+    type: "note",
     required: false,
     options: [],
     helpText: "Color, frase o indicación importante",
@@ -71,10 +315,10 @@ const petFields = [
   },
 ];
 
-const petIdFields = [
+const petIdFields: SeedCustomField[] = [
   {
     label: "Nombre de la mascota",
-    type: "text" as const,
+    type: "text",
     required: true,
     options: [],
     helpText: "Nombre que irá en la cédula",
@@ -82,7 +326,7 @@ const petIdFields = [
   },
   {
     label: "Fecha de nacimiento",
-    type: "date" as const,
+    type: "date",
     required: false,
     options: [],
     helpText: "Opcional",
@@ -90,15 +334,15 @@ const petIdFields = [
   },
   {
     label: "Especie",
-    type: "text" as const,
+    type: "text",
     required: false,
     options: [],
-    helpText: "Ejemplo: Canino o felino",
+    helpText: "Ejemplo: canino o felino",
     position: 2,
   },
   {
     label: "Raza",
-    type: "text" as const,
+    type: "text",
     required: false,
     options: [],
     helpText: "Opcional",
@@ -106,7 +350,7 @@ const petIdFields = [
   },
   {
     label: "Sexo",
-    type: "select" as const,
+    type: "select",
     required: false,
     options: ["Macho", "Hembra"],
     helpText: "Opcional",
@@ -114,7 +358,7 @@ const petIdFields = [
   },
   {
     label: "Teléfono de contacto",
-    type: "text" as const,
+    type: "text",
     required: true,
     options: [],
     helpText: "Número que aparecerá en la cédula",
@@ -122,7 +366,7 @@ const petIdFields = [
   },
   {
     label: "Foto de la mascota",
-    type: "image" as const,
+    type: "image",
     required: false,
     options: [],
     helpText: "Comparte la foto de referencia al coordinar el pedido",
@@ -130,7 +374,7 @@ const petIdFields = [
   },
   {
     label: "Tamaño",
-    type: "select" as const,
+    type: "select",
     required: true,
     options: ["Grande", "Mediana", "Pequeña"],
     helpText: "Elige el tamaño de la cédula",
@@ -138,70 +382,83 @@ const petIdFields = [
   },
 ];
 
-const petIdTiers = [
+const petIdTiers: SeedTier[] = [
   { minQuantity: 1, unitPrice: 10, totalPrice: 10, label: "1 unidad - $10.00" },
-  {
-    minQuantity: 2,
-    unitPrice: 9,
-    totalPrice: 18,
-    label: "2 unidades - $18.00",
-  },
-  {
-    minQuantity: 3,
-    unitPrice: 7.67,
-    totalPrice: 23,
-    label: "3 unidades - $23.00",
-  },
-  {
-    minQuantity: 4,
-    unitPrice: 7,
-    totalPrice: 28,
-    label: "4 unidades - $28.00",
-  },
-  {
-    minQuantity: 5,
-    unitPrice: 6.8,
-    totalPrice: 34,
-    label: "5 unidades - $34.00",
-  },
-  {
-    minQuantity: 6,
-    unitPrice: 6.33,
-    totalPrice: 38,
-    label: "6 unidades - $38.00",
-  },
+  { minQuantity: 2, unitPrice: 9, totalPrice: 18, label: "2 unidades - $18.00" },
+  { minQuantity: 3, unitPrice: 7.67, totalPrice: 23, label: "3 unidades - $23.00" },
+  { minQuantity: 4, unitPrice: 7, totalPrice: 28, label: "4 unidades - $28.00" },
+  { minQuantity: 5, unitPrice: 6.8, totalPrice: 34, label: "5 unidades - $34.00" },
+  { minQuantity: 6, unitPrice: 6.33, totalPrice: 38, label: "6 unidades - $38.00" },
 ];
 
-const weddingTiersMdf = [
+const weddingTiersMdf: SeedTier[] = [
   { minQuantity: 6, unitPrice: 4.5, label: "6 unidades - $27.00" },
   { minQuantity: 12, unitPrice: 4, label: "12 unidades - $48.00" },
   { minQuantity: 18, unitPrice: 4, label: "18 unidades - $72.00" },
   { minQuantity: 24, unitPrice: 4, label: "24 unidades - $96.00" },
 ];
 
-const weddingTiersAcrylic = [
+const weddingTiersAcrylic: SeedTier[] = [
   { minQuantity: 6, unitPrice: 5, label: "6 unidades - $30.00" },
   { minQuantity: 12, unitPrice: 4.5, label: "12 unidades - $54.00" },
   { minQuantity: 18, unitPrice: 4, label: "18 unidades - $72.00" },
   { minQuantity: 24, unitPrice: 4, label: "24 unidades - $96.00" },
 ];
 
-const products = [
+const categories = [
+  {
+    name: "Mascotas",
+    slug: "mascotas",
+    description: "Retratos, huellas, llaveros y recuerdos para tu mejor compañía.",
+    accentColor: "#b982d9",
+  },
+  {
+    name: "Bodas",
+    slug: "bodas",
+    description: "Recordatorios personalizados para celebrar y agradecer.",
+    accentColor: "#f07086",
+  },
+  {
+    name: "Recordatorios memoriales",
+    slug: "recordatorios-memoriales",
+    description:
+      "Línea de homenajes personalizados en acrílico, madera o cartón comprimido para conmemorar y honrar la memoria de un ser querido.",
+    accentColor: "#c8ab8b",
+  },
+  {
+    name: "Deportes",
+    slug: "deportes",
+    description:
+      "Escudos decorativos y personalizados de clubes y selecciones para exhibir con presencia y detalle.",
+    accentColor: "#1f4c8f",
+    currencySymbol: "$",
+  },
+];
+
+const products: SeedProduct[] = [
   {
     categorySlug: "mascotas",
     name: "Cédulas personalizadas para mascotas",
     slug: "cedulas-personalizadas-mascotas",
     description:
       "Cédulas de identificación personalizadas para mascotas, resistentes al agua, con acabado brillante y capa de resina para mayor durabilidad.",
-    basePrice: 10,
-    image: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
-    imageUrl: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
     featured: true,
     isHero: true,
     heroSlot: "primary",
-    fields: petIdFields,
-    tiers: petIdTiers,
+    customFields: petIdFields,
     extras: [{ name: "QR trasero", type: "personalización", priceDelta: 2 }],
+    variants: [
+      {
+        key: "default",
+        name: "Cédulas personalizadas para mascotas",
+        sku: "PET-ID-001",
+        basePrice: 10,
+        image: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
+        imageUrl: "/seed/mascotas/cedulas-personalizadas-mascotas.png",
+        priceTiers: petIdTiers,
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
@@ -209,161 +466,1184 @@ const products = [
     slug: "retrato-grabado-mdf",
     description:
       "Retrato personalizado con la foto de tu mascota, ideal para regalar o decorar un espacio especial.",
-    basePrice: 16,
-    image: "/seed/mascotas/mascotas-2.jpg",
     featured: true,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Retrato grabado en láser en MDF",
+        sku: "PET-RET-001",
+        basePrice: 16,
+        image: "/seed/mascotas/mascotas-2.jpg",
+        imageUrl: "/seed/mascotas/mascotas-2.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Retrato mediano grabado en MDF",
     slug: "retrato-mediano-grabado-mdf",
-    description:
-      "Formato mediano para conservar un recuerdo personalizado de tu mascota.",
-    basePrice: 13,
-    image: "/seed/mascotas/mascotas-3.jpg",
+    description: "Formato mediano para conservar un recuerdo personalizado de tu mascota.",
     featured: false,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Retrato mediano grabado en MDF",
+        sku: "PET-RET-002",
+        basePrice: 13,
+        image: "/seed/mascotas/mascotas-3.jpg",
+        imageUrl: "/seed/mascotas/mascotas-3.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Huellas que jamás se olvidan",
     slug: "huellas-que-jamas-se-olvidan",
-    description:
-      "Marco decorativo con fotos para honrar y guardar un recuerdo especial.",
-    basePrice: 18,
-    image: "/seed/mascotas/mascotas-4.jpg",
+    description: "Marco decorativo con fotos para honrar y guardar un recuerdo especial.",
     featured: true,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Huellas que jamás se olvidan",
+        sku: "PET-RET-003",
+        basePrice: 18,
+        image: "/seed/mascotas/mascotas-4.jpg",
+        imageUrl: "/seed/mascotas/mascotas-4.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Huella de amor",
     slug: "huella-de-amor",
     description: "Marco decorativo personalizado con fotos de tu mascota.",
-    basePrice: 15,
-    image: "/seed/mascotas/mascotas-5.jpg",
     featured: false,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Huella de amor",
+        sku: "PET-RET-004",
+        basePrice: 15,
+        image: "/seed/mascotas/mascotas-5.jpg",
+        imageUrl: "/seed/mascotas/mascotas-5.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Recuerdo en acrílico transparente",
     slug: "recuerdo-acrilico-transparente",
-    description:
-      "Pieza acrílica con foto personalizada y mensaje conmemorativo.",
-    basePrice: 16,
-    image: "/seed/mascotas/mascotas-6.jpg",
+    description: "Pieza acrílica con foto personalizada y mensaje conmemorativo.",
     featured: false,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Recuerdo en acrílico transparente",
+        sku: "PET-RET-005",
+        basePrice: 16,
+        image: "/seed/mascotas/mascotas-6.jpg",
+        imageUrl: "/seed/mascotas/mascotas-6.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Llavero personalizado en acrílico dorado espejo",
     slug: "llavero-personalizado-acrilico-dorado",
     description: "Detalle pequeño para llevar siempre a tu mascota contigo.",
-    basePrice: 6,
-    image: "/seed/mascotas/mascotas-7.jpg",
     featured: false,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Llavero personalizado en acrílico dorado espejo",
+        sku: "PET-KEY-001",
+        basePrice: 6,
+        image: "/seed/mascotas/mascotas-7.jpg",
+        imageUrl: "/seed/mascotas/mascotas-7.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   {
     categorySlug: "mascotas",
     name: "Portallaves personalizado",
     slug: "portallaves-personalizado",
     description: "Portallaves con forma de huella y nombre de tu mascota.",
-    basePrice: 20,
-    image: "/seed/mascotas/mascotas-8.jpg",
     featured: true,
-    fields: petFields,
+    customFields: petFields,
+    variants: [
+      {
+        key: "default",
+        name: "Portallaves personalizado",
+        sku: "PET-HOME-001",
+        basePrice: 20,
+        image: "/seed/mascotas/mascotas-8.jpg",
+        imageUrl: "/seed/mascotas/mascotas-8.jpg",
+      },
+    ],
+    defaultVariantKey: "default",
   },
   ...[
     [
       "recordatorio-bodas-carton-comprimido-arco",
       "Recordatorio de bodas arco floral",
-      "Cartón comprimido",
-      "14.3 cm x 13.3 cm",
       "/seed/bodas/bodas-2.jpg",
       weddingTiersMdf,
+      4.5,
     ],
     [
       "recordatorio-bodas-acrilico-negro-dorado",
       "Recordatorio acrílico negro con dorado espejo",
-      "Acrílico negro con acrílico dorado espejo",
-      "17.7 cm x 12.5 cm",
       "/seed/bodas/bodas-3.jpg",
       weddingTiersAcrylic,
+      5,
     ],
     [
       "recordatorio-bodas-carton-marco",
       "Recordatorio de bodas marco ornamental",
-      "Cartón comprimido",
-      "15.6 cm x 10.7 cm",
       "/seed/bodas/bodas-4.jpg",
       weddingTiersMdf,
+      4.5,
     ],
     [
       "recordatorio-bodas-acrilico-blanco",
       "Recordatorio de bodas acrílico blanco",
-      "Acrílico blanco",
-      "15.2 cm x 9.2 cm",
       "/seed/bodas/bodas-5.jpg",
       weddingTiersAcrylic,
+      5,
     ],
     [
       "recordatorio-bodas-mdf-corazon",
       "Recordatorio de bodas corazón MDF",
-      "MDF",
-      "12.7 cm x 14.5 cm",
       "/seed/bodas/bodas-6.jpg",
       weddingTiersMdf,
+      4.5,
     ],
     [
       "recordatorio-bodas-puzzle",
       "Recordatorio de bodas pieza faltante",
-      "Acrílico negro con dorado espejo",
-      "13.4 cm x 15.2 cm",
       "/seed/bodas/bodas-7.jpg",
       weddingTiersAcrylic,
+      5,
     ],
     [
       "recordatorio-bodas-corazon-negro",
       "Recordatorio de bodas corazón negro",
-      "Acrílico negro con dorado espejo",
-      "12.8 cm x 13 cm",
       "/seed/bodas/bodas-8.jpg",
       weddingTiersAcrylic,
+      5,
     ],
     [
       "recordatorio-bodas-tarjeta-acrilica",
       "Recordatorio de bodas tarjeta floral",
-      "Acrílico negro con dorado espejo",
-      "14 cm x 12 cm",
       "/seed/bodas/bodas-9.jpg",
       weddingTiersAcrylic,
+      5,
     ],
-  ].map(([slug, name, _material, _size, image, tiers], index) => ({
+  ].map(([slug, name, image, tiers, basePrice], index) => ({
     categorySlug: "bodas",
     name: name as string,
     slug: slug as string,
     description:
       "Recordatorio personalizado para bodas con nombres, fecha y detalles grabados.",
-    basePrice: (tiers as typeof weddingTiersMdf)[0]!.unitPrice,
-    image: image as string,
     featured: index < 2,
     isHero: slug === "recordatorio-bodas-acrilico-negro-dorado",
-    heroSlot:
-      slug === "recordatorio-bodas-acrilico-negro-dorado" ? "secondary" : null,
-    fields: weddingFields,
-    tiers: tiers as typeof weddingTiersMdf,
+    heroSlot: slug === "recordatorio-bodas-acrilico-negro-dorado" ? "secondary" : null,
+    customFields: weddingFields,
+    variants: [
+      {
+        key: "default",
+        name: name as string,
+        sku: `BOD-${String(index + 1).padStart(3, "0")}`,
+        basePrice: basePrice as number,
+        image: image as string,
+        imageUrl: image as string,
+        priceTiers: tiers as SeedTier[],
+      },
+    ],
+    defaultVariantKey: "default",
   })),
-];
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Siempre en nuestros corazones",
+    slug: "siempre-en-nuestros-corazones",
+    description:
+      "Recordatorio conmemorativo en acrílico blanco con negro. Personalizable con nombre, fechas, fotografía y mensaje conmemorativo. Vela opcional; vela adicional B/. 0.60 por unidad.",
+    featured: true,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "13cm", value: "13 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-SNC-10",
+        visualGroupKey: "principal",
+        basePrice: 3,
+        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "13cm",
+        name: "13 cm",
+        sku: "MEM-SNC-13",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        optionValueKeys: ["tamano:13cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-SNC-15",
+        visualGroupKey: "principal",
+        basePrice: 5,
+        image: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        imageUrl: "/seed/memoriales/siempre-en-nuestros-corazones.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "13cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Memorial ovalado",
+    slug: "memorial-ovalado",
+    description:
+      "Homenaje personalizado en acrílico blanco y acrílico dorado espejo. Personalizable con nombre, fechas, fotografía y mensaje conmemorativo.",
+    featured: true,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "13cm", value: "13 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-OVA-10",
+        visualGroupKey: "principal",
+        basePrice: 3,
+        image: "/seed/memoriales/memorial-ovalado.png",
+        imageUrl: "/seed/memoriales/memorial-ovalado.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "13cm",
+        name: "13 cm",
+        sku: "MEM-OVA-13",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/memorial-ovalado.png",
+        imageUrl: "/seed/memoriales/memorial-ovalado.png",
+        optionValueKeys: ["tamano:13cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-OVA-15",
+        visualGroupKey: "principal",
+        basePrice: 5,
+        image: "/seed/memoriales/memorial-ovalado.png",
+        imageUrl: "/seed/memoriales/memorial-ovalado.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "13cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Memorial de oración",
+    slug: "memorial-de-oracion",
+    description:
+      "Recordatorio espiritual en acrílico transparente con base de madera. Personalizable con nombre, fechas y mensaje conmemorativo.",
+    featured: false,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "13cm", value: "13 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-ORA-10",
+        visualGroupKey: "principal",
+        basePrice: 3,
+        image: "/seed/memoriales/memorial-de-oracion.png",
+        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "13cm",
+        name: "13 cm",
+        sku: "MEM-ORA-13",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/memorial-de-oracion.png",
+        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
+        optionValueKeys: ["tamano:13cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-ORA-15",
+        visualGroupKey: "principal",
+        basePrice: 5,
+        image: "/seed/memoriales/memorial-de-oracion.png",
+        imageUrl: "/seed/memoriales/memorial-de-oracion.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "13cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Memorial corazón",
+    slug: "memorial-corazon",
+    description:
+      "Placa conmemorativa en forma de corazón en acrílico transparente. Personalizable con nombre, fechas, fotografía y mensaje conmemorativo.",
+    featured: true,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "13cm", value: "13 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-COR-10",
+        visualGroupKey: "principal",
+        basePrice: 3,
+        image: "/seed/memoriales/memorial-corazon.png",
+        imageUrl: "/seed/memoriales/memorial-corazon.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "13cm",
+        name: "13 cm",
+        sku: "MEM-COR-13",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/memorial-corazon.png",
+        imageUrl: "/seed/memoriales/memorial-corazon.png",
+        optionValueKeys: ["tamano:13cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-COR-15",
+        visualGroupKey: "principal",
+        basePrice: 5,
+        image: "/seed/memoriales/memorial-corazon.png",
+        imageUrl: "/seed/memoriales/memorial-corazon.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "13cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Jesús Nazareno",
+    slug: "jesus-nazareno",
+    description:
+      "Diseño conmemorativo de Jesús Nazareno en cartón comprimido. Personalizable con nombre, fechas y dedicatoria breve.",
+    featured: false,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-JN-10",
+        visualGroupKey: "principal",
+        basePrice: 2.5,
+        image: "/seed/memoriales/jesus-nazareno.png",
+        imageUrl: "/seed/memoriales/jesus-nazareno.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-JN-15",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/jesus-nazareno.png",
+        imageUrl: "/seed/memoriales/jesus-nazareno.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "15cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Memorial rectángulo",
+    slug: "memorial-rectangulo",
+    description:
+      "Placa memorial rectangular en acrílico transparente. Personalizable con nombre, fechas, fotografía o imagen devocional y mensaje conmemorativo.",
+    featured: false,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "13cm", value: "13 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-REC-10",
+        visualGroupKey: "principal",
+        basePrice: 3,
+        image: "/seed/memoriales/memorial-rectangulo.png",
+        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "13cm",
+        name: "13 cm",
+        sku: "MEM-REC-13",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/memorial-rectangulo.png",
+        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
+        optionValueKeys: ["tamano:13cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-REC-15",
+        visualGroupKey: "principal",
+        basePrice: 5,
+        image: "/seed/memoriales/memorial-rectangulo.png",
+        imageUrl: "/seed/memoriales/memorial-rectangulo.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "13cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Cruz memorial",
+    slug: "cruz-memorial",
+    description:
+      "Cruz conmemorativa personalizable con material y tamaño. Personalizable con nombre, fotografía y mensaje conmemorativo. Incluye vela sin costo adicional.",
+    featured: true,
+    options: [
+      {
+        key: "material",
+        name: "Material",
+        values: [
+          { key: "acrilico-blanco", value: "Acrílico blanco" },
+          { key: "carton-comprimido", value: "Cartón comprimido" },
+        ],
+      },
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "12cm", value: "12 cm" },
+          { key: "15cm", value: "15 cm" },
+          { key: "18cm", value: "18 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "acrilico-12cm",
+        name: "Acrílico blanco / 12 cm",
+        sku: "MEM-CRU-A-12",
+        visualGroupKey: "acrilico-blanco",
+        basePrice: 4,
+        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        optionValueKeys: ["material:acrilico-blanco", "tamano:12cm"],
+      },
+      {
+        key: "acrilico-15cm",
+        name: "Acrílico blanco / 15 cm",
+        sku: "MEM-CRU-A-15",
+        visualGroupKey: "acrilico-blanco",
+        basePrice: 6,
+        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        optionValueKeys: ["material:acrilico-blanco", "tamano:15cm"],
+      },
+      {
+        key: "acrilico-18cm",
+        name: "Acrílico blanco / 18 cm",
+        sku: "MEM-CRU-A-18",
+        visualGroupKey: "acrilico-blanco",
+        basePrice: 8,
+        image: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-acrilico-blanco.png",
+        optionValueKeys: ["material:acrilico-blanco", "tamano:18cm"],
+      },
+      {
+        key: "carton-12cm",
+        name: "Cartón comprimido / 12 cm",
+        sku: "MEM-CRU-C-12",
+        visualGroupKey: "carton-comprimido",
+        basePrice: 2.5,
+        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        optionValueKeys: ["material:carton-comprimido", "tamano:12cm"],
+      },
+      {
+        key: "carton-15cm",
+        name: "Cartón comprimido / 15 cm",
+        sku: "MEM-CRU-C-15",
+        visualGroupKey: "carton-comprimido",
+        basePrice: 4.5,
+        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        optionValueKeys: ["material:carton-comprimido", "tamano:15cm"],
+      },
+      {
+        key: "carton-18cm",
+        name: "Cartón comprimido / 18 cm",
+        sku: "MEM-CRU-C-18",
+        visualGroupKey: "carton-comprimido",
+        basePrice: 6.5,
+        image: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        imageUrl: "/seed/memoriales/cruz-memorial-carton-comprimido.png",
+        optionValueKeys: ["material:carton-comprimido", "tamano:18cm"],
+      },
+    ],
+    defaultVariantKey: "acrilico-15cm",
+  },
+  {
+    categorySlug: "recordatorios-memoriales",
+    name: "Cruces memoriales",
+    slug: "cruces-memoriales",
+    description:
+      "Diseño de cruces memoriales en cartón comprimido. Personalizable con nombre, fechas y dedicatoria conmemorativa.",
+    featured: false,
+    options: [
+      {
+        key: "tamano",
+        name: "Tamaño",
+        values: [
+          { key: "10cm", value: "10 cm" },
+          { key: "15cm", value: "15 cm" },
+        ],
+      },
+    ],
+    variants: [
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "MEM-CRM-10",
+        visualGroupKey: "principal",
+        basePrice: 2.5,
+        image: "/seed/memoriales/cruces-memoriales.png",
+        imageUrl: "/seed/memoriales/cruces-memoriales.png",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "15cm",
+        name: "15 cm",
+        sku: "MEM-CRM-15",
+        visualGroupKey: "principal",
+        basePrice: 4,
+        image: "/seed/memoriales/cruces-memoriales.png",
+        imageUrl: "/seed/memoriales/cruces-memoriales.png",
+        optionValueKeys: ["tamano:15cm"],
+      },
+    ],
+    defaultVariantKey: "15cm",
+  },
+  {
+    categorySlug: "deportes",
+    name: "Escudo Arsenal",
+    slug: "escudo-arsenal",
+    description:
+      "Escudo decorativo del Arsenal con acabado protagonista para exhibir en escritorio, repisa o vitrina.",
+    featured: true,
+    options: [escudoTamanos],
+    variants: [
+      {
+        key: "17-5cm",
+        name: "17.5 cm",
+        sku: "DEP-ARS-175",
+        visualGroupKey: "principal",
+        basePrice: 30,
+        optionValueKeys: ["tamano:17-5cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
+            url: "/seed/deportes/escudo-arsenal.jpg",
+            alt: "Escudo Arsenal",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
+            url: "/seed/deportes/escudo-arsenal.mp4",
+            alt: "Video del escudo Arsenal",
+            position: 1,
+          },
+        ],
+      },
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "DEP-ARS-100",
+        visualGroupKey: "principal",
+        basePrice: 14,
+        optionValueKeys: ["tamano:10cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
+            url: "/seed/deportes/escudo-arsenal.jpg",
+            alt: "Escudo Arsenal",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
+            url: "/seed/deportes/escudo-arsenal.mp4",
+            alt: "Video del escudo Arsenal",
+            position: 1,
+          },
+        ],
+      },
+      {
+        key: "6-8cm",
+        name: "6.8 cm",
+        sku: "DEP-ARS-068",
+        visualGroupKey: "principal",
+        basePrice: 8,
+        optionValueKeys: ["tamano:6-8cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-arsenal.jpg",
+            url: "/seed/deportes/escudo-arsenal.jpg",
+            alt: "Escudo Arsenal",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-arsenal.mp4",
+            url: "/seed/deportes/escudo-arsenal.mp4",
+            alt: "Video del escudo Arsenal",
+            position: 1,
+          },
+        ],
+      },
+    ],
+    defaultVariantKey: "10cm",
+  },
+  {
+    categorySlug: "deportes",
+    name: "Escudo Barcelona",
+    slug: "escudo-barcelona",
+    description:
+      "Escudo decorativo del Barcelona para fans que quieren una pieza limpia, vistosa y lista para exhibir.",
+    featured: true,
+    options: [escudoTamanos],
+    variants: [
+      {
+        key: "17-5cm",
+        name: "17.5 cm",
+        sku: "DEP-BAR-175",
+        visualGroupKey: "principal",
+        basePrice: 30,
+        image: "/seed/deportes/escudo-barcelona.jpeg",
+        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
+        optionValueKeys: ["tamano:17-5cm"],
+      },
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "DEP-BAR-100",
+        visualGroupKey: "principal",
+        basePrice: 14,
+        image: "/seed/deportes/escudo-barcelona.jpeg",
+        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
+        optionValueKeys: ["tamano:10cm"],
+      },
+      {
+        key: "6-8cm",
+        name: "6.8 cm",
+        sku: "DEP-BAR-068",
+        visualGroupKey: "principal",
+        basePrice: 8,
+        image: "/seed/deportes/escudo-barcelona.jpeg",
+        imageUrl: "/seed/deportes/escudo-barcelona.jpeg",
+        optionValueKeys: ["tamano:6-8cm"],
+      },
+    ],
+    defaultVariantKey: "10cm",
+  },
+  {
+    categorySlug: "deportes",
+    name: "Escudo Real Madrid",
+    slug: "escudo-real-madrid",
+    description:
+      "Escudo decorativo del Real Madrid con presencia de vitrina y material visual adicional para apreciar mejor la pieza.",
+    featured: true,
+    options: [escudoTamanos],
+    variants: [
+      {
+        key: "17-5cm",
+        name: "17.5 cm",
+        sku: "DEP-RMA-175",
+        visualGroupKey: "principal",
+        basePrice: 30,
+        optionValueKeys: ["tamano:17-5cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
+            url: "/seed/deportes/escudo-real-madrid.jpeg",
+            alt: "Escudo Real Madrid",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
+            url: "/seed/deportes/escudo-real-madrid.mp4",
+            alt: "Video del escudo Real Madrid",
+            position: 1,
+          },
+        ],
+      },
+      {
+        key: "10cm",
+        name: "10 cm",
+        sku: "DEP-RMA-100",
+        visualGroupKey: "principal",
+        basePrice: 14,
+        optionValueKeys: ["tamano:10cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
+            url: "/seed/deportes/escudo-real-madrid.jpeg",
+            alt: "Escudo Real Madrid",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
+            url: "/seed/deportes/escudo-real-madrid.mp4",
+            alt: "Video del escudo Real Madrid",
+            position: 1,
+          },
+        ],
+      },
+      {
+        key: "6-8cm",
+        name: "6.8 cm",
+        sku: "DEP-RMA-068",
+        visualGroupKey: "principal",
+        basePrice: 8,
+        optionValueKeys: ["tamano:6-8cm"],
+        media: [
+          {
+            type: "image",
+            sourcePath: "/seed/deportes/escudo-real-madrid.jpeg",
+            url: "/seed/deportes/escudo-real-madrid.jpeg",
+            alt: "Escudo Real Madrid",
+          },
+          {
+            type: "video",
+            sourcePath: "/seed/deportes/escudo-real-madrid.mp4",
+            url: "/seed/deportes/escudo-real-madrid.mp4",
+            alt: "Video del escudo Real Madrid",
+            position: 1,
+          },
+        ],
+      },
+    ],
+    defaultVariantKey: "10cm",
+  },
+  {
+    categorySlug: "deportes",
+    name: "Escudo Panamá",
+    slug: "escudo-panama",
+    description:
+      "Escudo de Panamá disponible en varios acabados y tamaños para exhibición decorativa o regalo representativo.",
+    featured: true,
+    options: [
+      {
+        key: "color",
+        name: "Color",
+        values: [
+          { key: "original", value: "Original" },
+          { key: "dorado", value: "Dorado" },
+          { key: "plateado", value: "Plateado" },
+        ],
+      },
+      escudoTamanos,
+    ],
+    variants: [
+      {
+        key: "original-17-5cm",
+        name: "Original / 17.5 cm",
+        sku: "DEP-PAN-O-175",
+        visualGroupKey: "original",
+        basePrice: 30,
+        image: "/seed/deportes/escudo-panama-original.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
+        optionValueKeys: ["color:original", "tamano:17-5cm"],
+      },
+      {
+        key: "original-10cm",
+        name: "Original / 10 cm",
+        sku: "DEP-PAN-O-100",
+        visualGroupKey: "original",
+        basePrice: 14,
+        image: "/seed/deportes/escudo-panama-original.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
+        optionValueKeys: ["color:original", "tamano:10cm"],
+      },
+      {
+        key: "original-6-8cm",
+        name: "Original / 6.8 cm",
+        sku: "DEP-PAN-O-068",
+        visualGroupKey: "original",
+        basePrice: 8,
+        image: "/seed/deportes/escudo-panama-original.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-original.jpeg",
+        optionValueKeys: ["color:original", "tamano:6-8cm"],
+      },
+      {
+        key: "dorado-17-5cm",
+        name: "Dorado / 17.5 cm",
+        sku: "DEP-PAN-D-175",
+        visualGroupKey: "dorado",
+        basePrice: 30,
+        image: "/seed/deportes/escudo-panama-dorado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
+        optionValueKeys: ["color:dorado", "tamano:17-5cm"],
+      },
+      {
+        key: "dorado-10cm",
+        name: "Dorado / 10 cm",
+        sku: "DEP-PAN-D-100",
+        visualGroupKey: "dorado",
+        basePrice: 14,
+        image: "/seed/deportes/escudo-panama-dorado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
+        optionValueKeys: ["color:dorado", "tamano:10cm"],
+      },
+      {
+        key: "dorado-6-8cm",
+        name: "Dorado / 6.8 cm",
+        sku: "DEP-PAN-D-068",
+        visualGroupKey: "dorado",
+        basePrice: 8,
+        image: "/seed/deportes/escudo-panama-dorado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-dorado.jpeg",
+        optionValueKeys: ["color:dorado", "tamano:6-8cm"],
+      },
+      {
+        key: "plateado-17-5cm",
+        name: "Plateado / 17.5 cm",
+        sku: "DEP-PAN-P-175",
+        visualGroupKey: "plateado",
+        basePrice: 30,
+        image: "/seed/deportes/escudo-panama-plateado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
+        optionValueKeys: ["color:plateado", "tamano:17-5cm"],
+      },
+      {
+        key: "plateado-10cm",
+        name: "Plateado / 10 cm",
+        sku: "DEP-PAN-P-100",
+        visualGroupKey: "plateado",
+        basePrice: 14,
+        image: "/seed/deportes/escudo-panama-plateado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
+        optionValueKeys: ["color:plateado", "tamano:10cm"],
+      },
+      {
+        key: "plateado-6-8cm",
+        name: "Plateado / 6.8 cm",
+        sku: "DEP-PAN-P-068",
+        visualGroupKey: "plateado",
+        basePrice: 8,
+        image: "/seed/deportes/escudo-panama-plateado.jpeg",
+        imageUrl: "/seed/deportes/escudo-panama-plateado.jpeg",
+        optionValueKeys: ["color:plateado", "tamano:6-8cm"],
+      },
+    ],
+    defaultVariantKey: "original-10cm",
+  },
+].filter((product) => ["recordatorios-memoriales", "deportes"].includes(product.categorySlug));
+
+const cleanupCategorySlugs = ["mascotas", "bodas"] as const;
+const legacyCategorySeed = {
+  name: "Legacy interno",
+  slug: "legacy-interno",
+  description: "Categoria interna para conservar referencias historicas fuera del catalogo publico.",
+  accentColor: "#6b6b6b",
+  isActive: false,
+};
+
+function variantId(productSlug: string, key: string) {
+  return key === "default" ? `variant-${productSlug}` : `variant-${productSlug}-${key}`;
+}
+
+function optionId(productSlug: string, optionKey: string) {
+  return `option-${productSlug}-${optionKey}`;
+}
+
+function optionValueId(productSlug: string, optionKey: string, valueKey: string) {
+  return `option-value-${productSlug}-${optionKey}-${valueKey}`;
+}
+
+async function resetProductCollections(productId: string) {
+  await prisma.$transaction([
+    prisma.productImage.deleteMany({ where: { productId } }),
+    prisma.priceTier.deleteMany({ where: { productId } }),
+    prisma.priceTier.deleteMany({ where: { variant: { productId } } }),
+    prisma.productVariantImage.deleteMany({ where: { variant: { productId } } }),
+    prisma.productVariantOptionValue.deleteMany({ where: { variant: { productId } } }),
+    prisma.productVariantAttribute.deleteMany({ where: { variant: { productId } } }),
+    prisma.productVariant.deleteMany({ where: { productId } }),
+    prisma.productOption.deleteMany({ where: { productId } }),
+    prisma.productExtra.deleteMany({ where: { productId } }),
+    prisma.customField.deleteMany({ where: { productId } }),
+  ]);
+}
+
+async function cleanupSeedProductsByCategorySlugs(categorySlugs: readonly string[]) {
+  const targetCategorySlugs = Array.from(new Set([...categorySlugs, legacyCategorySeed.slug]));
+  if (targetCategorySlugs.length === 0) return;
+
+  const staleProducts = await prisma.product.findMany({
+    where: {
+      category: {
+        slug: { in: targetCategorySlugs },
+      },
+    },
+    select: {
+      id: true,
+      orderItems: { select: { id: true, orderId: true } },
+    },
+  });
+
+  if (staleProducts.some((product) => product.orderItems.length > 0)) {
+    await prisma.orderItem.deleteMany({
+      where: { productId: { in: staleProducts.map((product) => product.id) } },
+    });
+  }
+
+  for (const product of staleProducts) {
+    await resetProductCollections(product.id);
+  }
+
+  if (staleProducts.length > 0) {
+    await prisma.product.deleteMany({
+      where: { id: { in: staleProducts.map((product) => product.id) } },
+    });
+  }
+}
+
+async function seedProduct(
+  product: SeedProduct,
+  categoryId: string,
+  resolvedMediaByVariantId: Map<string, SeedResolvedMedia[]>,
+) {
+  const existing = await prisma.product.findUnique({
+    where: { slug: product.slug },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await resetProductCollections(existing.id);
+  }
+
+  const extras = product.extras ?? [];
+  const variants = product.variants.map((variant, index) => ({
+    ...variant,
+    id: variantId(product.slug, variant.key),
+    position: index,
+    isActive: variant.isActive ?? true,
+    optionValueIds: (variant.optionValueKeys ?? []).map((selection) => {
+      const [optionKey, valueKey] = selection.split(":");
+      return optionValueId(product.slug, optionKey!, valueKey!);
+    }),
+  }));
+
+  const defaultVariantId =
+    variants.find((variant) => variant.key === product.defaultVariantKey)?.id ??
+    variants[0]?.id ??
+    null;
+  const defaultVariant =
+    variants.find((variant) => variant.id === defaultVariantId) ?? variants[0];
+
+  const persisted = await prisma.product.upsert({
+    where: { slug: product.slug },
+    create: {
+      name: product.name,
+      slug: product.slug,
+      sku: defaultVariant?.sku ?? null,
+      defaultVariantId: null,
+      description: product.description,
+      basePrice: defaultVariant?.basePrice ?? 0,
+      discountType: defaultVariant?.discountType ?? null,
+      discountValue: defaultVariant?.discountValue ?? null,
+      isPublished: true,
+      isFeatured: product.featured,
+      isHero: product.isHero ?? false,
+      heroSlot: product.isHero ? product.heroSlot ?? "primary" : null,
+      categoryId,
+    },
+    update: {
+      name: product.name,
+      sku: defaultVariant?.sku ?? null,
+      defaultVariantId: null,
+      description: product.description,
+      basePrice: defaultVariant?.basePrice ?? 0,
+      discountType: defaultVariant?.discountType ?? null,
+      discountValue: defaultVariant?.discountValue ?? null,
+      isPublished: true,
+      isFeatured: product.featured,
+      isHero: product.isHero ?? false,
+      heroSlot: product.isHero ? product.heroSlot ?? "primary" : null,
+      categoryId,
+    },
+  });
+
+  if (extras.length > 0) {
+    await prisma.productExtra.createMany({
+      data: extras.map((extra) => ({ ...extra, productId: persisted.id })),
+    });
+  }
+
+  if ((product.customFields ?? []).length > 0) {
+    await prisma.customField.createMany({
+      data: (product.customFields ?? []).map((field) => ({
+        productId: persisted.id,
+        label: field.label,
+        type: field.type,
+        required: field.required,
+        options: field.options,
+        helpText: field.helpText ?? null,
+        position: field.position,
+      })),
+    });
+  }
+
+  for (const [optionPosition, option] of (product.options ?? []).entries()) {
+    await prisma.productOption.create({
+      data: {
+        id: optionId(product.slug, option.key),
+        productId: persisted.id,
+        name: option.name,
+        position: optionPosition,
+        values: {
+          create: option.values.map((value, valuePosition) => ({
+            id: optionValueId(product.slug, option.key, value.key),
+            value: value.value,
+            position: valuePosition,
+            swatch: value.swatch ?? null,
+          })),
+        },
+      },
+    });
+  }
+
+  for (const variant of variants) {
+    const media = resolvedMediaByVariantId.get(variant.id) ?? [];
+
+    await prisma.productVariant.create({
+      data: {
+        id: variant.id,
+        productId: persisted.id,
+        name: variant.name,
+        sku: variant.sku ?? null,
+        selectionKey: variant.optionValueIds.slice().sort().join("|") || null,
+        visualGroupKey: variant.visualGroupKey ?? null,
+        basePrice: variant.basePrice,
+        discountType: variant.discountType ?? null,
+        discountValue: variant.discountValue ?? null,
+        isActive: variant.isActive,
+        position: variant.position,
+        images: {
+          create: media,
+        },
+        priceTiers: {
+          create: variant.priceTiers ?? [],
+        },
+      },
+    });
+
+    if (variant.optionValueIds.length > 0) {
+      await prisma.productVariantOptionValue.createMany({
+        data: variant.optionValueIds.map((valueId) => ({
+          variantId: variant.id,
+          optionValueId: valueId,
+        })),
+      });
+    }
+  }
+
+  await prisma.product.update({
+    where: { id: persisted.id },
+    data: { defaultVariantId },
+  });
+}
 
 async function main() {
+  const resolvedSeedMedia = await syncSeedMedia(products);
   const password = process.env.ADMIN_PASSWORD ?? "change-me-now";
-  const email = (
-    process.env.ADMIN_EMAIL ?? "admin@artenova.local"
-  ).toLowerCase();
+  const email = (process.env.ADMIN_EMAIL ?? "admin@artenova.local").toLowerCase();
 
   await prisma.adminUser.upsert({
     where: { email },
@@ -390,147 +1670,22 @@ async function main() {
     update: {},
   });
 
-  const categories = await Promise.all([
-    prisma.category.upsert({
-      where: { slug: "mascotas" },
-      create: {
-        name: "Mascotas",
-        slug: "mascotas",
-        description:
-          "Retratos, huellas, llaveros y recuerdos para tu mejor compañía.",
-        accentColor: "#b982d9",
-      },
-      update: {},
-    }),
-    prisma.category.upsert({
-      where: { slug: "bodas" },
-      create: {
-        name: "Bodas",
-        slug: "bodas",
-        description: "Recordatorios personalizados para celebrar y agradecer.",
-        accentColor: "#f07086",
-      },
-      update: {},
-    }),
-  ]);
-
-  const categoryBySlug = new Map(
-    categories.map((category) => [category.slug, category.id]),
+  const categoryRows = await Promise.all(
+    categories.map((category) =>
+      prisma.category.upsert({
+        where: { slug: category.slug },
+        create: category,
+        update: category,
+      }),
+    ),
   );
 
-  for (const product of products) {
-    const isHero = "isHero" in product ? product.isHero : false;
-    const heroSlot = "heroSlot" in product ? product.heroSlot : null;
-    const existing = await prisma.product.findUnique({
-      where: { slug: product.slug },
-    });
-    if (existing) {
-      await prisma.$transaction([
-        prisma.productImage.deleteMany({ where: { productId: existing.id } }),
-        prisma.priceTier.deleteMany({ where: { productId: existing.id } }),
-        prisma.priceTier.deleteMany({ where: { variant: { productId: existing.id } } }),
-        prisma.productVariantImage.deleteMany({ where: { variant: { productId: existing.id } } }),
-        prisma.productVariantOptionValue.deleteMany({ where: { variant: { productId: existing.id } } }),
-        prisma.productVariantAttribute.deleteMany({ where: { variant: { productId: existing.id } } }),
-        prisma.productVariant.deleteMany({ where: { productId: existing.id } }),
-        prisma.productExtra.deleteMany({ where: { productId: existing.id } }),
-        prisma.customField.deleteMany({ where: { productId: existing.id } }),
-      ]);
-    }
+  const categoryBySlug = new Map(categoryRows.map((category) => [category.slug, category.id]));
 
-    await prisma.product.upsert({
-      where: { slug: product.slug },
-      create: {
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        basePrice: product.basePrice,
-        isFeatured: product.featured,
-        isHero,
-        heroSlot: isHero ? (heroSlot ?? null) : null,
-        categoryId: categoryBySlug.get(product.categorySlug)!,
-        images: {
-          create: [
-            {
-              url: resolveProductImageUrl(product),
-              alt: product.name,
-              position: 0,
-            },
-          ],
-        },
-        priceTiers: { create: [] },
-        variants: {
-          create: [
-            {
-              name: product.name,
-              basePrice: product.basePrice,
-              isActive: true,
-              position: 0,
-              priceTiers: { create: "tiers" in product ? product.tiers : [] }
-            }
-          ]
-        },
-        extras: {
-          create:
-            "extras" in product
-              ? product.extras
-              : [
-                  { name: "Acabado premium", type: "acabado", priceDelta: 3 },
-                  {
-                    name: "Empaque para regalo",
-                    type: "presentacion",
-                    priceDelta: 2,
-                  },
-                ],
-        },
-        customFields: { create: product.fields },
-      },
-      update: {
-        name: product.name,
-        description: product.description,
-        basePrice: product.basePrice,
-        isPublished: true,
-        isFeatured: product.featured,
-        isHero,
-        heroSlot: isHero ? (heroSlot ?? null) : null,
-        categoryId: categoryBySlug.get(product.categorySlug)!,
-        images: {
-          create: [
-            {
-              url: resolveProductImageUrl(product),
-              alt: product.name,
-              position: 0,
-            },
-          ],
-        },
-        priceTiers: { create: [] },
-        variants: {
-          create: [
-            {
-              name: product.name,
-              basePrice: product.basePrice,
-              isActive: true,
-              position: 0,
-              priceTiers: { create: "tiers" in product ? product.tiers : [] }
-            }
-          ]
-        },
-        extras: {
-          create:
-            "extras" in product
-              ? product.extras
-              : [
-                  { name: "Acabado premium", type: "acabado", priceDelta: 3 },
-                  {
-                    name: "Empaque para regalo",
-                    type: "presentacion",
-                    priceDelta: 2,
-                  },
-                ],
-        },
-        customFields: { create: product.fields },
-      },
-    });
+  await cleanupSeedProductsByCategorySlugs(cleanupCategorySlugs);
+
+  for (const product of products) {
+    await seedProduct(product, categoryBySlug.get(product.categorySlug)!, resolvedSeedMedia);
   }
 
   console.log("Seed de Artenova completado");

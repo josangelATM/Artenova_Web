@@ -1,39 +1,299 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
-import { ChevronLeft, ChevronRight, ImageIcon, X } from "lucide-react";
-import type { ProductImage } from "@artenova/shared";
+import { ChevronLeft, ChevronRight, ImageIcon, PlayCircle, X } from "lucide-react";
+import { resolveMediaStillUrl, resolvePreviewMode, type ProductMedia } from "@artenova/shared";
 
 export type ProductGalleryItem = {
   key: string;
-  image: ProductImage;
+  media: ProductMedia;
 };
 
-function imageLabel(image: ProductImage, productName: string, index: number) {
-  return image.alt?.trim() || `${productName} ${index + 1}`;
+function mediaLabel(media: ProductMedia, productName: string, index: number) {
+  return media.alt?.trim() || `${productName} ${index + 1}`;
+}
+
+function pauseVideoElement(video: HTMLVideoElement | null) {
+  if (!video) return;
+  try {
+    video.pause();
+  } catch {
+    // Ignore unsupported media controls in tests.
+  }
+}
+
+function playVideoElement(video: HTMLVideoElement | null) {
+  if (!video) return;
+  try {
+    const result = video.play();
+    if (result && typeof result.catch === "function") {
+      void result.catch(() => undefined);
+    }
+  } catch {
+    // Ignore browser autoplay rejections or unsupported media in tests.
+  }
+}
+
+function useElementInView<T extends Element>(enabled = true, rootMargin = "120px") {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(!enabled);
+
+  useEffect(() => {
+    if (!enabled) {
+      setInView(true);
+      return;
+    }
+    const element = ref.current;
+    if (!element) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry?.isIntersecting ?? false);
+      },
+      { rootMargin, threshold: 0.35 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [enabled, rootMargin]);
+
+  return { ref, inView };
+}
+
+function InlineVideo({
+  media,
+  label,
+  shouldPlay,
+  controls = false,
+  loop = false,
+  preload = "metadata",
+  large = false,
+}: {
+  media: ProductMedia;
+  label: string;
+  shouldPlay: boolean;
+  controls?: boolean;
+  loop?: boolean;
+  preload?: "none" | "metadata" | "auto";
+  large?: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (shouldPlay) {
+      playVideoElement(video);
+      return;
+    }
+    pauseVideoElement(video);
+  }, [shouldPlay, media.url]);
+
+  useEffect(() => () => pauseVideoElement(videoRef.current), []);
+
+  return (
+    <Box
+      component="video"
+      ref={videoRef}
+      src={media.url}
+      poster={media.posterUrl ?? undefined}
+      controls={controls}
+      muted
+      playsInline
+      loop={loop}
+      autoPlay={shouldPlay}
+      preload={preload}
+      disablePictureInPicture={!controls}
+      controlsList={controls ? "nodownload noplaybackrate" : "nofullscreen nodownload noplaybackrate"}
+      aria-label={label}
+      sx={{
+        width: "100%",
+        height: "100%",
+        aspectRatio: "4 / 5",
+        objectFit: "contain",
+        display: "block",
+        p: large ? { xs: 1, md: 1.5 } : { xs: 1.5, md: 2 },
+        bgcolor: "rgba(255,255,255,.45)",
+        borderRadius: large ? { xs: 2, md: 3 } : 0,
+      }}
+    />
+  );
+}
+
+function MediaPlaceholder({ label, compact = false }: { label: string; compact?: boolean }) {
+  return (
+    <Stack
+      spacing={1}
+      alignItems="center"
+      justifyContent="center"
+      sx={{
+        width: "100%",
+        height: "100%",
+        minHeight: compact ? 0 : { xs: 320, md: 560 },
+        color: "text.secondary",
+        textAlign: "center",
+        p: compact ? 1 : 3,
+        bgcolor: "rgba(255,255,255,.45)",
+      }}
+    >
+      <ImageIcon size={compact ? 18 : 34} />
+      {!compact && (
+        <Typography fontWeight={900} sx={{ maxWidth: "16ch" }}>
+          {label}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
+function GalleryMediaFrame({
+  media,
+  label,
+  shouldPlay,
+  controls = false,
+  preload = "metadata",
+  large = false,
+}: {
+  media: ProductMedia;
+  label: string;
+  shouldPlay: boolean;
+  controls?: boolean;
+  preload?: "none" | "metadata" | "auto";
+  large?: boolean;
+}) {
+  const previewMode = resolvePreviewMode(media, controls ? "viewer" : "hero");
+
+  if (previewMode === "video") {
+    return (
+      <InlineVideo
+        media={media}
+        label={label}
+        shouldPlay={shouldPlay}
+        controls={controls}
+        loop={!controls}
+        preload={preload}
+        large={large}
+      />
+    );
+  }
+
+  if (previewMode === "image") {
+    return (
+      <Box
+        component="img"
+        src={resolveMediaStillUrl(media) ?? media.url}
+        alt={label}
+        loading={large ? "eager" : "lazy"}
+        sx={{
+          width: "100%",
+          height: "100%",
+          aspectRatio: "4 / 5",
+          objectFit: "contain",
+          display: "block",
+          p: large ? { xs: 1, md: 1.5 } : { xs: 1.5, md: 2 },
+          bgcolor: "rgba(255,255,255,.45)",
+          borderRadius: large ? { xs: 2, md: 3 } : 0,
+        }}
+      />
+    );
+  }
+
+  return <MediaPlaceholder label={label} />;
+}
+
+function ThumbnailPreview({
+  media,
+  label,
+  isActive,
+}: {
+  media: ProductMedia;
+  label: string;
+  isActive: boolean;
+}) {
+  const stillUrl = resolveMediaStillUrl(media);
+
+  if (stillUrl) {
+    return (
+      <Box
+        component="img"
+        src={stillUrl}
+        alt={label}
+        loading="lazy"
+        sx={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          borderRadius: 1.5,
+          bgcolor: "rgba(255,255,255,.65)",
+        }}
+      />
+    );
+  }
+
+  if (media.type === "video" && isActive) {
+    return (
+      <Box sx={{ width: "100%", height: "100%" }}>
+        <InlineVideo
+          media={media}
+          label={label}
+          shouldPlay
+          preload="none"
+          loop
+        />
+      </Box>
+    );
+  }
+
+  return <MediaPlaceholder label={label} compact />;
 }
 
 export function ProductGallery({
   productName,
   items,
+  thumbnailItems,
   activeKey,
+  activeThumbnailKey,
   onActiveKeyChange
 }: {
   productName: string;
   items: ProductGalleryItem[];
+  thumbnailItems?: ProductGalleryItem[];
   activeKey: string;
+  activeThumbnailKey?: string;
   onActiveKeyChange: (key: string) => void;
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerAutoplay, setViewerAutoplay] = useState(false);
   const [activeIndex, setActiveIndex] = useState(() => Math.max(0, items.findIndex((item) => item.key === activeKey)));
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const activeItem = items[activeIndex];
-  const activeImage = activeItem?.image;
+  const activeMedia = activeItem?.media;
   const hasMany = items.length > 1;
+  const previewItems = thumbnailItems && thumbnailItems.length > 0 ? thumbnailItems : items;
+  const activePreviewKey = activeThumbnailKey ?? activeKey;
+  const hasPreviewStrip = previewItems.length > 1;
+  const galleryViewport = useElementInView<HTMLDivElement>(Boolean(activeMedia && activeMedia.type === "video"));
+  const viewerVideoShouldAutoplay = viewerOpen && viewerAutoplay && activeMedia?.type === "video";
+  const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && galleryViewport.inView && !viewerOpen);
 
   useEffect(() => {
     const index = items.findIndex((item) => item.key === activeKey);
     setActiveIndex(index >= 0 ? index : 0);
   }, [activeKey, items]);
+
+  useEffect(() => {
+    if (!viewerOpen) {
+      setViewerAutoplay(false);
+    }
+  }, [viewerOpen]);
+
+  const activeMediaLabel = useMemo(
+    () => (activeMedia ? mediaLabel(activeMedia, productName, activeIndex) : productName),
+    [activeIndex, activeMedia, productName]
+  );
 
   function updateActiveIndex(nextIndex: number) {
     const nextItem = items[nextIndex];
@@ -79,7 +339,7 @@ export function ProductGallery({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [viewerOpen, activeIndex, items]);
 
-  if (!activeImage) {
+  if (!activeMedia) {
     return (
       <Box
         sx={{
@@ -115,6 +375,7 @@ export function ProductGallery({
     <>
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "flex-start" }}>
         <Box
+          ref={galleryViewport.ref}
           sx={{
             order: { xs: 1, md: 2 },
             position: "relative",
@@ -130,10 +391,13 @@ export function ProductGallery({
           <Box
             component="button"
             type="button"
-            onClick={() => setViewerOpen(true)}
+            onClick={() => {
+              setViewerAutoplay(mainVideoShouldAutoplay);
+              setViewerOpen(true);
+            }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            aria-label="Ampliar imagen"
+            aria-label={activeMedia.type === "video" ? "Ampliar video" : "Ampliar imagen"}
             sx={{
               display: "block",
               width: "100%",
@@ -145,18 +409,11 @@ export function ProductGallery({
               touchAction: "pan-y",
             }}
           >
-            <Box
-              component="img"
-              src={activeImage.url}
-              alt={imageLabel(activeImage, productName, activeIndex)}
-              sx={{
-                width: "100%",
-                aspectRatio: "4 / 5",
-                objectFit: "contain",
-                display: "block",
-                p: { xs: 1.5, md: 2 },
-                bgcolor: "rgba(255,255,255,.45)",
-              }}
+            <GalleryMediaFrame
+              media={activeMedia}
+              label={activeMediaLabel}
+              shouldPlay={mainVideoShouldAutoplay}
+              controls={activeMedia.type === "video"}
             />
           </Box>
           {hasMany && (
@@ -195,7 +452,7 @@ export function ProductGallery({
           )}
         </Box>
 
-        {hasMany && (
+        {hasPreviewStrip && (
           <Stack
             direction={{ xs: "row", md: "column" }}
             spacing={1}
@@ -209,36 +466,37 @@ export function ProductGallery({
               flex: { md: "0 0 92px" }
             }}
           >
-            {items.map((item, index) => (
+            {previewItems.map((item, index) => (
               <Box
                 key={item.key}
                 component="button"
                 type="button"
-                onClick={() => updateActiveIndex(index)}
-                aria-label={`Ver imagen ${index + 1}`}
+                onClick={() => onActiveKeyChange(item.key)}
+                aria-label={`Ver elemento ${index + 1}`}
                 sx={{
                   flex: { xs: "0 0 72px", sm: "0 0 84px", md: "0 0 84px" },
                   width: { xs: 72, sm: 84, md: 84 },
                   height: { xs: 72, sm: 84, md: 84 },
                   p: 0.5,
                   borderRadius: 2,
-                  border: index === activeIndex ? "2px solid rgba(196,110,78,1)" : "1px solid rgba(64,44,37,.16)",
+                  border: item.key === activePreviewKey ? "2px solid rgba(196,110,78,1)" : "1px solid rgba(64,44,37,.16)",
                   background: "rgba(255,250,245,.9)",
                   cursor: "pointer",
                 }}
               >
-                <Box
-                  component="img"
-                  src={item.image.url}
-                  alt={imageLabel(item.image, productName, index)}
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                    borderRadius: 1.5,
-                    bgcolor: "rgba(255,255,255,.65)",
-                  }}
-                />
+                <Box sx={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", borderRadius: 1.5 }}>
+                  <ThumbnailPreview
+                    media={item.media}
+                    label={mediaLabel(item.media, productName, index)}
+                    isActive={item.key === activePreviewKey}
+                  />
+                  {item.media.type === "video" && (
+                    <PlayCircle
+                      size={18}
+                      style={{ position: "absolute", right: 6, bottom: 6, color: "rgba(64,44,37,.82)" }}
+                    />
+                  )}
+                </Box>
               </Box>
             ))}
           </Stack>
@@ -268,28 +526,34 @@ export function ProductGallery({
         <Box sx={{ minHeight: "100vh", color: "text.primary", display: "grid", gridTemplateRows: "auto 1fr", background: "rgba(255,247,239,.34)", backdropFilter: "blur(10px)" }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: { xs: 1.5, md: 2 } }}>
             <Typography fontWeight={900} noWrap sx={{ maxWidth: "78vw" }}>{productName}</Typography>
-            <IconButton aria-label="Cerrar imagen" onClick={() => setViewerOpen(false)} sx={{ ...arrowSx, color: "rgba(64,44,37,.74)" }}>
+            <IconButton aria-label="Cerrar visor" onClick={() => setViewerOpen(false)} sx={{ ...arrowSx, color: "rgba(64,44,37,.74)" }}>
               <X size={18} />
             </IconButton>
           </Stack>
           <Box sx={{ position: "relative", display: "grid", placeItems: "center", p: { xs: 1, md: 3 } }}>
             <Box
-              component="img"
-              src={activeImage.url}
-              alt={imageLabel(activeImage, productName, activeIndex)}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               sx={{
-                maxWidth: "100%",
+                width: "100%",
+                maxWidth: "min(100%, 980px)",
                 maxHeight: "calc(100vh - 96px)",
-                objectFit: "contain",
                 borderRadius: { xs: 2, md: 3 },
                 boxShadow: "0 28px 90px rgba(64,44,37,.26)",
                 bgcolor: "rgba(255,255,255,.55)",
-                p: { xs: 1, md: 1.5 },
                 touchAction: "pan-y",
+                overflow: "hidden",
               }}
-            />
+            >
+              <GalleryMediaFrame
+                media={activeMedia}
+                label={activeMediaLabel}
+                shouldPlay={viewerVideoShouldAutoplay}
+                controls={activeMedia.type === "video"}
+                preload="metadata"
+                large
+              />
+            </Box>
             {hasMany && (
               <>
                 <IconButton aria-label="Imagen anterior" onClick={() => goTo(-1)} sx={{ ...arrowSx, position: "absolute", left: { xs: 8, md: 24 } }}>

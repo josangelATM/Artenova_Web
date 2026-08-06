@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
-import { formatCurrency, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
+import { formatCurrency, resolveFirstStillUrl, resolveMediaStillUrl, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
 import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
 import { ProductReviews } from "../components/ProductReviews";
 import { ProductPageSkeleton } from "../components/SkeletonStates";
@@ -13,8 +13,13 @@ import { applySeo, productSeoDescription } from "../lib/seo";
 type SelectionState = Record<string, string>;
 type GalleryImageItem = ProductGalleryItem & {
   variantId: string | null;
-  selectionState: SelectionState | null;
+  visualGroupKey: string;
 };
+type GalleryGroupMap = Map<string, GalleryImageItem[]>;
+
+function resolveVisualGroupKey(variant: ProductVariant | null | undefined) {
+  return variant?.visualGroupKey?.trim() || variant?.id || "base";
+}
 
 function variantSelectionMap(variant: ProductVariant) {
   return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
@@ -33,8 +38,7 @@ function resolveNextSelection(options: ProductOption[], variants: ProductVariant
   const draftSelection = { ...currentSelection, [optionId]: optionValueId };
   const exactMatches = variants.filter((variant) => matchesSelection(variant, draftSelection));
   if (exactMatches.length === 0) {
-    const fallbackVariant = variants.find((variant) => variant.selections.some((selection) => selection.optionId === optionId && selection.optionValueId === optionValueId));
-    return fallbackVariant ? completeSelectionFromVariant(fallbackVariant) : currentSelection;
+    return currentSelection;
   }
 
   const anchorVariant = exactMatches[0]!;
@@ -45,6 +49,14 @@ function resolveNextSelection(options: ProductOption[], variants: ProductVariant
   }), {});
 }
 
+function resolveGalleryItemsForGroup(groups: GalleryGroupMap, groupKey: string) {
+  const scoped = groups.get(groupKey);
+  if (scoped && scoped.length > 0) return scoped;
+  const baseGroup = groups.get("base");
+  if (baseGroup && baseGroup.length > 0) return baseGroup;
+  return groups.values().next().value ?? [];
+}
+
 export function ProductPage() {
   const { slug } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
@@ -52,6 +64,7 @@ export function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<SelectionState>({});
+  const [activeVisualGroup, setActiveVisualGroup] = useState("");
   const [activeGalleryKey, setActiveGalleryKey] = useState("");
 
   useEffect(() => {
@@ -63,10 +76,13 @@ export function ProductPage() {
     void Promise.all([api.product(slug), api.settings()])
       .then(([nextProduct, nextSettings]) => {
         if (!active) return;
+        const defaultVariant = nextProduct.defaultVariant ?? nextProduct.variants.find((variant) => variant.isActive) ?? nextProduct.variants[0] ?? null;
+        const defaultVisualGroup = resolveVisualGroupKey(defaultVariant);
         setProduct(nextProduct);
         setSettings(nextSettings);
-        setSelectedOptions({});
-        setActiveGalleryKey(nextProduct.images[0] ? `base:${nextProduct.images[0].id}` : "");
+        setSelectedOptions(defaultVariant ? completeSelectionFromVariant(defaultVariant) : {});
+        setActiveVisualGroup(defaultVisualGroup);
+        setActiveGalleryKey("");
       })
       .catch((err) => {
         if (!active) return;
@@ -88,33 +104,60 @@ export function ProductPage() {
 
   const selectedVariant = useMemo(() => {
     if (!product) return null;
-    if (productOptions.length === 0) return activeVariants[0] ?? product.variants[0] ?? null;
-    if (!hasOptionSelection) return null;
+    if (productOptions.length === 0) return product.defaultVariant ?? activeVariants[0] ?? product.variants[0] ?? null;
+    if (!hasOptionSelection) return product.defaultVariant ?? activeVariants[0] ?? product.variants[0] ?? null;
     return activeVariants.find((variant) => {
       const selectionMap = variantSelectionMap(variant);
       return productOptions.every((option) => selectionMap[option.id] === selectedOptions[option.id]);
-    }) ?? activeVariants.find((variant) => matchesSelection(variant, selectedOptions)) ?? null;
+    }) ?? null;
   }, [activeVariants, hasOptionSelection, product, productOptions, selectedOptions]);
 
-  const galleryItems = useMemo<GalleryImageItem[]>(() => {
-    if (!product) return [];
-    const baseItems = product.images.map((image, index) => ({
-      key: `base:${image.id ?? index}`,
-      image,
-      variantId: null,
-      selectionState: null
-    }));
-    const variantItems = activeVariants.flatMap((variant) => {
-      const selectionState = completeSelectionFromVariant(variant);
-      return variant.images.map((image, index) => ({
-        key: `variant:${variant.id}:${image.id ?? index}`,
-        image,
-        variantId: variant.id,
-        selectionState
-      }));
-    });
-    return [...baseItems, ...variantItems];
+  const visualGalleryMap = useMemo<GalleryGroupMap>(() => {
+    if (!product) return new Map<string, GalleryImageItem[]>();
+    const groups = new Map<string, GalleryImageItem[]>();
+    if (product.media.length > 0) {
+      groups.set("base", product.media.map((media, index) => ({
+        key: `base:${media.id ?? index}`,
+        media,
+        variantId: null,
+        visualGroupKey: "base",
+      })));
+    }
+    for (const variant of activeVariants) {
+      const groupKey = resolveVisualGroupKey(variant);
+      const existingItems = groups.get(groupKey) ?? [];
+      const seenUrls = new Set(existingItems.map((item) => item.media.url));
+      for (const [index, media] of variant.media.entries()) {
+        if (seenUrls.has(media.url)) continue;
+        existingItems.push({
+          key: `visual:${groupKey}:${media.id ?? index}`,
+          media,
+          variantId: variant.id,
+          visualGroupKey: groupKey,
+        });
+        seenUrls.add(media.url);
+      }
+      groups.set(groupKey, existingItems);
+    }
+    return groups;
   }, [activeVariants, product]);
+
+  const galleryItems = useMemo<GalleryImageItem[]>(() => {
+    return resolveGalleryItemsForGroup(visualGalleryMap, activeVisualGroup);
+  }, [activeVisualGroup, visualGalleryMap]);
+
+  const galleryThumbnailItems = useMemo<GalleryImageItem[]>(() => {
+    if (galleryItems.length > 1) return galleryItems;
+    return Array.from(visualGalleryMap.values())
+      .map((groupItems) => groupItems[0] ?? null)
+      .filter((item): item is GalleryImageItem => Boolean(item));
+  }, [galleryItems, visualGalleryMap]);
+
+  useEffect(() => {
+    if (!selectedVariant) return;
+    const nextGroup = resolveVisualGroupKey(selectedVariant);
+    setActiveVisualGroup((current) => current || nextGroup);
+  }, [selectedVariant]);
 
   useEffect(() => {
     if (!galleryItems.length) {
@@ -131,21 +174,33 @@ export function ProductPage() {
     [activeGalleryKey, galleryItems]
   );
 
-  useEffect(() => {
-    if (!activeGalleryItem) return;
-    const nextSelection = activeGalleryItem.selectionState ?? {};
-    const currentKeys = Object.keys(selectedOptions);
-    const nextKeys = Object.keys(nextSelection);
-    const selectionChanged =
-      currentKeys.length !== nextKeys.length ||
-      nextKeys.some((key) => selectedOptions[key] !== nextSelection[key]);
-    if (selectionChanged) {
-      setSelectedOptions(nextSelection);
+  const activeThumbnailKey = useMemo(() => {
+    if (galleryItems.length > 1) return activeGalleryItem?.key ?? "";
+    return galleryItems[0]?.key ?? activeGalleryItem?.key ?? "";
+  }, [activeGalleryItem, galleryItems]);
+
+  function handleGalleryKeyChange(nextKey: string) {
+    const nextInActiveGroup = galleryItems.find((item) => item.key === nextKey);
+    if (nextInActiveGroup) {
+      setActiveGalleryKey(nextKey);
+      return;
     }
-  }, [activeGalleryItem, selectedOptions]);
+
+    const nextThumbnailItem = galleryThumbnailItems.find((item) => item.key === nextKey);
+    if (!nextThumbnailItem) return;
+
+    const nextVisualGroup = nextThumbnailItem.visualGroupKey;
+    const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
+    const nextGalleryItem = nextGalleryItems[0];
+
+    setActiveVisualGroup(nextVisualGroup);
+    if (nextGalleryItem) {
+      setActiveGalleryKey(nextGalleryItem.key);
+    }
+  }
 
   const activePricing = selectedVariant?.pricingSummary ?? product?.pricingSummary ?? null;
-  const activePriceTiers = selectedVariant?.priceTiers.length ? selectedVariant.priceTiers : product?.priceTiers ?? [];
+  const activePriceTiers = selectedVariant?.priceTiers ?? [];
 
   const availabilityByOption = useMemo(() => {
     if (!product) return new Map<string, Set<string>>();
@@ -168,12 +223,17 @@ export function ProductPage() {
     if (!product || !activePricing) return;
     applySeo({
       title: product.name,
-      description: productSeoDescription({ name: product.name, description: product.description, price: activePricing.finalPrice }),
+      description: productSeoDescription({
+        name: product.name,
+        description: product.description,
+        price: activePricing.finalPrice,
+        currencySymbol: product.currencySymbol,
+      }),
       path: `/producto/${product.slug}`,
-      image: activeGalleryItem?.image.url ?? product.images[0]?.url,
+      image: resolveMediaStillUrl(activeGalleryItem?.media) ?? resolveFirstStillUrl(galleryItems.map((item) => item.media)) ?? resolveFirstStillUrl(product.media),
       type: "product",
     });
-  }, [activeGalleryItem, activePricing, product]);
+  }, [activeGalleryItem, activePricing, galleryItems, product]);
 
   if (loading) return <ProductPageSkeleton />;
 
@@ -206,8 +266,10 @@ export function ProductPage() {
           <ProductGallery
             productName={selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name}
             items={galleryItems}
+            thumbnailItems={galleryThumbnailItems}
             activeKey={activeGalleryItem?.key ?? ""}
-            onActiveKeyChange={setActiveGalleryKey}
+            activeThumbnailKey={activeThumbnailKey}
+            onActiveKeyChange={handleGalleryKeyChange}
           />
         </Grid>
 
@@ -253,12 +315,15 @@ export function ProductPage() {
                                 setSelectedOptions(nextSelection);
                                 const matchingVariant = activeVariants.find((variant) =>
                                   productOptions.every((productOption) => variantSelectionMap(variant)[productOption.id] === nextSelection[productOption.id])
-                                ) ?? activeVariants.find((variant) => matchesSelection(variant, nextSelection));
-                                const nextGalleryItem = matchingVariant
-                                  ? galleryItems.find((item) => item.variantId === matchingVariant.id)
-                                  : galleryItems.find((item) => item.variantId === null) ?? galleryItems[0];
-                                if (nextGalleryItem) {
-                                  setActiveGalleryKey(nextGalleryItem.key);
+                                ) ?? null;
+                                if (matchingVariant) {
+                                  const nextVisualGroup = resolveVisualGroupKey(matchingVariant);
+                                  const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
+                                  const nextGalleryItem = nextGalleryItems[0];
+                                  setActiveVisualGroup(nextVisualGroup);
+                                  if (nextGalleryItem) {
+                                    setActiveGalleryKey(nextGalleryItem.key);
+                                  }
                                 }
                               }}
                             />
@@ -278,11 +343,11 @@ export function ProductPage() {
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
                   <Typography variant="h4" fontWeight={900} sx={{ fontSize: { xs: 32, md: 36 } }}>
-                    {formatCurrency(activePricing.finalPrice)}
+                    {formatCurrency(activePricing.finalPrice, product.currencySymbol)}
                   </Typography>
                   {activePricing.hasDiscount && (
                     <Typography color="text.secondary" sx={{ textDecoration: "line-through" }}>
-                      {formatCurrency(activePricing.originalPrice)}
+                      {formatCurrency(activePricing.originalPrice, product.currencySymbol)}
                     </Typography>
                   )}
                 </Stack>
@@ -310,11 +375,11 @@ export function ProductPage() {
                       <Typography>{tier.label ?? `${tier.minQuantity}+ unidades`}</Typography>
                       <Stack spacing={0.25} alignItems="flex-end">
                         <Typography fontWeight={900} textAlign="right">
-                          {tier.finalTotalPrice != null ? formatCurrency(tier.finalTotalPrice) : `${formatCurrency(tier.finalUnitPrice ?? tier.unitPrice)} c/u`}
+                          {tier.finalTotalPrice != null ? formatCurrency(tier.finalTotalPrice, product.currencySymbol) : `${formatCurrency(tier.finalUnitPrice ?? tier.unitPrice, product.currencySymbol)} c/u`}
                         </Typography>
                         {tier.hasDiscount && (
                           <Typography variant="caption" color="text.secondary" sx={{ textDecoration: "line-through" }}>
-                            {tier.originalTotalPrice != null ? formatCurrency(tier.originalTotalPrice) : `${formatCurrency(tier.originalUnitPrice ?? tier.unitPrice)} c/u`}
+                            {tier.originalTotalPrice != null ? formatCurrency(tier.originalTotalPrice, product.currencySymbol) : `${formatCurrency(tier.originalUnitPrice ?? tier.unitPrice, product.currencySymbol)} c/u`}
                           </Typography>
                         )}
                       </Stack>
@@ -334,7 +399,7 @@ export function ProductPage() {
                     <Stack key={extra.id ?? extra.name} direction="row" justifyContent="space-between" gap={2}>
                       <Typography>{extra.name}</Typography>
                       <Typography fontWeight={900} textAlign="right">
-                        {extra.priceDelta > 0 ? `+${formatCurrency(extra.priceDelta)}` : "Incluido"}
+                        {extra.priceDelta > 0 ? `+${formatCurrency(extra.priceDelta, product.currencySymbol)}` : "Incluido"}
                       </Typography>
                     </Stack>
                   ))}

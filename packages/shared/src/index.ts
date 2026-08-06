@@ -16,12 +16,14 @@ export const customFieldTypes = [
 export const heroSlotValues = ["primary", "secondary"] as const;
 export const productReviewSourceValues = ["customer", "admin"] as const;
 export const discountTypeValues = ["percentage", "fixed"] as const;
+export const productMediaTypeValues = ["image", "video"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
 export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
 export type DiscountType = (typeof discountTypeValues)[number];
+export type ProductMediaType = (typeof productMediaTypeValues)[number];
 
 export const moneySchema = z.coerce.number().nonnegative().finite();
 
@@ -41,11 +43,13 @@ export const adminCategoryInputSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const productImageSchema = z.object({
+export const productMediaSchema = z.object({
   id: z.string(),
   url: z.string(),
+  type: z.enum(productMediaTypeValues).default("image"),
   alt: z.string(),
   position: z.number().int(),
+  posterUrl: z.string().nullable().optional(),
 });
 
 export const priceTierSchema = z.object({
@@ -106,12 +110,13 @@ export const productVariantSchema = z.object({
   name: z.string(),
   sku: z.string().nullable().optional(),
   selectionKey: z.string().nullable().optional(),
+  visualGroupKey: z.string().nullable().optional(),
   basePrice: moneySchema,
   discountType: z.enum(discountTypeValues).nullable().optional(),
   discountValue: moneySchema.nullable().optional(),
   isActive: z.boolean(),
   position: z.number().int().nonnegative(),
-  images: z.array(productImageSchema).default([]),
+  media: z.array(productMediaSchema).default([]),
   attributes: z.array(productVariantAttributeSchema).default([]),
   selections: z.array(productVariantSelectionSchema).default([]),
   priceTiers: z.array(priceTierSchema).default([]),
@@ -168,6 +173,8 @@ export const productSchema = z.object({
   name: z.string(),
   slug: z.string(),
   sku: z.string().nullable().optional(),
+  defaultVariantId: z.string().nullable().optional(),
+  currencySymbol: z.string().default("B/."),
   description: z.string(),
   categoryId: z.string(),
   basePrice: moneySchema,
@@ -177,12 +184,13 @@ export const productSchema = z.object({
   isFeatured: z.boolean(),
   isHero: z.boolean(),
   heroSlot: z.enum(heroSlotValues).nullable().optional(),
-  images: z.array(productImageSchema),
+  media: z.array(productMediaSchema),
   priceTiers: z.array(priceTierSchema),
   extras: z.array(productExtraSchema),
   customFields: z.array(customFieldSchema),
   productOptions: z.array(productOptionSchema).default([]),
   variants: z.array(productVariantSchema).default([]),
+  defaultVariant: productVariantSchema.nullable().optional(),
   pricingSummary: pricingSummarySchema,
   reviews: z.array(productReviewSchema).default([]),
   reviewSummary: z.object({
@@ -231,15 +239,16 @@ export const adminProductInputSchema = z.object({
   isFeatured: z.boolean().default(false),
   isHero: z.boolean().default(false),
   heroSlot: z.enum(heroSlotValues).optional().nullable(),
-  images: z.array(productImageSchema.omit({ id: true })).default([]),
+  media: z.array(productMediaSchema.omit({ id: true })).default([]),
   priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   extras: z.array(productExtraSchema.omit({ id: true })).default([]),
   customFields: z.array(customFieldSchema.omit({ id: true })).default([]),
   productOptions: z.array(productOptionSchema.extend({
     values: z.array(productOptionValueSchema).default([]),
   })).default([]),
+  defaultVariantId: z.string().optional().nullable(),
   variants: z.array(productVariantSchema.omit({ pricingSummary: true, attributes: true, selections: true }).extend({
-    images: z.array(productImageSchema.omit({ id: true })).default([]),
+    media: z.array(productMediaSchema.omit({ id: true })).default([]),
     optionValueIds: z.array(z.string()).default([]),
     priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   })).default([]),
@@ -271,7 +280,8 @@ export type PricingSummary = z.infer<typeof pricingSummarySchema>;
 export type ProductReview = z.infer<typeof productReviewSchema>;
 export type CreateProductReviewInput = z.infer<typeof createProductReviewSchema>;
 export type AdminProductReviewInput = z.infer<typeof adminProductReviewInputSchema>;
-export type ProductImage = z.infer<typeof productImageSchema>;
+export type ProductMedia = z.infer<typeof productMediaSchema>;
+export type ProductImage = ProductMedia;
 export type PriceTier = z.infer<typeof priceTierSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type ProductVariantAttribute = z.infer<typeof productVariantAttributeSchema>;
@@ -309,8 +319,40 @@ export type Order = {
   items: OrderItem[];
 };
 
-export function formatCurrency(value: number): string {
-  return `$${value.toFixed(2)}`;
+export function formatCurrency(value: number, currencySymbol = "B/."): string {
+  return `${currencySymbol}${value.toFixed(2)}`;
+}
+
+export type ProductMediaRenderable = Pick<ProductMedia, "type" | "url" | "posterUrl">;
+export type ProductMediaSurface = "hero" | "card" | "thumbnail" | "viewer" | "seo";
+
+export function resolveMediaStillUrl(media?: ProductMediaRenderable | null): string | undefined {
+  if (!media) return undefined;
+  return media.type === "video" ? media.posterUrl ?? undefined : media.url;
+}
+
+export function isRenderableInlineVideo(media?: ProductMediaRenderable | null): boolean {
+  return media?.type === "video";
+}
+
+export function resolvePreviewMode(
+  media: ProductMediaRenderable | null | undefined,
+  surface: ProductMediaSurface
+): "image" | "video" | "placeholder" {
+  if (!media) return "placeholder";
+  if (media.type === "image") return "image";
+  if (surface === "hero" || surface === "card" || surface === "viewer") return "video";
+  if (resolveMediaStillUrl(media)) return "image";
+  return "placeholder";
+}
+
+export function resolveFirstStillUrl(mediaItems: readonly ProductMediaRenderable[] | null | undefined): string | undefined {
+  if (!mediaItems) return undefined;
+  for (const media of mediaItems) {
+    const stillUrl = resolveMediaStillUrl(media);
+    if (stillUrl) return stillUrl;
+  }
+  return undefined;
 }
 
 export { applyDiscount, calculateLineTotal, getFromPrice, getUnitPrice, resolveDisplayTiers, resolvePricingSummary, resolveVariantPricing } from "./pricing";

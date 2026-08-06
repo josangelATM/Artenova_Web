@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Button, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { FilterX, Plus } from "lucide-react";
-import type { Category, Product } from "@artenova/shared";
+import { formatCurrency, resolveMediaStillUrl, type Category, type Product } from "@artenova/shared";
 import { Link as RouterLink } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip } from "./adminUi";
@@ -38,8 +38,9 @@ export function AdminProductsPage() {
   const rows = useMemo(() => {
     const term = query.trim().toLowerCase();
     return products.filter((product) => {
+      const defaultVariant = product.defaultVariant ?? product.variants.find((variant) => variant.isActive) ?? product.variants[0] ?? null;
       const categoryName = categoryById.get(product.categoryId) ?? "";
-      const matchesSearch = !term || [product.name, product.slug, product.sku ?? "", product.description, categoryName].some((value) => value.toLowerCase().includes(term));
+      const matchesSearch = !term || [product.name, product.slug, defaultVariant?.sku ?? product.sku ?? "", product.description, categoryName].some((value) => value.toLowerCase().includes(term));
       const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? product.isPublished : !product.isPublished);
       const matchesFeatured = featuredFilter === "all" || (featuredFilter === "yes" ? product.isFeatured : !product.isFeatured);
       const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
@@ -68,7 +69,9 @@ export function AdminProductsPage() {
         flex: 1.35,
         minWidth: 300,
         renderCell: ({ row }) => {
-          const image = row.images[0];
+          const defaultVariant = row.defaultVariant ?? row.variants.find((variant) => variant.isActive) ?? row.variants[0] ?? null;
+          const previewMedia = defaultVariant?.media[0] ?? row.media[0];
+          const image = resolveMediaStillUrl(previewMedia);
           return (
             <Stack spacing={0.25} minWidth={0}>
               <Tooltip
@@ -77,7 +80,7 @@ export function AdminProductsPage() {
                 placement="right"
                 title={
                   image ? (
-                    <Box component="img" src={image.url} alt={image.alt || row.name} sx={{ width: 180, height: 180, objectFit: "cover", borderRadius: 2, display: "block" }} />
+                    <Box component="img" src={image} alt={previewMedia?.alt || row.name} sx={{ width: 180, height: 180, objectFit: "cover", borderRadius: 2, display: "block" }} />
                   ) : (
                     "Sin imagen"
                   )
@@ -88,7 +91,7 @@ export function AdminProductsPage() {
                 </Typography>
               </Tooltip>
               <Typography variant="caption" color="text.secondary" noWrap>
-                {row.sku ? `Ref. ${row.sku}` : "Sin referencia"}
+                {defaultVariant?.sku ? `Ref. ${defaultVariant.sku}` : "Sin referencia"}
               </Typography>
             </Stack>
           );
@@ -111,7 +114,7 @@ export function AdminProductsPage() {
         field: "basePrice",
         headerName: "Precio desde",
         minWidth: 140,
-        renderCell: ({ row }) => `$${row.pricingSummary.finalPrice.toFixed(2)}`
+        renderCell: ({ row }) => formatCurrency(row.pricingSummary.finalPrice, row.currencySymbol)
       },
       {
         field: "featured",

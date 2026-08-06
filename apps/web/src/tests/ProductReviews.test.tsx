@@ -9,6 +9,7 @@ const product: Product = {
   id: "p1",
   name: "Retrato grabado",
   slug: "retrato-grabado",
+  currencySymbol: "$",
   description: "Detalle personalizado",
   categoryId: "c1",
   basePrice: 16,
@@ -18,7 +19,7 @@ const product: Product = {
   isFeatured: true,
   isHero: false,
   heroSlot: null,
-  images: [],
+  media: [],
   priceTiers: [],
   extras: [],
   customFields: [],
@@ -35,9 +36,9 @@ const product: Product = {
       comment: "Quedo precioso.",
       isApproved: true,
       source: "customer",
-      createdAt: "2026-08-01T10:00:00.000Z"
-    }
-  ]
+      createdAt: "2026-08-01T10:00:00.000Z",
+    },
+  ],
 };
 
 describe("ProductReviews", () => {
@@ -45,7 +46,7 @@ describe("ProductReviews", () => {
     render(
       <ThemeProvider theme={theme}>
         <ProductReviews product={product} onReviewCreated={vi.fn()} />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText(/Ana/i)).toBeInTheDocument();

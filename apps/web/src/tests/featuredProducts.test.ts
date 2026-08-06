@@ -7,6 +7,7 @@ function makeProduct(input: Partial<Product> & Pick<Product, "id" | "name" | "sl
     id: input.id,
     name: input.name,
     slug: input.slug,
+    currencySymbol: input.currencySymbol ?? "$",
     description: input.description ?? "Detalle personalizado",
     categoryId: input.categoryId ?? "c1",
     basePrice: input.basePrice ?? 10,
@@ -14,7 +15,7 @@ function makeProduct(input: Partial<Product> & Pick<Product, "id" | "name" | "sl
     isFeatured: input.isFeatured ?? false,
     isHero: input.isHero ?? false,
     heroSlot: input.heroSlot ?? null,
-    images: input.images ?? [],
+    media: input.media ?? [],
     priceTiers: input.priceTiers ?? [],
     extras: input.extras ?? [],
     customFields: input.customFields ?? [],
@@ -24,7 +25,14 @@ function makeProduct(input: Partial<Product> & Pick<Product, "id" | "name" | "sl
     reviewSummary: input.reviewSummary ?? { averageRating: 0, reviewCount: 0 },
     discountType: input.discountType ?? null,
     discountValue: input.discountValue ?? null,
-    pricingSummary: (input as Product).pricingSummary ?? { originalPrice: input.basePrice ?? 10, finalPrice: input.basePrice ?? 10, hasDiscount: false, discountType: null, discountValue: null },
+    pricingSummary:
+      (input as Product).pricingSummary ?? {
+        originalPrice: input.basePrice ?? 10,
+        finalPrice: input.basePrice ?? 10,
+        hasDiscount: false,
+        discountType: null,
+        discountValue: null,
+      },
   };
 }
 

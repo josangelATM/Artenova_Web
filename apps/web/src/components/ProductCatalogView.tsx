@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { FilterX, Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { type Category, type Product, type SiteSettings } from "@artenova/shared";
+import { resolveMediaStillUrl, type Category, type Product, type SiteSettings } from "@artenova/shared";
 import { api } from "../lib/api";
 import { applySeo } from "../lib/seo";
 import { ProductCard } from "./ProductCard";
@@ -38,6 +38,10 @@ export function ProductCatalogView() {
   const hasFilters = Boolean(q || category);
   const activeCategory = categories.find((item) => item.slug === category);
   const displayedProducts = hasFilters ? products : catalogProducts.length > 0 ? catalogProducts : products;
+  const catalogHeroProduct = catalogProducts[0] as (Product & { images?: Product["media"] }) | undefined;
+  const catalogHeroVariant = catalogHeroProduct?.defaultVariant as (Product["defaultVariant"] & { images?: Product["media"] }) | undefined;
+  const catalogHeroMedia = (catalogHeroVariant?.media ?? catalogHeroVariant?.images ?? [])[0]
+    ?? (catalogHeroProduct?.media ?? catalogHeroProduct?.images ?? [])[0];
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
@@ -109,11 +113,11 @@ export function ProductCatalogView() {
       title,
       description,
       path: canonicalPath,
-      image: catalogProducts[0]?.images[0]?.url,
+      image: resolveMediaStillUrl(catalogHeroMedia),
       robots: q ? "noindex,follow" : "index,follow",
       type: "website",
     });
-  }, [activeCategory, catalogProducts, category, categorySlug, q, settings]);
+  }, [activeCategory, catalogHeroMedia, catalogProducts, category, categorySlug, q, settings]);
 
   useEffect(() => {
     setLoading(true);

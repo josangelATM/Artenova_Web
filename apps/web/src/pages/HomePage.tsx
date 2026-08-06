@@ -16,7 +16,7 @@ import {
   Truck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { Product, SiteSettings } from "@artenova/shared";
+import { resolveMediaStillUrl, type Product, type SiteSettings } from "@artenova/shared";
 import { ProductCard } from "../components/ProductCard";
 import { CatalogGridSkeleton } from "../components/SkeletonStates";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -39,6 +39,10 @@ export function HomePage() {
 
   const featuredProducts = useMemo(() => selectFeaturedProducts(products, 4), [products]);
   const quoteUrl = whatsappHref(settings?.whatsapp, "Hola, quiero cotizar una pieza personalizada con Artenova.");
+  const featuredProduct = featuredProducts[0] as (Product & { images?: Product["media"] }) | undefined;
+  const featuredVariant = featuredProduct?.defaultVariant as (Product["defaultVariant"] & { images?: Product["media"] }) | undefined;
+  const heroMedia = (featuredVariant?.media ?? featuredVariant?.images ?? [])[0]
+    ?? (featuredProduct?.media ?? featuredProduct?.images ?? [])[0];
 
   useEffect(() => {
     void Promise.all([api.settings(), api.products(new URLSearchParams())])
@@ -56,10 +60,10 @@ export function HomePage() {
         settings?.heroSubtitle ??
         "Diseñamos placas, recordatorios, regalos y artículos personalizados para mascotas, celebraciones y ocasiones especiales, hechos contigo antes de fabricar.",
       path: "/",
-      image: featuredProducts[0]?.images[0]?.url,
+      image: resolveMediaStillUrl(heroMedia),
       type: "website",
     });
-  }, [featuredProducts, settings]);
+  }, [featuredProducts, heroMedia, settings]);
 
   return (
     <Box className="home-shell">

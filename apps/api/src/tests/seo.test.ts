@@ -39,7 +39,7 @@ function makeProduct(slug = "placa-mascota") {
     heroSlot: null,
     createdAt: new Date("2026-08-01T10:00:00Z"),
     updatedAt: new Date("2026-08-02T10:00:00Z"),
-    category: { id: "c1", name: "Mascotas", slug: "mascotas", description: "Detalles para mascotas.", accentColor: null, isActive: true },
+    category: { id: "c1", name: "Mascotas", slug: "mascotas", description: "Detalles para mascotas.", accentColor: null, currencySymbol: "$", isActive: true },
     images: [{ id: "i1", productId: "p1", url: "/seed/mascotas/mascotas-1.jpg", alt: "Placa para mascota", position: 0, createdAt: new Date() }],
     priceTiers: [],
     options: [],
@@ -122,6 +122,7 @@ describe("seo routes", () => {
     expect(html).toContain('<link rel="canonical" href="https://artenova.example/producto/placa-mascota" />');
     expect(html).toContain('<meta property="og:type" content="product" />');
     expect(html).toContain('"@type":"Product"');
+    expect(html).toContain('"priceCurrency":"USD"');
     expect(html).toContain('"aggregateRating"');
   });
 

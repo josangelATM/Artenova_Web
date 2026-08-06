@@ -1,5 +1,7 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+
+const fallbackDatabaseUrl = "postgresql://artenova:artenova_dev@localhost:5432/artenova?schema=public";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -8,7 +10,6 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts"
   },
   datasource: {
-    url: env("DATABASE_URL")
+    url: process.env.DATABASE_URL ?? fallbackDatabaseUrl
   }
 });
-

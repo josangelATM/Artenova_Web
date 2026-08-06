@@ -2,14 +2,13 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
 import { Pencil, PauseCircle } from "lucide-react";
 import type { Category } from "@artenova/shared";
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip } from "./adminUi";
 import { AdminBackButton, AdminBreadcrumbs, AdminDetailSection, AdminField } from "./adminCrudUi";
 
 export function AdminCategoryDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [category, setCategory] = useState<Category | null>(null);
   const [error, setError] = useState("");
 

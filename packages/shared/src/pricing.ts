@@ -65,21 +65,35 @@ export function getFromPrice(product: Pick<Product, "basePrice" | "discountType"
     .filter((variant) => variant.isActive)
     .map((variant) => resolvePricingSummary({
       basePrice: variant.basePrice,
-      discountType: variant.discountType ?? product.discountType,
-      discountValue: variant.discountValue ?? product.discountValue,
+      discountType: variant.discountType,
+      discountValue: variant.discountValue,
     }).finalPrice);
 
   return activeVariantPrices.length > 0 ? Math.min(...activeVariantPrices) : resolvePricingSummary(product).finalPrice;
 }
 
+function resolveCommercialSource(
+  product: Pick<Product, "basePrice" | "priceTiers" | "discountType" | "discountValue" | "defaultVariant">,
+) {
+  const variant = product.defaultVariant;
+  if (!variant) return product;
+  return {
+    basePrice: variant.basePrice,
+    priceTiers: variant.priceTiers,
+    discountType: variant.discountType,
+    discountValue: variant.discountValue,
+  };
+}
+
 export function calculateLineTotal(
-  product: Pick<Product, "basePrice" | "priceTiers" | "extras" | "discountType" | "discountValue">,
+  product: Pick<Product, "basePrice" | "priceTiers" | "extras" | "discountType" | "discountValue" | "defaultVariant">,
   quantity: number,
   selectedExtraIds: string[]
 ): { unitPrice: number; extrasTotal: number; lineTotal: number; extras: ProductExtra[] } {
-  const exactTier = product.priceTiers.find((tier) => tier.totalPrice != null && tier.minQuantity === quantity);
-  const discountedTier = exactTier ? resolveTierPrice(exactTier, product.discountType, product.discountValue) : null;
-  const unitPrice = discountedTier?.finalTotalPrice != null ? roundMoney(discountedTier.finalTotalPrice / quantity) : getUnitPrice(product, quantity);
+  const commercialSource = resolveCommercialSource(product);
+  const exactTier = commercialSource.priceTiers.find((tier) => tier.totalPrice != null && tier.minQuantity === quantity);
+  const discountedTier = exactTier ? resolveTierPrice(exactTier, commercialSource.discountType, commercialSource.discountValue) : null;
+  const unitPrice = discountedTier?.finalTotalPrice != null ? roundMoney(discountedTier.finalTotalPrice / quantity) : getUnitPrice(commercialSource, quantity);
   const selected = product.extras.filter((extra) => selectedExtraIds.includes(extra.id ?? ""));
   const extrasTotal = selected.reduce((sum, extra) => sum + extra.priceDelta, 0);
   return {
@@ -95,21 +109,17 @@ export function resolveDisplayTiers<T extends TieredPrice>(item: T) {
 }
 
 export function resolveVariantPricing(variant: ProductVariant, product: Pick<Product, "discountType" | "discountValue" | "priceTiers">) {
-  const discountType = variant.discountType ?? product.discountType;
-  const discountValue = variant.discountValue ?? product.discountValue;
-  const priceTiers = variant.priceTiers.length > 0 ? variant.priceTiers : product.priceTiers;
-
   return {
     pricingSummary: resolvePricingSummary({
       basePrice: variant.basePrice,
-      discountType,
-      discountValue,
+      discountType: variant.discountType,
+      discountValue: variant.discountValue,
     }),
     priceTiers: resolveDisplayTiers({
       basePrice: variant.basePrice,
-      discountType,
-      discountValue,
-      priceTiers,
+      discountType: variant.discountType,
+      discountValue: variant.discountValue,
+      priceTiers: variant.priceTiers,
     }),
   };
 }

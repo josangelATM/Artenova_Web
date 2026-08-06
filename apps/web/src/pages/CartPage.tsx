@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Box, Button, Container, Divider, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { calculateLineTotal, formatCurrency } from "@artenova/shared";
+import { calculateLineTotal, formatCurrency, resolveMediaStillUrl } from "@artenova/shared";
 import { api } from "../lib/api";
 import { applySeo } from "../lib/seo";
 import { useCart } from "../store/cart";
@@ -68,11 +68,11 @@ export function CartPage() {
             <Stack spacing={1.5}>
               {cart.items.map((item) => {
                 const price = calculateLineTotal(item.product, item.quantity, item.selectedExtraIds);
-                const image = item.product.images[0];
+                const image = resolveMediaStillUrl(item.product.defaultVariant?.media[0] ?? item.product.media[0]);
                 return (
                   <Stack key={item.id} direction="row" spacing={1.5} alignItems="center">
                     {image && (
-                      <Box component="img" src={image.url} alt={image.alt || item.product.name} sx={{ width: 58, height: 58, objectFit: "cover", borderRadius: 1.5, flexShrink: 0 }} />
+                      <Box component="img" src={image} alt={item.product.name} sx={{ width: 58, height: 58, objectFit: "cover", borderRadius: 1.5, flexShrink: 0 }} />
                     )}
                     <Box flex={1} minWidth={0}>
                       <Typography fontWeight={900} noWrap>{item.product.name}</Typography>

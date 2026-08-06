@@ -1,8 +1,8 @@
-import type { AdminCategoryInput, AdminProductReviewInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductImage, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateOrderInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminProductReviewInput, Category, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, SiteSettings, UpdateOrderInput } from "@artenova/shared";
 
-type AdminProductPayload = Omit<Partial<Product>, "images" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
+type AdminProductPayload = Omit<Partial<Product>, "media" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
   id?: string;
-  images?: Array<Omit<ProductImage, "id">>;
+  media?: Array<Omit<ProductMedia, "id">>;
   priceTiers?: Array<Omit<PriceTier, "id">>;
   extras?: Array<Omit<ProductExtra, "id">>;
   customFields?: Array<Omit<CustomField, "id">>;
@@ -12,8 +12,8 @@ type AdminProductPayload = Omit<Partial<Product>, "images" | "priceTiers" | "ext
     }
   >;
   variants?: Array<
-    Omit<ProductVariant, "pricingSummary" | "images" | "attributes" | "priceTiers" | "selections"> & {
-      images?: Array<Omit<ProductImage, "id">>;
+    Omit<ProductVariant, "pricingSummary" | "media" | "attributes" | "priceTiers" | "selections"> & {
+      media?: Array<Omit<ProductMedia, "id">>;
       optionValueIds?: string[];
       priceTiers?: Array<Omit<PriceTier, "id">>;
     }
@@ -51,13 +51,14 @@ export const api = {
   createOrder: (input: CreateOrderInput) =>
     request<Order>("/api/orders", { method: "POST", body: JSON.stringify(input) }),
   getOrder: (code: string) => request<Order>(`/api/orders/${code}`),
-  uploadProductImage: (input: { file: File; slug: string; alt: string; position: number }) => {
+  uploadProductMedia: (input: { file: File; slug: string; alt: string; position: number; poster?: File | null }) => {
     const data = new FormData();
     data.append("file", input.file);
+    if (input.poster) data.append("poster", input.poster);
     data.append("slug", input.slug);
     data.append("alt", input.alt);
     data.append("position", String(input.position));
-    return request<{ url: string; alt: string; position: number }>("/api/admin/products/images", { method: "POST", body: data });
+    return request<{ url: string; type: "image" | "video"; alt: string; position: number; posterUrl?: string | null }>("/api/admin/products/media", { method: "POST", body: data });
   },
   adminLogin: (email: string, password: string) =>
     request<{ id: string; email: string }>("/api/admin/auth/login", {

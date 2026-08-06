@@ -9,7 +9,7 @@ const emptyCategory = {
   name: "",
   slug: "",
   description: "",
-  isActive: true
+  isActive: true,
 };
 
 export function AdminCategoryFormPage() {
@@ -32,7 +32,7 @@ export function AdminCategoryFormPage() {
           name: category.name,
           slug: category.slug,
           description: category.description ?? "",
-          isActive: category.isActive
+          isActive: category.isActive,
         });
       })
       .catch((err) => {

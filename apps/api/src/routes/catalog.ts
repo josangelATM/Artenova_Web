@@ -72,6 +72,7 @@ catalogRouter.get("/products", async (req, res) => {
         ? [
             { name: { contains: q, mode: "insensitive" } },
             { sku: { contains: q, mode: "insensitive" } },
+            { variants: { some: { sku: { contains: q, mode: "insensitive" }, isActive: true } } },
             { description: { contains: q, mode: "insensitive" } }
           ]
         : undefined
