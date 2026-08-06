@@ -12,8 +12,35 @@ import { errorHandler } from "./middleware/errors";
 
 export function createApp() {
   const app = express();
+  const allowedImageOrigins = ["'self'", "data:"];
+  const allowedMediaOrigins = ["'self'"];
 
-  app.use(helmet());
+  if (env.S3_PUBLIC_BASE_URL) {
+    const s3Origin = new URL(env.S3_PUBLIC_BASE_URL).origin;
+    allowedImageOrigins.push(s3Origin);
+    allowedMediaOrigins.push(s3Origin);
+  }
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          fontSrc: ["'self'", "data:", "https:"],
+          formAction: ["'self'"],
+          frameAncestors: ["'self'"],
+          imgSrc: allowedImageOrigins,
+          mediaSrc: allowedMediaOrigins,
+          objectSrc: ["'none'"],
+          scriptSrc: ["'self'", "https://static.cloudflareinsights.com"],
+          scriptSrcAttr: ["'none'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+          upgradeInsecureRequests: env.NODE_ENV === "production" ? [] : null,
+        },
+      },
+    }),
+  );
   app.use(
     cors({
       origin: env.APP_BASE_URL,
