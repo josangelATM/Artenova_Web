@@ -7,6 +7,7 @@ import { prisma } from "../lib/prisma";
 import { priceOrderItems } from "../services/pricing";
 
 export const ordersRouter = Router();
+const orderInclude: any = { items: { include: { units: true } }, payments: true };
 
 function toPublicOrder(payload: ReturnType<typeof orderPayload>) {
   return {
@@ -29,7 +30,7 @@ ordersRouter.post("/", async (req, res) => {
         return tx.order.create({
           data: {
             code,
-            source: "storefront",
+            source: "storefront" as any,
             customerName: input.customerName,
             customerWhatsapp: input.customerWhatsapp,
             customerNote: input.customerNote,
@@ -48,7 +49,7 @@ ordersRouter.post("/", async (req, res) => {
               }))
             }
           },
-          include: { items: { include: { units: true } }, payments: true }
+          include: orderInclude
         });
       });
       break;
@@ -72,7 +73,7 @@ ordersRouter.get("/:code", async (req, res) => {
   const code = String(req.params.code);
   const order = await prisma.order.findUnique({
     where: { code },
-    include: { items: { include: { units: true } }, payments: true }
+    include: orderInclude
   });
   if (!order) {
     res.status(404).json({ message: "Pedido no encontrado" });

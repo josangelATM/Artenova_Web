@@ -45,7 +45,7 @@ const productInclude = {
   reviews: { orderBy: { createdAt: "desc" as const } }
 };
 
-const orderInclude = {
+const orderInclude: any = {
   items: {
     include: {
       units: { orderBy: { position: "asc" as const } }
@@ -196,6 +196,54 @@ function buildVariantName(optionValueIds: string[], optionValueLabelById: Map<st
   return labels.length > 0 ? labels.join(" / ") : "Variante";
 }
 
+type AdminVariantInput = {
+  id: string;
+  name: string;
+  sku: string | null;
+  visualGroupKey: string;
+  basePrice: number;
+  discountType: "percentage" | "fixed" | null;
+  discountValue: number | null;
+  isActive: boolean;
+  position: number;
+  optionValueIds: string[];
+  media: ProductMediaInput[];
+  priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
+};
+
+function normalizeAdminVariantInput(
+  variant: {
+    id: string;
+    name: string;
+    sku?: string | null;
+    visualGroupKey?: string | null;
+    basePrice: number;
+    discountType?: "percentage" | "fixed" | null;
+    discountValue?: number | null;
+    isActive: boolean;
+    position?: number;
+    optionValueIds?: string[];
+    media: ProductMediaInput[];
+    priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
+  },
+  position: number,
+): AdminVariantInput {
+  return {
+    id: variant.id,
+    name: variant.name,
+    sku: variant.sku ?? null,
+    visualGroupKey: variant.visualGroupKey?.trim() || "default",
+    basePrice: variant.basePrice,
+    discountType: variant.discountType ?? null,
+    discountValue: variant.discountValue ?? null,
+    isActive: variant.isActive,
+    position: variant.position ?? position,
+    optionValueIds: variant.optionValueIds ?? [],
+    media: variant.media,
+    priceTiers: variant.priceTiers,
+  };
+}
+
 function buildCanonicalVariantInput(input: {
   name: string;
   sku?: string | null;
@@ -204,7 +252,7 @@ function buildCanonicalVariantInput(input: {
   discountValue?: number | null;
   media: ProductMediaInput[];
   priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
-}, variantId?: string) {
+}, variantId?: string): AdminVariantInput {
   return {
     id: variantId ?? crypto.randomUUID(),
     name: input.name,
@@ -394,20 +442,7 @@ async function syncProductOptions(
 async function syncVariants(
   tx: any,
   productId: string,
-  inputVariants: Array<{
-    id: string;
-    name: string;
-    sku?: string | null;
-    visualGroupKey?: string | null;
-    basePrice: number;
-    discountType?: "percentage" | "fixed" | null;
-    discountValue?: number | null;
-    isActive: boolean;
-    position: number;
-    optionValueIds: string[];
-    media: ProductMediaInput[];
-    priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
-  }>,
+  inputVariants: AdminVariantInput[],
   optionValueIds: Set<string>,
   optionValueLabelById: Map<string, string>
 ) {
@@ -519,7 +554,7 @@ adminRouter.get("/dashboard", async (_req, res) => {
     prisma.category.count(),
     db.productReview.count()
   ]);
-  const latestOrders = await prisma.order.findMany({
+  const latestOrders = await db.order.findMany({
     include: orderInclude,
     orderBy: { createdAt: "desc" },
     take: 6
@@ -564,7 +599,7 @@ adminRouter.get("/expenses", async (req, res) => {
   const input = adminExpenseQuerySchema.parse(req.query);
   const { todayStart, todayEnd, monthStart } = buildExpenseSummaryBounds(new Date());
   const q = input.q?.trim() ?? "";
-  const filters: Prisma.ExpenseWhereInput = {
+  const filters = {
     category: input.category,
     expenseDate: input.dateFrom || input.dateTo
       ? {
@@ -810,8 +845,8 @@ adminRouter.post("/products", async (req, res) => {
   const input = adminProductInputSchema.parse(req.body);
   const product = await prisma.$transaction(async (tx) => {
     const hasOptions = input.productOptions.length > 0;
-    const requestedVariantPayload = hasOptions
-      ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
+    const requestedVariantPayload: AdminVariantInput[] = hasOptions
+      ? input.variants.map((variant, position) => normalizeAdminVariantInput(variant, position))
       : [buildCanonicalVariantInput(input)];
     const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, requestedVariantPayload);
     const variantPayload = hasOptions
@@ -865,8 +900,8 @@ adminRouter.put("/products/:id", async (req, res) => {
     });
     const hasOptions = input.productOptions.length > 0;
     const canonicalVariantId = existingVariants.find((variant: { selectionKey: string | null }) => !variant.selectionKey)?.id;
-    const requestedVariantPayload = hasOptions
-      ? input.variants.map((variant, position) => ({ ...variant, position: variant.position ?? position }))
+    const requestedVariantPayload: AdminVariantInput[] = hasOptions
+      ? input.variants.map((variant, position) => normalizeAdminVariantInput(variant, position))
       : [buildCanonicalVariantInput(input, canonicalVariantId)];
     const defaultVariantId = resolveDefaultVariantId(input.defaultVariantId, requestedVariantPayload);
     const variantPayload = hasOptions
@@ -917,7 +952,7 @@ adminRouter.get("/orders", async (req, res) => {
   const hasBalance = req.query.hasBalance === "true";
   const dateFrom = typeof req.query.dateFrom === "string" && req.query.dateFrom ? new Date(req.query.dateFrom) : null;
   const dateTo = typeof req.query.dateTo === "string" && req.query.dateTo ? new Date(req.query.dateTo) : null;
-  const orders = await prisma.order.findMany({
+  const orders = await db.order.findMany({
     where: {
       OR: q ? [
         { code: { contains: q, mode: "insensitive" } },
@@ -933,7 +968,7 @@ adminRouter.get("/orders", async (req, res) => {
     include: orderInclude,
     orderBy: { createdAt: "desc" }
   });
-  res.json(orders.map(orderPayload).filter((order) => !hasBalance || order.balance > 0));
+  res.json(orders.map(orderPayload).filter((order: ReturnType<typeof orderPayload>) => !hasBalance || order.balance > 0));
 });
 
 adminRouter.post("/orders", async (req, res) => {
@@ -946,8 +981,8 @@ adminRouter.post("/orders", async (req, res) => {
         const created = await tx.order.create({
           data: {
             code,
-            source: "admin_manual",
-            status: input.status,
+            source: "admin_manual" as any,
+            status: input.status as any,
             customerName: input.customerName,
             customerWhatsapp: input.customerWhatsapp,
             customerNote: input.customerNote,
@@ -979,7 +1014,7 @@ adminRouter.post("/orders", async (req, res) => {
 });
 
 adminRouter.get("/orders/:id", async (req, res) => {
-  const order = await prisma.order.findUnique({
+  const order = await db.order.findUnique({
     where: { id: req.params.id },
     include: orderInclude
   });
@@ -1001,7 +1036,7 @@ adminRouter.put("/orders/:id", async (req, res) => {
         customerWhatsapp: input.customerWhatsapp,
         customerNote: input.customerNote,
         internalNote: input.internalNote ?? null,
-        status: input.status,
+        status: input.status as any,
         estimatedTotal,
         finalPrice: input.finalPrice ?? estimatedTotal,
         completedAt: input.status === "entregado" ? (input.completedAt ? new Date(input.completedAt) : new Date()) : null
@@ -1017,7 +1052,7 @@ adminRouter.put("/orders/:id", async (req, res) => {
 
 adminRouter.post("/orders/:id/payments", async (req, res) => {
   const input = adminOrderPaymentInputSchema.parse(req.body);
-  await prisma.orderPayment.create({
+  await db.orderPayment.create({
     data: {
       orderId: req.params.id,
       amount: input.amount,
@@ -1026,7 +1061,7 @@ adminRouter.post("/orders/:id/payments", async (req, res) => {
       note: toOptionalString(input.note)
     }
   });
-  const order = await prisma.order.findUniqueOrThrow({
+  const order = await db.order.findUniqueOrThrow({
     where: { id: req.params.id },
     include: orderInclude
   });
@@ -1035,10 +1070,10 @@ adminRouter.post("/orders/:id/payments", async (req, res) => {
 
 adminRouter.put("/orders/:id/status", async (req, res) => {
   const input = updateAdminOrderStatusSchema.parse(req.body);
-  const order = await prisma.order.update({
+  const order = await db.order.update({
     where: { id: req.params.id },
     data: {
-      status: input.status,
+      status: input.status as any,
       completedAt: input.status === "entregado" ? new Date() : null
     },
     include: orderInclude
