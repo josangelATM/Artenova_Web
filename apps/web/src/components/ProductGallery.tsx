@@ -60,34 +60,18 @@ async function createThumbnailFromVideoElement(video: HTMLVideoElement) {
   }
 }
 
-function useElementInView<T extends Element>(enabled = true, rootMargin = "120px") {
-  const ref = useRef<T | null>(null);
-  const [inView, setInView] = useState(!enabled);
+function findNextVideoItem(items: readonly ProductGalleryItem[], startIndex: number, excludeKey?: string) {
+  if (!items.length) return null;
+  const normalizedStartIndex = startIndex >= 0 ? startIndex : 0;
 
-  useEffect(() => {
-    if (!enabled) {
-      setInView(true);
-      return;
-    }
-    const element = ref.current;
-    if (!element) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setInView(true);
-      return;
-    }
+  for (let offset = 1; offset <= items.length; offset += 1) {
+    const candidate = items[(normalizedStartIndex + offset) % items.length];
+    if (!candidate || candidate.media.type !== "video") continue;
+    if (excludeKey && candidate.key === excludeKey) continue;
+    return candidate;
+  }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry?.isIntersecting ?? false);
-      },
-      { rootMargin, threshold: 0.35 }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [enabled, rootMargin]);
-
-  return { ref, inView };
+  return null;
 }
 
 function BackgroundVideoPreloader({
@@ -381,9 +365,8 @@ export function ProductGallery({
   const activeNavigationKey = hasMany ? activeKey : activePreviewKey;
   const navigationIndex = Math.max(0, navigationItems.findIndex((item) => item.key === activeNavigationKey));
   const canNavigate = navigationItems.length > 1;
-  const galleryViewport = useElementInView<HTMLDivElement>(Boolean(activeMedia && activeMedia.type === "video"));
   const viewerVideoShouldAutoplay = viewerOpen && viewerAutoplay && activeMedia?.type === "video";
-  const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && galleryViewport.inView && !viewerOpen);
+  const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && !viewerOpen);
   const [videoThumbnailUrls, setVideoThumbnailUrls] = useState<Record<string, string>>({});
   const videoThumbnailUrlsRef = useRef<Record<string, string>>({});
 
@@ -407,26 +390,10 @@ export function ProductGallery({
     [activeIndex, activeMedia, productName]
   );
 
-  const nextVideoPreloadItem = useMemo(() => {
-    for (let index = navigationIndex + 1; index < navigationItems.length; index += 1) {
-      const candidate = navigationItems[index];
-      if (candidate?.media.type === "video") {
-        return candidate;
-      }
-    }
-    return null;
-  }, [navigationIndex, navigationItems]);
-
-  const preloadItems = useMemo(() => {
-    const nextItems: ProductGalleryItem[] = [];
-    if (activeItem?.media.type === "video") {
-      nextItems.push(activeItem);
-    }
-    if (nextVideoPreloadItem && nextVideoPreloadItem.key !== activeItem?.key) {
-      nextItems.push(nextVideoPreloadItem);
-    }
-    return nextItems;
-  }, [activeItem, nextVideoPreloadItem]);
+  const nextVideoPreloadItem = useMemo(
+    () => findNextVideoItem(navigationItems, navigationIndex, activeItem?.media.type === "video" ? activeItem.key : undefined),
+    [activeItem?.key, activeItem?.media.type, navigationIndex, navigationItems]
+  );
 
   function handleThumbnailReady(key: string, url: string) {
     setVideoThumbnailUrls((current) => {
@@ -540,7 +507,7 @@ export function ProductGallery({
 
   return (
     <>
-      {preloadItems.map((item) => (
+      {(nextVideoPreloadItem ? [nextVideoPreloadItem] : []).map((item) => (
         <BackgroundVideoPreloader
           key={item.key}
           media={item.media}
@@ -551,7 +518,6 @@ export function ProductGallery({
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ xs: "stretch", md: "flex-start" }}>
         <Box
-          ref={galleryViewport.ref}
           tabIndex={0}
           aria-label={`Galería del producto ${productName}`}
           onFocus={() => setGalleryActive(true)}
@@ -577,7 +543,7 @@ export function ProductGallery({
             component="button"
             type="button"
             onClick={() => {
-              setViewerAutoplay(mainVideoShouldAutoplay);
+              setViewerAutoplay(Boolean(activeMedia?.type === "video"));
               setViewerOpen(true);
             }}
             onTouchStart={handleTouchStart}

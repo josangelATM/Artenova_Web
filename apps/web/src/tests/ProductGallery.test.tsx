@@ -32,6 +32,24 @@ describe("ProductGallery", () => {
     expect(preloader).toHaveAttribute("src", "/seed/demo.mp4");
   });
 
+  it("precarga el siguiente video con busqueda circular cuando el activo esta al final", () => {
+    render(
+      <ProductGallery
+        productName="Producto demo"
+        items={[
+          videoItem("video-1", "/seed/demo.mp4", "Video uno"),
+          imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
+          imageItem("img-2", "/seed/dos.jpg", "Imagen dos"),
+        ]}
+        activeKey="img-2"
+        onActiveKeyChange={vi.fn()}
+      />,
+    );
+
+    const preloader = screen.getAllByTestId("gallery-video-preloader-video-1").at(-1);
+    expect(preloader).toHaveAttribute("src", "/seed/demo.mp4");
+  });
+
   it("muestra un estado visual de video en miniatura cuando no existe poster persistido", () => {
     render(
       <ProductGallery
@@ -48,6 +66,7 @@ describe("ProductGallery", () => {
 
     expect(screen.getAllByText("Video").length).toBeGreaterThan(0);
     const visibleVideo = screen.getAllByLabelText(/video uno/i).find((node) => node.tagName.toLowerCase() === "video");
+    expect(visibleVideo).toHaveAttribute("autoplay");
     expect(visibleVideo).toHaveAttribute("preload", "auto");
   });
 });

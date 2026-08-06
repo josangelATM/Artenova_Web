@@ -1355,15 +1355,6 @@ const products: SeedProduct[] = [
   },
 ].filter((product) => ["recordatorios-memoriales", "deportes"].includes(product.categorySlug));
 
-const cleanupCategorySlugs = ["mascotas", "bodas"] as const;
-const legacyCategorySeed = {
-  name: "Legacy interno",
-  slug: "legacy-interno",
-  description: "Categoria interna para conservar referencias historicas fuera del catalogo publico.",
-  accentColor: "#6b6b6b",
-  isActive: false,
-};
-
 function variantId(productSlug: string, key: string) {
   return key === "default" ? `variant-${productSlug}` : `variant-${productSlug}-${key}`;
 }
@@ -1374,54 +1365,6 @@ function optionId(productSlug: string, optionKey: string) {
 
 function optionValueId(productSlug: string, optionKey: string, valueKey: string) {
   return `option-value-${productSlug}-${optionKey}-${valueKey}`;
-}
-
-async function resetProductCollections(productId: string) {
-  await prisma.$transaction([
-    prisma.productImage.deleteMany({ where: { productId } }),
-    prisma.priceTier.deleteMany({ where: { productId } }),
-    prisma.priceTier.deleteMany({ where: { variant: { productId } } }),
-    prisma.productVariantImage.deleteMany({ where: { variant: { productId } } }),
-    prisma.productVariantOptionValue.deleteMany({ where: { variant: { productId } } }),
-    prisma.productVariantAttribute.deleteMany({ where: { variant: { productId } } }),
-    prisma.productVariant.deleteMany({ where: { productId } }),
-    prisma.productOption.deleteMany({ where: { productId } }),
-    prisma.productExtra.deleteMany({ where: { productId } }),
-    prisma.customField.deleteMany({ where: { productId } }),
-  ]);
-}
-
-async function cleanupSeedProductsByCategorySlugs(categorySlugs: readonly string[]) {
-  const targetCategorySlugs = Array.from(new Set([...categorySlugs, legacyCategorySeed.slug]));
-  if (targetCategorySlugs.length === 0) return;
-
-  const staleProducts = await prisma.product.findMany({
-    where: {
-      category: {
-        slug: { in: targetCategorySlugs },
-      },
-    },
-    select: {
-      id: true,
-      orderItems: { select: { id: true, orderId: true } },
-    },
-  });
-
-  if (staleProducts.some((product) => product.orderItems.length > 0)) {
-    await prisma.orderItem.deleteMany({
-      where: { productId: { in: staleProducts.map((product) => product.id) } },
-    });
-  }
-
-  for (const product of staleProducts) {
-    await resetProductCollections(product.id);
-  }
-
-  if (staleProducts.length > 0) {
-    await prisma.product.deleteMany({
-      where: { id: { in: staleProducts.map((product) => product.id) } },
-    });
-  }
 }
 
 async function seedProduct(
@@ -1435,7 +1378,8 @@ async function seedProduct(
   });
 
   if (existing) {
-    await resetProductCollections(existing.id);
+    console.log(`Skipping existing product: ${product.slug}`);
+    return;
   }
 
   const extras = product.extras ?? [];
@@ -1458,28 +1402,10 @@ async function seedProduct(
     variants.find((variant) => variant.id === defaultVariantId) ?? variants[0];
   const productMedia = resolvedSeedMedia.productMediaBySlug.get(product.slug) ?? [];
 
-  const persisted = await prisma.product.upsert({
-    where: { slug: product.slug },
-    create: {
+  const persisted = await prisma.product.create({
+    data: {
       name: product.name,
       slug: product.slug,
-      sku: defaultVariant?.sku ?? null,
-      defaultVariantId: null,
-      description: product.description,
-      basePrice: defaultVariant?.basePrice ?? 0,
-      discountType: defaultVariant?.discountType ?? null,
-      discountValue: defaultVariant?.discountValue ?? null,
-      isPublished: true,
-      isFeatured: product.featured,
-      isHero: product.isHero ?? false,
-      heroSlot: product.isHero ? product.heroSlot ?? "primary" : null,
-      categoryId,
-      images: {
-        create: productMedia,
-      },
-    },
-    update: {
-      name: product.name,
       sku: defaultVariant?.sku ?? null,
       defaultVariantId: null,
       description: product.description,
@@ -1618,8 +1544,6 @@ async function main() {
   );
 
   const categoryBySlug = new Map(categoryRows.map((category) => [category.slug, category.id]));
-
-  await cleanupSeedProductsByCategorySlugs(cleanupCategorySlugs);
 
   for (const product of products) {
     await seedProduct(product, categoryBySlug.get(product.categorySlug)!, resolvedSeedMedia);
