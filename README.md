@@ -45,14 +45,13 @@ docker compose --env-file .env -f docker-compose.dev.yml exec api pnpm --filter 
 
 ```powershell
 docker compose --env-file .env -f docker-compose.prod.yml up --build -d
-docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter @artenova/api db:deploy
-docker compose --env-file .env -f docker-compose.prod.yml exec api pnpm --filter @artenova/api db:seed
 ```
 
 El compose de produccion expone HTTP en el puerto `90`; define siempre `PROD_APP_BASE_URL` con la URL publica final del sitio antes de levantarlo.
 Define tambien `PROD_API_BASE_URL` con la URL publica de la API, normalmente `https://DOMINIO/api` si el API queda detras del mismo dominio.
 Estas variables alimentan canonical, Open Graph, robots y sitemap; no deben apuntar a `localhost` en produccion.
 El API usa `WEB_INTERNAL_BASE_URL` para leer el `index.html` del servicio web e inyectar Open Graph en URLs de producto; en Docker Compose queda como `http://web`.
+Al iniciar el contenedor `api` en produccion se ejecutan automaticamente `db:deploy` y `db:seed` antes de levantar el servidor.
 
 ## Pruebas
 
