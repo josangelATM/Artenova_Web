@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
-import { formatCurrency, type Order, type Product } from "@artenova/shared";
+import { type Order, type Product } from "@artenova/shared";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminSection } from "./adminUi";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
-import { buildDraftItemsPayload, buildDraftPaymentsPayload, defaultItem, emptyPaymentDraft, getBalance, getItemsTotal, getPaidTotal, OrderItemsEditor, OrderSummaryStrip, type DraftOrder, type DraftPayment } from "./adminOrderUi";
+import { buildDraftItemsPayload, buildDraftPaymentsPayload, defaultItem, emptyPaymentDraft, getBalance, getItemsTotal, getPaidTotal, moneyInputAdornment, OrderItemsEditor, OrderSummaryStrip, type DraftOrder, type DraftPayment } from "./adminOrderUi";
 
 const emptyDraft: DraftOrder = {
   customerName: "",
@@ -77,8 +77,7 @@ export function AdminOrderFormPage() {
   return (
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Pedidos", to: "/admin/pedidos" }, { label: "Nuevo" }]} />
-      <AdminPageHeader title="Nuevo pedido" subtitle="El código se asignará al guardar con formato 2608-###." action={<AdminBackButton to="/admin/pedidos" />} />
-      <OrderSummaryStrip status={draft.status} itemsTotal={itemsTotal} paidTotal={paidTotal} balance={balance} />
+      <AdminPageHeader title="Nuevo pedido" action={<AdminBackButton to="/admin/pedidos" />} />
 
       <AdminSection title="Cliente">
         <Stack spacing={1.5}>
@@ -123,7 +122,14 @@ export function AdminOrderFormPage() {
                 </Stack>
                 <Grid container spacing={1.25}>
                   <Grid size={{ xs: 12, md: 3 }}>
-                    <TextField fullWidth size="small" label="Monto" value={payment.amount} onChange={(event) => updatePayment(index, { amount: event.target.value })} />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Monto"
+                      value={payment.amount}
+                      onChange={(event) => updatePayment(index, { amount: event.target.value })}
+                      slotProps={{ input: { startAdornment: moneyInputAdornment } }}
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 3 }}>
                     <TextField fullWidth size="small" select label="Método" value={payment.method} onChange={(event) => updatePayment(index, { method: event.target.value as DraftPayment["method"] })}>
@@ -155,17 +161,7 @@ export function AdminOrderFormPage() {
       </AdminSection>
 
       <AdminSection title="Resumen">
-        <Grid container spacing={1.5}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Items: <strong>{formatCurrency(itemsTotal)}</strong></Typography>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Abonado: <strong>{formatCurrency(paidTotal)}</strong></Typography>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Saldo: <strong>{formatCurrency(balance)}</strong></Typography>
-          </Grid>
-        </Grid>
+        <OrderSummaryStrip itemsTotal={itemsTotal} paidTotal={paidTotal} balance={balance} />
       </AdminSection>
 
       <Box

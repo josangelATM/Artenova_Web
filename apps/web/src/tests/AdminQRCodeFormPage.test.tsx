@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminQRCodeFormPage } from "../pages/admin/AdminQRCodeFormPage";
 import { theme } from "../theme/theme";
 
@@ -50,11 +50,23 @@ function renderPage() {
   );
 }
 
+function firstByLabelText(label: string) {
+  return screen.getAllByLabelText(label)[0] as HTMLElement;
+}
+
+function textboxAt(index: number) {
+  return screen.getAllByRole("textbox")[index] as HTMLElement;
+}
+
 describe("AdminQRCodeFormPage", () => {
   beforeEach(() => {
     saveAdminQRCodeMock.mockReset();
     previewQRCodeMock.mockReset();
     adminQRCodeMock.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("does not render the logo field and keeps preview manual", async () => {
@@ -68,8 +80,8 @@ describe("AdminQRCodeFormPage", () => {
 
     expect(screen.queryByLabelText(/logo url/i)).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Promo QR" } });
-    fireEvent.change(screen.getByLabelText("URL destino"), { target: { value: "https://artenova.com/promos" } });
+    fireEvent.change(textboxAt(0), { target: { value: "Promo QR" } });
+    fireEvent.change(textboxAt(1), { target: { value: "https://artenova.com/promos" } });
 
     await waitFor(() => {
       expect(previewQRCodeMock).not.toHaveBeenCalled();
@@ -80,5 +92,37 @@ describe("AdminQRCodeFormPage", () => {
     await waitFor(() => {
       expect(previewQRCodeMock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("supports transparent background without auto-refreshing the preview", async () => {
+    previewQRCodeMock.mockResolvedValue({
+      resolvedTarget: "https://artenova.com/promos",
+      previewUrl: "https://artenovapty.com/q/preview",
+      svg: "<svg></svg>",
+    });
+
+    renderPage();
+
+    fireEvent.change(textboxAt(0), { target: { value: "Promo QR" } });
+    fireEvent.change(textboxAt(1), { target: { value: "https://artenova.com/promos" } });
+
+    const transparentToggle = firstByLabelText("Fondo transparente");
+    fireEvent.click(transparentToggle);
+
+    const backgroundField = firstByLabelText("Color de fondo");
+    expect(backgroundField).toBeDisabled();
+    expect(previewQRCodeMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Generar vista previa" }));
+
+    await waitFor(() => {
+      expect(previewQRCodeMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(previewQRCodeMock).toHaveBeenCalledWith(expect.objectContaining({
+      designConfig: expect.objectContaining({
+        transparentBackground: true,
+      }),
+    }));
   });
 });

@@ -11,6 +11,7 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "media:backfill-video-posters": "tsx src/scripts/backfillVideoPosters.ts",
+    "orders:import-workbook": "tsx src/scripts/importOrdersWorkbook.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -32,6 +33,7 @@
     "pg": "8.22.0",
     "qrcode": "^1.5.4",
     "sharp": "0.35.3",
+    "xlsx": "^0.18.5",
     "zod": "4.4.3"
   },
   "devDependencies": {

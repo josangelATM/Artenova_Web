@@ -316,6 +316,7 @@ model OrderItem {
   variantNameSnapshot String?
   unitLabel        String?
   selectedExtraIds Json          @default("[]")
+  appliedAdjustments Json        @default("[]")
   personalization  Json          @default("{}")
   units            OrderItemUnit[]
 }

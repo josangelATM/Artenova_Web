@@ -200,7 +200,6 @@ export function AdminOrdersPage() {
     <Stack spacing={2.5}>
       <AdminPageHeader
         title="Pedidos"
-        subtitle="Centraliza captura manual, cobros y seguimiento sin volver al Excel."
         action={
           <Button component={RouterLink} to="/admin/pedidos/nuevo" variant="contained" startIcon={<Plus size={18} />}>
             Nuevo pedido

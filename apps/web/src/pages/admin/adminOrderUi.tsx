@@ -1,12 +1,19 @@
-import { Autocomplete, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
-import { Plus, Trash2 } from "lucide-react";
-import { formatCurrency, orderStatusLabels, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
+import { Autocomplete, Box, Button, Grid, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Copy, Plus, Trash2 } from "lucide-react";
+import { formatCurrency, type AdminOrderItemAdjustment, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
+
+export type DraftItemAdjustment = Omit<AdminOrderItemAdjustment, "unitAmount"> & {
+  unitAmount: string;
+};
 
 export type DraftItem = {
   productId: string;
   productName: string;
   quantity: string;
   unitPrice: string;
+  skuSnapshot: string;
+  variantNameSnapshot: string;
+  appliedAdjustments: DraftItemAdjustment[];
   personalization: Record<string, string>;
 };
 
@@ -27,10 +34,14 @@ export type DraftOrder = {
 
 export const emptyPaymentDraft: DraftPayment = {
   amount: "",
-  method: "efectivo",
+  method: "yappy",
   reference: "",
   note: "",
 };
+
+export const moneyInputAdornment = (
+  <InputAdornment position="start">B/.</InputAdornment>
+);
 
 function toStringMap(values: Record<string, string | string[]>) {
   return Object.fromEntries(
@@ -43,28 +54,76 @@ export function toNumberOrZero(value: string) {
   return Number.isFinite(normalized) ? normalized : 0;
 }
 
+function roundMoney(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function normalizedQuantity(value: string) {
+  return Math.max(1, Math.round(toNumberOrZero(value)));
+}
+
+function buildAdjustmentPayload(adjustment: DraftItemAdjustment, quantity: number): AdminOrderItemAdjustment {
+  const unitAmount = roundMoney(Math.max(0, toNumberOrZero(adjustment.unitAmount)));
+  return {
+    label: adjustment.label.trim(),
+    unitAmount,
+    quantity,
+    totalAmount: roundMoney(unitAmount * quantity),
+  };
+}
+
+function syncAdjustmentsQuantity(adjustments: DraftItemAdjustment[], quantity: number) {
+  return adjustments.map((adjustment) => {
+    const payload = buildAdjustmentPayload(adjustment, quantity);
+    return {
+      ...adjustment,
+      label: payload.label,
+      quantity: payload.quantity,
+      totalAmount: payload.totalAmount,
+      unitAmount: String(payload.unitAmount),
+    };
+  });
+}
+
+function resolveSuggestedUnitPrice(product?: Product) {
+  if (!product) return 0;
+  return product.defaultVariant?.pricingSummary.finalPrice
+    ?? product.pricingSummary.finalPrice
+    ?? 0;
+}
+
+export function getItemAdjustmentsTotal(item: DraftItem) {
+  return roundMoney(
+    item.appliedAdjustments.reduce((sum, adjustment) => sum + roundMoney(toNumberOrZero(adjustment.unitAmount) * normalizedQuantity(item.quantity)), 0),
+  );
+}
+
 export function getItemLineTotal(item: DraftItem) {
-  return Number((Math.max(1, Math.round(toNumberOrZero(item.quantity))) * toNumberOrZero(item.unitPrice)).toFixed(2));
+  return roundMoney(normalizedQuantity(item.quantity) * toNumberOrZero(item.unitPrice) + getItemAdjustmentsTotal(item));
 }
 
 export function getItemsTotal(items: DraftItem[]) {
-  return Number(items.reduce((sum, item) => sum + getItemLineTotal(item), 0).toFixed(2));
+  return roundMoney(items.reduce((sum, item) => sum + getItemLineTotal(item), 0));
 }
 
 export function getPaidTotal(payments: DraftPayment[]) {
-  return Number(payments.reduce((sum, payment) => sum + toNumberOrZero(payment.amount), 0).toFixed(2));
+  return roundMoney(payments.reduce((sum, payment) => sum + toNumberOrZero(payment.amount), 0));
 }
 
 export function getBalance(total: number, paid: number) {
-  return Number(Math.max(0, total - paid).toFixed(2));
+  return roundMoney(Math.max(0, total - paid));
 }
 
 export function defaultItem(product?: Product, productName = ""): DraftItem {
+  const quantity = 1;
   return {
     productId: product?.id ?? "",
     productName: product?.name ?? productName,
-    quantity: "1",
-    unitPrice: product ? String(product.pricingSummary.finalPrice) : "0",
+    quantity: String(quantity),
+    unitPrice: String(resolveSuggestedUnitPrice(product)),
+    skuSnapshot: product?.defaultVariant?.sku ?? "",
+    variantNameSnapshot: product?.defaultVariant?.name ?? "",
+    appliedAdjustments: [],
     personalization: {},
   };
 }
@@ -80,27 +139,44 @@ export function orderToDraft(order: Order): DraftOrder {
       productName: item.productName,
       quantity: String(item.quantity),
       unitPrice: String(item.unitPrice),
+      skuSnapshot: item.skuSnapshot ?? "",
+      variantNameSnapshot: item.variantNameSnapshot ?? "",
+      appliedAdjustments: (item.appliedAdjustments ?? []).map((adjustment) => ({
+        label: adjustment.label,
+        unitAmount: String(adjustment.unitAmount),
+        quantity: adjustment.quantity,
+        totalAmount: adjustment.totalAmount,
+      })),
       personalization: toStringMap(item.personalization ?? {}),
     })),
   };
 }
 
 export function buildDraftItemsPayload(items: DraftItem[]) {
-  return items.map((item) => ({
-    productId: item.productId.trim() || null,
-    productName: item.productName.trim(),
-    quantity: Math.max(1, Math.round(toNumberOrZero(item.quantity))),
-    unitPrice: toNumberOrZero(item.unitPrice),
-    extrasTotal: 0,
-    skuSnapshot: null,
-    variantNameSnapshot: null,
-    unitLabel: null,
-    selectedExtraIds: [],
-    personalization: Object.fromEntries(
-      Object.entries(item.personalization).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]),
-    ),
-    units: [],
-  }));
+  return items.map((item) => {
+    const quantity = normalizedQuantity(item.quantity);
+    const appliedAdjustments = item.appliedAdjustments
+      .map((adjustment) => buildAdjustmentPayload(adjustment, quantity))
+      .filter((adjustment) => adjustment.label);
+    const extrasTotal = roundMoney(appliedAdjustments.reduce((sum, adjustment) => sum + adjustment.totalAmount, 0));
+
+    return {
+      productId: item.productId.trim() || null,
+      productName: item.productName.trim(),
+      quantity,
+      unitPrice: toNumberOrZero(item.unitPrice),
+      extrasTotal,
+      skuSnapshot: item.skuSnapshot.trim() || null,
+      variantNameSnapshot: item.variantNameSnapshot.trim() || null,
+      unitLabel: null,
+      selectedExtraIds: [],
+      appliedAdjustments,
+      personalization: Object.fromEntries(
+        Object.entries(item.personalization).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]),
+      ),
+      units: [],
+    };
+  });
 }
 
 export function buildDraftPaymentsPayload(payments: DraftPayment[]) {
@@ -172,27 +248,33 @@ function GenericPersonalizationField({
 }
 
 export function OrderSummaryStrip({
-  status,
   itemsTotal,
   paidTotal,
   balance,
 }: {
-  status: Order["status"];
   itemsTotal: number;
   paidTotal: number;
   balance: number;
 }) {
   return (
-    <Paper sx={{ border: "1px solid rgba(64,44,37,.10)", borderRadius: 2, p: 1.5, bgcolor: "rgba(255,250,245,.92)" }}>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
-        <Typography fontWeight={900}>{orderStatusLabels[status]}</Typography>
-        <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-          <Typography variant="body2">Items: <strong>{formatCurrency(itemsTotal)}</strong></Typography>
-          <Typography variant="body2">Abonado: <strong>{formatCurrency(paidTotal)}</strong></Typography>
-          <Typography variant="body2">Saldo: <strong>{formatCurrency(balance)}</strong></Typography>
-        </Stack>
-      </Stack>
-    </Paper>
+    <Grid container spacing={1.25}>
+      {[
+        { label: "Total", value: itemsTotal },
+        { label: "Abonado", value: paidTotal },
+        { label: "Saldo", value: balance },
+      ].map((item) => (
+        <Grid key={item.label} size={{ xs: 12, md: 4 }}>
+          <Box sx={{ px: 0.25, py: 0.5 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: ".08em" }}>
+              {item.label}
+            </Typography>
+            <Typography sx={{ mt: 0.35, fontSize: { xs: "1.4rem", md: "1.7rem" }, lineHeight: 1.1, fontWeight: 900 }}>
+              {formatCurrency(item.value)}
+            </Typography>
+          </Box>
+        </Grid>
+      ))}
+    </Grid>
   );
 }
 
@@ -219,6 +301,38 @@ export function OrderItemsEditor({
     onChange(items.filter((_, itemIndex) => itemIndex !== index));
   }
 
+  function duplicateItem(index: number) {
+    const source = items[index];
+    if (!source) return;
+    const clone: DraftItem = {
+      ...source,
+      appliedAdjustments: source.appliedAdjustments.map((adjustment) => ({ ...adjustment })),
+      personalization: { ...source.personalization },
+    };
+    onChange([
+      ...items.slice(0, index + 1),
+      clone,
+      ...items.slice(index + 1),
+    ]);
+  }
+
+  function addAdjustment(index: number) {
+    updateItem(index, (current) => ({
+      ...current,
+      appliedAdjustments: [
+        ...current.appliedAdjustments,
+        { label: "", unitAmount: "0", quantity: normalizedQuantity(current.quantity), totalAmount: 0 },
+      ],
+    }));
+  }
+
+  function removeAdjustment(index: number, adjustmentIndex: number) {
+    updateItem(index, (current) => ({
+      ...current,
+      appliedAdjustments: current.appliedAdjustments.filter((_, currentIndex) => currentIndex !== adjustmentIndex),
+    }));
+  }
+
   return (
     <Stack spacing={1.5}>
       <Button fullWidth variant="outlined" startIcon={<Plus size={18} />} onClick={addItem}>
@@ -229,15 +343,21 @@ export function OrderItemsEditor({
         const selectedProduct = item.productId ? productById.get(item.productId) ?? null : null;
         const customFields = selectedProduct?.customFields ?? [];
         const lineTotal = getItemLineTotal(item);
+        const adjustmentsTotal = getItemAdjustmentsTotal(item);
 
         return (
           <Paper key={`draft-item-${index}`} sx={{ border: "1px solid rgba(64,44,37,.10)", boxShadow: "none", p: 1.5 }}>
             <Stack spacing={1.25}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography fontWeight={900}>Item {index + 1}</Typography>
-                <IconButton aria-label="Eliminar item" onClick={() => removeItem(index)}>
-                  <Trash2 size={18} />
-                </IconButton>
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <Button size="small" variant="text" startIcon={<Copy size={16} />} onClick={() => duplicateItem(index)}>
+                    Copiar línea
+                  </Button>
+                  <IconButton aria-label="Eliminar item" onClick={() => removeItem(index)}>
+                    <Trash2 size={18} />
+                  </IconButton>
+                </Stack>
               </Stack>
 
               <Autocomplete
@@ -252,34 +372,130 @@ export function OrderItemsEditor({
                     ...current,
                     productId: "",
                     productName: nextValue,
+                    skuSnapshot: "",
+                    variantNameSnapshot: "",
                     personalization: current.productName === nextValue ? current.personalization : {},
                   }));
                 }}
                 onChange={(_event, nextValue) => {
                   if (!nextValue) {
-                    updateItem(index, (current) => ({ ...current, productId: "" }));
+                    updateItem(index, (current) => ({
+                      ...current,
+                      productId: "",
+                      skuSnapshot: "",
+                      variantNameSnapshot: "",
+                    }));
                     return;
                   }
                   if (typeof nextValue === "string") {
-                    updateItem(index, (current) => defaultItem(undefined, nextValue || current.productName));
+                    updateItem(index, (current) => ({
+                      ...defaultItem(undefined, nextValue || current.productName),
+                      appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, normalizedQuantity(current.quantity)),
+                    }));
                     return;
                   }
-                  updateItem(index, () => defaultItem(nextValue));
+                  updateItem(index, (current) => ({
+                    ...defaultItem(nextValue),
+                    quantity: current.quantity,
+                    appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, normalizedQuantity(current.quantity)),
+                  }));
                 }}
                 renderInput={(params) => <TextField {...params} size="small" label="Producto" />}
               />
 
               <Grid container spacing={1.25}>
                 <Grid size={{ xs: 12, md: 3 }}>
-                  <TextField fullWidth size="small" label="Cantidad" value={item.quantity} onChange={(event) => updateItem(index, (current) => ({ ...current, quantity: event.target.value }))} />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Cantidad"
+                    value={item.quantity}
+                    onChange={(event) => updateItem(index, (current) => {
+                      const quantity = normalizedQuantity(event.target.value);
+                      return {
+                        ...current,
+                        quantity: event.target.value,
+                        appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, quantity),
+                      };
+                    })}
+                  />
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField fullWidth size="small" label="Costo individual" value={item.unitPrice} onChange={(event) => updateItem(index, (current) => ({ ...current, unitPrice: event.target.value }))} />
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Costo individual"
+                    value={item.unitPrice}
+                    onChange={(event) => updateItem(index, (current) => ({ ...current, unitPrice: event.target.value }))}
+                    slotProps={{ input: { startAdornment: moneyInputAdornment } }}
+                  />
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth size="small" label="Cargos adicionales" value={formatCurrency(adjustmentsTotal)} slotProps={{ input: { readOnly: true } }} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField fullWidth size="small" label="Costo total" value={formatCurrency(lineTotal)} slotProps={{ input: { readOnly: true } }} />
                 </Grid>
               </Grid>
+
+              <Stack spacing={1.25}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography fontWeight={900}>Cargos adicionales</Typography>
+                  <Button size="small" startIcon={<Plus size={16} />} onClick={() => addAdjustment(index)}>
+                    Agregar cargo
+                  </Button>
+                </Stack>
+                {item.appliedAdjustments.length === 0 && <Typography color="text.secondary">Sin cargos.</Typography>}
+                {item.appliedAdjustments.map((adjustment, adjustmentIndex) => (
+                  <Grid key={`adjustment-${index}-${adjustmentIndex}`} container spacing={1.25} alignItems="center">
+                    <Grid size={{ xs: 12, md: 5 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Cargo"
+                        value={adjustment.label}
+                        onChange={(event) => updateItem(index, (current) => ({
+                          ...current,
+                          appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
+                            ? { ...currentAdjustment, label: event.target.value }
+                            : currentAdjustment),
+                        }))}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Monto por unidad"
+                        value={adjustment.unitAmount}
+                        onChange={(event) => updateItem(index, (current) => {
+                          const quantity = normalizedQuantity(current.quantity);
+                          return {
+                            ...current,
+                            appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
+                              ? {
+                                  ...currentAdjustment,
+                                  unitAmount: event.target.value,
+                                  quantity,
+                                  totalAmount: roundMoney(Math.max(0, toNumberOrZero(event.target.value)) * quantity),
+                                }
+                              : currentAdjustment),
+                          };
+                        })}
+                        slotProps={{ input: { startAdornment: moneyInputAdornment } }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <TextField fullWidth size="small" label="Total del cargo" value={formatCurrency(adjustment.totalAmount)} slotProps={{ input: { readOnly: true } }} />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 1 }}>
+                      <IconButton aria-label="Eliminar cargo" onClick={() => removeAdjustment(index, adjustmentIndex)}>
+                        <Trash2 size={18} />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                ))}
+              </Stack>
 
               {customFields.length > 0 ? (
                 <Grid container spacing={1.25}>

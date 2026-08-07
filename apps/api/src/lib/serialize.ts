@@ -140,6 +140,14 @@ export function orderPayload(order: any) {
     variantNameSnapshot: item.variantNameSnapshot ?? null,
     unitLabel: item.unitLabel ?? null,
     selectedExtraIds: Array.isArray(item.selectedExtraIds) ? item.selectedExtraIds : [],
+    appliedAdjustments: Array.isArray(item.appliedAdjustments)
+      ? item.appliedAdjustments.map((adjustment: any) => ({
+          label: adjustment.label ?? "",
+          unitAmount: toNumber(adjustment.unitAmount) ?? 0,
+          quantity: Number(adjustment.quantity) || 1,
+          totalAmount: toNumber(adjustment.totalAmount) ?? 0,
+        }))
+      : [],
     personalization: item.personalization ?? {},
     units: (item.units ?? []).map((unit: any) => ({
       ...unit,

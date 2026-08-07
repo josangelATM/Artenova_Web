@@ -95,11 +95,12 @@ export function calculateLineTotal(
   const discountedTier = exactTier ? resolveTierPrice(exactTier, commercialSource.discountType, commercialSource.discountValue) : null;
   const unitPrice = discountedTier?.finalTotalPrice != null ? roundMoney(discountedTier.finalTotalPrice / quantity) : getUnitPrice(commercialSource, quantity);
   const selected = product.extras.filter((extra) => selectedExtraIds.includes(extra.id ?? ""));
-  const extrasTotal = selected.reduce((sum, extra) => sum + extra.priceDelta, 0);
+  const extrasUnitTotal = selected.reduce((sum, extra) => sum + extra.priceDelta, 0);
+  const extrasTotal = roundMoney(extrasUnitTotal * quantity);
   return {
     unitPrice,
     extrasTotal,
-    lineTotal: roundMoney((discountedTier?.finalTotalPrice ?? unitPrice * quantity) + extrasTotal * quantity),
+    lineTotal: roundMoney((discountedTier?.finalTotalPrice ?? unitPrice * quantity) + extrasTotal),
     extras: selected
   };
 }

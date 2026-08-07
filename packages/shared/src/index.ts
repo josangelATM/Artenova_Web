@@ -242,6 +242,13 @@ export const orderItemUnitSchema = z.object({
     .default({}),
 });
 
+export const adminOrderItemAdjustmentSchema = z.object({
+  label: z.string().trim().min(1).max(200),
+  unitAmount: moneySchema,
+  quantity: z.number().int().positive(),
+  totalAmount: moneySchema,
+}).strict();
+
 export const adminOrderItemSchema = z.object({
   id: z.string().optional(),
   productId: z.string().min(1).nullable().optional(),
@@ -253,11 +260,12 @@ export const adminOrderItemSchema = z.object({
   variantNameSnapshot: z.string().max(160).optional().nullable(),
   unitLabel: z.string().max(120).optional().nullable(),
   selectedExtraIds: z.array(z.string()).default([]),
+  appliedAdjustments: z.array(adminOrderItemAdjustmentSchema).default([]),
   personalization: z
     .record(z.string(), z.union([z.string(), z.array(z.string())]))
     .default({}),
   units: z.array(orderItemUnitSchema).default([]),
-});
+}).strict();
 
 export const adminOrderPaymentInputSchema = z.object({
   amount: moneySchema,
@@ -313,11 +321,13 @@ export const adminExpenseSummarySchema = z.object({
 export const qrCodeDesignSchema = z.object({
   foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1F2937"),
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#FFFFFF"),
+  transparentBackground: z.boolean().default(false),
   margin: z.number().int().min(0).max(8).default(2),
 });
 const defaultQRCodeDesign = {
   foregroundColor: "#1F2937",
   backgroundColor: "#FFFFFF",
+  transparentBackground: false,
   margin: 2,
 } as const;
 
@@ -446,7 +456,7 @@ export const updateOrderSchema = z.object({
 
 export const createAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
-  customerWhatsapp: z.string().min(6).max(40),
+  customerWhatsapp: z.string().trim().min(2).max(40),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),
@@ -457,7 +467,7 @@ export const createAdminOrderSchema = z.object({
 
 export const updateAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
-  customerWhatsapp: z.string().min(6).max(40),
+  customerWhatsapp: z.string().trim().min(2).max(40),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),
@@ -539,6 +549,7 @@ export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
 export type ProductVariantSelection = z.infer<typeof productVariantSelectionSchema>;
 export type ProductExtra = z.infer<typeof productExtraSchema>;
 export type CustomField = z.infer<typeof customFieldSchema>;
+export type AdminOrderItemAdjustment = z.infer<typeof adminOrderItemAdjustmentSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
 export type CreateAdminOrderInput = z.infer<typeof createAdminOrderSchema>;
@@ -598,6 +609,7 @@ export type OrderItem = {
   variantNameSnapshot?: string | null;
   unitLabel?: string | null;
   selectedExtraIds?: string[];
+  appliedAdjustments?: AdminOrderItemAdjustment[];
   personalization: Record<string, string | string[]>;
   units: OrderItemUnit[];
 };

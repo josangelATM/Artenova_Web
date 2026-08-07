@@ -66,6 +66,33 @@ describe("admin order schemas", () => {
     expect(payload.payments[0]?.amount).toBe(4);
   });
 
+  it("accepts manual applied adjustments with the item quantity", () => {
+    const payload = createAdminOrderSchema.parse({
+      customerName: "Rosa",
+      customerWhatsapp: "6111-2233",
+      items: [
+        {
+          productId: "prod-2",
+          productName: "Cuadro QR",
+          quantity: 3,
+          unitPrice: 10,
+          extrasTotal: 4.5,
+          appliedAdjustments: [
+            { label: "QR", unitAmount: 1.5, quantity: 3, totalAmount: 4.5 },
+          ],
+          personalization: {},
+        },
+      ],
+    });
+
+    expect(payload.items[0]?.appliedAdjustments[0]).toMatchObject({
+      label: "QR",
+      unitAmount: 1.5,
+      quantity: 3,
+      totalAmount: 4.5,
+    });
+  });
+
   it("rejects legacy order statuses", () => {
     expect(() => updateAdminOrderSchema.parse({
       customerName: "Legacy",
@@ -77,10 +104,51 @@ describe("admin order schemas", () => {
     })).toThrow();
   });
 
+  it("rejects legacy option-linked adjustment fields", () => {
+    expect(() => createAdminOrderSchema.parse({
+      customerName: "Legacy",
+      customerWhatsapp: "6000-0000",
+      items: [
+        {
+          productId: "prod-1",
+          productName: "Placa",
+          quantity: 1,
+          unitPrice: 10,
+          extrasTotal: 2,
+          selectedOptionValueIds: ["value-1"],
+          appliedAdjustments: [
+            {
+              label: "QR",
+              sourceOptionId: "opt-1",
+              sourceOptionValueId: "value-1",
+              sourceOptionName: "Acabado",
+              sourceOptionValue: "QR",
+              unitAmount: 2,
+              quantity: 1,
+              totalAmount: 2,
+            },
+          ],
+          personalization: {},
+        },
+      ],
+    })).toThrow();
+  });
+
   it("validates payment movements", () => {
     expect(adminOrderPaymentInputSchema.parse({ amount: "12.5", method: "yappy", reference: "YAP-001" })).toMatchObject({
       amount: 12.5,
       method: "yappy"
     });
+  });
+
+  it("accepts short admin contacts like IG", () => {
+    const payload = createAdminOrderSchema.parse({
+      customerName: "Fernando",
+      customerWhatsapp: "IG",
+      items: [],
+      payments: [],
+    });
+
+    expect(payload.customerWhatsapp).toBe("IG");
   });
 });

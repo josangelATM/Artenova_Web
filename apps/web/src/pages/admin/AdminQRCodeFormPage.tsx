@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Checkbox, FormControlLabel, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type {
   AdminQRCodeInput,
   QRCode,
@@ -19,6 +19,7 @@ type Draft = {
   status: "active" | "inactive";
   foregroundColor: string;
   backgroundColor: string;
+  transparentBackground: boolean;
   margin: number;
   url: string;
   phone: string;
@@ -38,6 +39,7 @@ function createDraft(): Draft {
     status: "active",
     foregroundColor: "#1F2937",
     backgroundColor: "#FFFFFF",
+    transparentBackground: false,
     margin: 2,
     url: "",
     phone: "",
@@ -58,6 +60,7 @@ function draftFromQRCode(qrCode: QRCode): Draft {
   draft.status = qrCode.status;
   draft.foregroundColor = qrCode.designConfig.foregroundColor;
   draft.backgroundColor = qrCode.designConfig.backgroundColor;
+  draft.transparentBackground = qrCode.designConfig.transparentBackground ?? false;
   draft.margin = qrCode.designConfig.margin;
 
   if (qrCode.type === "url") {
@@ -85,6 +88,7 @@ function draftToInput(draft: Draft): AdminQRCodeInput {
   const designConfig = {
     foregroundColor: draft.foregroundColor,
     backgroundColor: draft.backgroundColor,
+    transparentBackground: draft.transparentBackground,
     margin: Number(draft.margin),
   };
 
@@ -310,7 +314,15 @@ export function AdminQRCodeFormPage() {
             <TextField fullWidth type="color" label="Color principal" value={draft.foregroundColor} onChange={(event) => updateDraft({ foregroundColor: event.target.value })} />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField fullWidth type="color" label="Color de fondo" value={draft.backgroundColor} onChange={(event) => updateDraft({ backgroundColor: event.target.value })} />
+            <TextField
+              fullWidth
+              type="color"
+              label="Color de fondo"
+              value={draft.backgroundColor}
+              onChange={(event) => updateDraft({ backgroundColor: event.target.value })}
+              disabled={draft.transparentBackground}
+              helperText={draft.transparentBackground ? "No se usa mientras el fondo transparente esta activado." : undefined}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField select fullWidth label="Margen" value={String(draft.margin)} onChange={(event) => updateDraft({ margin: Number(event.target.value) })}>
@@ -318,6 +330,17 @@ export function AdminQRCodeFormPage() {
                 <MenuItem key={value} value={value}>{value}</MenuItem>
               ))}
             </TextField>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={draft.transparentBackground}
+                  onChange={(event) => updateDraft({ transparentBackground: event.target.checked })}
+                />
+              )}
+              label="Fondo transparente"
+            />
           </Grid>
         </Grid>
       </AdminSection>

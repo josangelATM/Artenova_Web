@@ -10,6 +10,7 @@ describe("QR code schemas", () => {
       designConfig: {
         foregroundColor: "#111827",
         backgroundColor: "#FFFFFF",
+        transparentBackground: true,
         margin: 2,
       },
       destinationConfig: {
@@ -29,6 +30,7 @@ describe("QR code schemas", () => {
       designConfig: {
         foregroundColor: "#0F172A",
         backgroundColor: "#FFFFFF",
+        transparentBackground: false,
         margin: 1,
       },
       destinationConfig: {
@@ -45,6 +47,7 @@ describe("QR code schemas", () => {
       designConfig: {
         foregroundColor: "#0F172A",
         backgroundColor: "#FFFFFF",
+        transparentBackground: false,
         margin: 2,
       },
       destinationConfig: {
@@ -70,11 +73,28 @@ describe("QR code schemas", () => {
       designConfig: {
         foregroundColor: "#111827",
         backgroundColor: "#FFFFFF",
+        transparentBackground: false,
         margin: 2,
       },
       destinationConfig: {
         url: "no-es-url",
       },
     })).toThrow();
+  });
+
+  it("defaults transparent background to false when omitted", () => {
+    const parsed = qrCodePreviewSchema.parse({
+      type: "url",
+      designConfig: {
+        foregroundColor: "#111827",
+        backgroundColor: "#FFFFFF",
+        margin: 2,
+      },
+      destinationConfig: {
+        url: "https://artenova.com/promos",
+      },
+    });
+
+    expect(parsed.designConfig.transparentBackground).toBe(false);
   });
 });

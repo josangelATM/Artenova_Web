@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, AdminSection } from "./adminUi";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
-import { buildDraftItemsPayload, emptyPaymentDraft, getBalance, getItemsTotal, orderToDraft, OrderItemsEditor, OrderSummaryStrip, toNumberOrZero, type DraftOrder, type DraftPayment } from "./adminOrderUi";
+import { buildDraftItemsPayload, emptyPaymentDraft, getBalance, getItemsTotal, moneyInputAdornment, orderToDraft, OrderItemsEditor, OrderSummaryStrip, toNumberOrZero, type DraftOrder, type DraftPayment } from "./adminOrderUi";
 
 export function AdminOrderDetailPage() {
   const { id } = useParams();
@@ -101,7 +101,6 @@ export function AdminOrderDetailPage() {
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Pedidos", to: "/admin/pedidos" }, { label: order.code }]} />
       <AdminPageHeader title={order.code} action={<AdminBackButton to="/admin/pedidos" />} />
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-      <OrderSummaryStrip status={draft.status} itemsTotal={itemsTotal} paidTotal={paidTotal} balance={balance} />
 
       <AdminSection title="Cliente">
         <Grid container spacing={1.5}>
@@ -150,7 +149,13 @@ export function AdminOrderDetailPage() {
           <Stack spacing={1.25}>
             <Grid container spacing={1.25}>
               <Grid size={{ xs: 12, md: 3 }}>
-                <TextField fullWidth label="Monto" value={paymentDraft.amount} onChange={(event) => setPaymentDraft({ ...paymentDraft, amount: event.target.value })} />
+                <TextField
+                  fullWidth
+                  label="Monto"
+                  value={paymentDraft.amount}
+                  onChange={(event) => setPaymentDraft({ ...paymentDraft, amount: event.target.value })}
+                  slotProps={{ input: { startAdornment: moneyInputAdornment } }}
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
                 <TextField fullWidth select label="Método" value={paymentDraft.method} onChange={(event) => setPaymentDraft({ ...paymentDraft, method: event.target.value as DraftPayment["method"] })}>
@@ -183,17 +188,7 @@ export function AdminOrderDetailPage() {
       </AdminSection>
 
       <AdminSection title="Resumen">
-        <Grid container spacing={1.5}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Items: <strong>{formatCurrency(itemsTotal)}</strong></Typography>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Abonado: <strong>{formatCurrency(paidTotal)}</strong></Typography>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="body2">Saldo: <strong>{formatCurrency(balance)}</strong></Typography>
-          </Grid>
-        </Grid>
+        <OrderSummaryStrip itemsTotal={itemsTotal} paidTotal={paidTotal} balance={balance} />
       </AdminSection>
 
       <Box

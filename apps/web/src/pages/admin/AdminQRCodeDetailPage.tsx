@@ -157,11 +157,16 @@ export function AdminQRCodeDetailPage() {
               <Box component="img" src={svgPreviewUrl} alt={`QR ${qrCode.name}`} sx={{ width: 260, maxWidth: "100%", borderRadius: 2, border: "1px solid rgba(64,44,37,.10)", bgcolor: "#fff", p: 1.5 }} />
               <Stack spacing={1}>
                 <Typography color="text.secondary">
-                  Color principal: {qrCode.designConfig.foregroundColor} | Fondo: {qrCode.designConfig.backgroundColor}
+                  Color principal: {qrCode.designConfig.foregroundColor} | Fondo: {qrCode.designConfig.transparentBackground ? "Transparente" : qrCode.designConfig.backgroundColor}
                 </Typography>
                 <Typography color="text.secondary">
                   Margen: {qrCode.designConfig.margin}
                 </Typography>
+                {!qrCode.designConfig.transparentBackground && (
+                  <Typography color="text.secondary">
+                    Color de fondo visible: {qrCode.designConfig.backgroundColor}
+                  </Typography>
+                )}
               </Stack>
             </Stack>
           </AdminSection>

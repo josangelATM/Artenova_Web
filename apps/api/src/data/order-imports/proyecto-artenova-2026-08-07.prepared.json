@@ -1,0 +1,4613 @@
+{
+  "source": {
+    "kind": "excel-workbook",
+    "file": "C:\\Users\\JOSEANSANCHEZ\\Documents\\temp\\eml batch\\Proyecto artenova.xlsx",
+    "preparedAt": "2026-08-07T17:57:49.750Z"
+  },
+  "summary": {
+    "totalRows": 94,
+    "regularRows": 22,
+    "petRows": 72,
+    "igRows": 19,
+    "zeroTotalRows": 20,
+    "automaticOrders": 80,
+    "groupedOrders": 9,
+    "reviewGroups": 0
+  },
+  "reviewGroups": [],
+  "automaticOrders": [
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        4
+      ],
+      "customerName": "Mackan",
+      "customerWhatsapp": "6962-5607",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Mackan",
+        "customerWhatsapp": "6962-5607",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 4",
+        "status": "nuevo",
+        "finalPrice": 35,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Placa para vehiculo",
+            "quantity": 1,
+            "unitPrice": 35,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "4"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 35,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        5
+      ],
+      "customerName": "Franciech",
+      "customerWhatsapp": "6247-7057",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Franciech",
+        "customerWhatsapp": "6247-7057",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 5",
+        "status": "nuevo",
+        "finalPrice": 48,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cruces de acrílico blanco",
+            "quantity": 12,
+            "unitPrice": 4,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "5"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 14.4,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        6
+      ],
+      "customerName": "Dinorah",
+      "customerWhatsapp": "6678-2052",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Dinorah",
+        "customerWhatsapp": "6678-2052",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 6",
+        "status": "nuevo",
+        "finalPrice": 75,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Fallecimiento",
+            "quantity": 30,
+            "unitPrice": 2.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "6"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 75,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        7
+      ],
+      "customerName": "Anyuri",
+      "customerWhatsapp": "6750-9792",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Anyuri",
+        "customerWhatsapp": "6750-9792",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 7",
+        "status": "nuevo",
+        "finalPrice": 32,
+        "items": [
+          {
+            "productId": null,
+            "productName": "cruces de padrinos",
+            "quantity": 2,
+            "unitPrice": 16,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "7"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 7.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        8
+      ],
+      "customerName": "America",
+      "customerWhatsapp": "6635-3802",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "America",
+        "customerWhatsapp": "6635-3802",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 8",
+        "status": "nuevo",
+        "finalPrice": 36,
+        "items": [
+          {
+            "productId": null,
+            "productName": "angelita dorada",
+            "quantity": 12,
+            "unitPrice": 3,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "8"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 20,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        9
+      ],
+      "customerName": "Tony bocas",
+      "customerWhatsapp": "6765-5814",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Tony bocas",
+        "customerWhatsapp": "6765-5814",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 9",
+        "status": "nuevo",
+        "finalPrice": 25,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Escudo del barcelona",
+            "quantity": 1,
+            "unitPrice": 25,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "9"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 25,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        10
+      ],
+      "customerName": "Laracelis",
+      "customerWhatsapp": "6378-8619",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Laracelis",
+        "customerWhatsapp": "6378-8619",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 10",
+        "status": "nuevo",
+        "finalPrice": 18,
+        "items": [
+          {
+            "productId": null,
+            "productName": "cripta",
+            "quantity": 1,
+            "unitPrice": 18,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "10"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 18,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        11
+      ],
+      "customerName": "Yabeira",
+      "customerWhatsapp": "6738-1358",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Yabeira",
+        "customerWhatsapp": "6738-1358",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 11",
+        "status": "nuevo",
+        "finalPrice": 31.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "angeles de cc",
+            "quantity": 6,
+            "unitPrice": 5.25,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "11"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 15,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        12
+      ],
+      "customerName": "Fabian",
+      "customerWhatsapp": "6715-0794",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Fabian",
+        "customerWhatsapp": "6715-0794",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 12",
+        "status": "nuevo",
+        "finalPrice": 35,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Logo en 3D",
+            "quantity": 1,
+            "unitPrice": 35,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "12"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 11,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        13,
+        14
+      ],
+      "customerName": "diex",
+      "customerWhatsapp": "6968-3525",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "diex",
+        "customerWhatsapp": "6968-3525",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 13, 14",
+        "status": "nuevo",
+        "finalPrice": 28,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Escudo arsenal",
+            "quantity": 1,
+            "unitPrice": 14,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "13"
+            },
+            "units": []
+          },
+          {
+            "productId": null,
+            "productName": "Escudo real madrid",
+            "quantity": 1,
+            "unitPrice": 14,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "14"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 8.4,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        15,
+        16
+      ],
+      "customerName": "douglas",
+      "customerWhatsapp": "6805-8127",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "douglas",
+        "customerWhatsapp": "6805-8127",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 15, 16",
+        "status": "nuevo",
+        "finalPrice": 28,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Escudo yankies",
+            "quantity": 1,
+            "unitPrice": 14,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "15"
+            },
+            "units": []
+          },
+          {
+            "productId": null,
+            "productName": "Escudo barcelona",
+            "quantity": 1,
+            "unitPrice": 14,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "16"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 8.4,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        17
+      ],
+      "customerName": "Vanesa",
+      "customerWhatsapp": "6680-6669",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Vanesa",
+        "customerWhatsapp": "6680-6669",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 17",
+        "status": "nuevo",
+        "finalPrice": 45,
+        "items": [
+          {
+            "productId": null,
+            "productName": "llaveros",
+            "quantity": 30,
+            "unitPrice": 1.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "17"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 13.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        18
+      ],
+      "customerName": "spinlab",
+      "customerWhatsapp": "6061-0652",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "spinlab",
+        "customerWhatsapp": "6061-0652",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 18",
+        "status": "nuevo",
+        "finalPrice": 31.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "medallas de acrilico",
+            "quantity": 9,
+            "unitPrice": 3.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "18"
+            },
+            "units": []
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        19
+      ],
+      "customerName": "spinlab",
+      "customerWhatsapp": "6061-0652",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "spinlab",
+        "customerWhatsapp": "6061-0652",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 19",
+        "status": "nuevo",
+        "finalPrice": 8,
+        "items": [
+          {
+            "productId": null,
+            "productName": "trofeo de acrílico",
+            "quantity": 1,
+            "unitPrice": 8,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "19"
+            },
+            "units": []
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        20
+      ],
+      "customerName": "guillermo",
+      "customerWhatsapp": "6838-8280",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "guillermo",
+        "customerWhatsapp": "6838-8280",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 20",
+        "status": "nuevo",
+        "finalPrice": 22.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "llavero + cartoncillo",
+            "quantity": 18,
+            "unitPrice": 1.25,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "20"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.76,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        21
+      ],
+      "customerName": "Jorgelis",
+      "customerWhatsapp": "6991-1458",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Jorgelis",
+        "customerWhatsapp": "6991-1458",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 21",
+        "status": "nuevo",
+        "finalPrice": 70,
+        "items": [
+          {
+            "productId": null,
+            "productName": "castillos mdf",
+            "quantity": 10,
+            "unitPrice": 7,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "21"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 56,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        22
+      ],
+      "customerName": "Isabel Flores",
+      "customerWhatsapp": "6841-4928",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Isabel Flores",
+        "customerWhatsapp": "6841-4928",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 22",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "llavero o collar",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "22"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        23
+      ],
+      "customerName": "milenys",
+      "customerWhatsapp": "6875-6814",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "milenys",
+        "customerWhatsapp": "6875-6814",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 23",
+        "status": "nuevo",
+        "finalPrice": 54,
+        "items": [
+          {
+            "productId": null,
+            "productName": "bautizo recordatorios",
+            "quantity": 12,
+            "unitPrice": 4.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "23"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 16.2,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        24
+      ],
+      "customerName": "Katherine",
+      "customerWhatsapp": "6027-1615",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Katherine",
+        "customerWhatsapp": "6027-1615",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 24",
+        "status": "nuevo",
+        "finalPrice": 67,
+        "items": [
+          {
+            "productId": null,
+            "productName": "bautizo angeles de la guarda",
+            "quantity": 10,
+            "unitPrice": 6.7,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "24"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 20.25,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Pedidos regulares",
+      "rowNumbers": [
+        25
+      ],
+      "customerName": "Melva",
+      "customerWhatsapp": "6004-0906",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Melva",
+        "customerWhatsapp": "6004-0906",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Pedidos regulares | Filas: 25",
+        "status": "nuevo",
+        "finalPrice": 45,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Caliz primera comunión",
+            "quantity": 12,
+            "unitPrice": 3.75,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Pedidos regulares",
+              "fila_origen": "25"
+            },
+            "units": []
+          }
+        ],
+        "payments": [
+          {
+            "amount": 13.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        4
+      ],
+      "customerName": "Gabriel",
+      "customerWhatsapp": "6217-2806",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Gabriel",
+        "customerWhatsapp": "6217-2806",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 4",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Ambar",
+                "personalization": {
+                  "nombre_mascota": "Ambar",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "4"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        5
+      ],
+      "customerName": "Velsi",
+      "customerWhatsapp": "6004-1464",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Velsi",
+        "customerWhatsapp": "6004-1464",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 5",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Bonnie",
+                "personalization": {
+                  "nombre_mascota": "Bonnie",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "5"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        6
+      ],
+      "customerName": "Maryel",
+      "customerWhatsapp": "6160-2355",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Maryel",
+        "customerWhatsapp": "6160-2355",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 6",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Peggy",
+                "personalization": {
+                  "nombre_mascota": "Peggy",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "6"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        7
+      ],
+      "customerName": "David Hernández",
+      "customerWhatsapp": "6568-6132",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "David Hernández",
+        "customerWhatsapp": "6568-6132",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 7",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Nala",
+                "personalization": {
+                  "nombre_mascota": "Nala",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "7"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        8
+      ],
+      "customerName": "Yira",
+      "customerWhatsapp": "6646-3097",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Yira",
+        "customerWhatsapp": "6646-3097",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 8",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Hebe",
+                "personalization": {
+                  "nombre_mascota": "Hebe",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "8"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        9
+      ],
+      "customerName": "Paulina",
+      "customerWhatsapp": "6115-2071",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Paulina",
+        "customerWhatsapp": "6115-2071",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 9",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Hikary",
+                "personalization": {
+                  "nombre_mascota": "Hikary",
+                  "tamano": "Pequeño",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "9"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        10,
+        11
+      ],
+      "customerName": "Felix",
+      "customerWhatsapp": "6671-8948",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "Felix",
+        "customerWhatsapp": "6671-8948",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 10, 11",
+        "status": "nuevo",
+        "finalPrice": 16.8,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 16.8,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "2"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Rosco",
+                "personalization": {
+                  "nombre_mascota": "Rosco",
+                  "tamano": "Mediano",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "8.4",
+                  "total_original": "8.4",
+                  "fila_origen": "10"
+                }
+              },
+              {
+                "position": 1,
+                "label": "Oslo",
+                "personalization": {
+                  "nombre_mascota": "Oslo",
+                  "tamano": "Mediano",
+                  "color": "Rojo",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "8.4",
+                  "total_original": "8.4",
+                  "fila_origen": "11"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 4.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        12
+      ],
+      "customerName": "Betzi",
+      "customerWhatsapp": "6679-8887",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Betzi",
+        "customerWhatsapp": "6679-8887",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 12",
+        "status": "nuevo",
+        "finalPrice": 9,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 9,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Tyler",
+                "personalization": {
+                  "nombre_mascota": "Tyler",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9",
+                  "total_original": "9",
+                  "fila_origen": "12"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 9,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        13
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 13",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Milo",
+                "personalization": {
+                  "nombre_mascota": "Milo",
+                  "tamano": "Mediano",
+                  "color": "Rojo",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "13"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        14
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 14",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Gator",
+                "personalization": {
+                  "nombre_mascota": "Gator",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "Si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "14"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        15
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 15",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Asha",
+                "personalization": {
+                  "nombre_mascota": "Asha",
+                  "tamano": "Pequeño",
+                  "color": "Fucsia",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "15"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        16
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 16",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Chikis",
+                "personalization": {
+                  "nombre_mascota": "Chikis",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "16"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        17
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 17",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Zeus",
+                "personalization": {
+                  "nombre_mascota": "Zeus",
+                  "tamano": "Pequeño",
+                  "color": "Azul",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "17"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        18
+      ],
+      "customerName": "Nathaly",
+      "customerWhatsapp": "6273-7265",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nathaly",
+        "customerWhatsapp": "6273-7265",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 18",
+        "status": "nuevo",
+        "finalPrice": 6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Chester",
+                "personalization": {
+                  "nombre_mascota": "Chester",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "6",
+                  "total_original": "6",
+                  "fila_origen": "18"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        19
+      ],
+      "customerName": "Marlon",
+      "customerWhatsapp": "6748-5690",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Marlon",
+        "customerWhatsapp": "6748-5690",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 19",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Ares",
+                "personalization": {
+                  "nombre_mascota": "Ares",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "19"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        20
+      ],
+      "customerName": "Elix",
+      "customerWhatsapp": "6550-4722",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Elix",
+        "customerWhatsapp": "6550-4722",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 20",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Fakir",
+                "personalization": {
+                  "nombre_mascota": "Fakir",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "20"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        21
+      ],
+      "customerName": "Milena",
+      "customerWhatsapp": "6989-6940",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Milena",
+        "customerWhatsapp": "6989-6940",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 21",
+        "status": "nuevo",
+        "finalPrice": 9.6,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 9.6,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Max",
+                "personalization": {
+                  "nombre_mascota": "Max",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.6",
+                  "total_original": "9.6",
+                  "fila_origen": "21"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 9.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        22
+      ],
+      "customerName": "Techeyca",
+      "customerWhatsapp": "6189-8958",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Techeyca",
+        "customerWhatsapp": "6189-8958",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 22",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Dante",
+                "personalization": {
+                  "nombre_mascota": "Dante",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "22"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        23
+      ],
+      "customerName": "Melanie",
+      "customerWhatsapp": "6949-2136",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Melanie",
+        "customerWhatsapp": "6949-2136",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 23",
+        "status": "nuevo",
+        "finalPrice": 10.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Lúa",
+                "personalization": {
+                  "nombre_mascota": "Lúa",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "10.5",
+                  "fila_origen": "23"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        24
+      ],
+      "customerName": "Melanie",
+      "customerWhatsapp": "6949-2136",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Melanie",
+        "customerWhatsapp": "6949-2136",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 24",
+        "status": "nuevo",
+        "finalPrice": 10.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Logan",
+                "personalization": {
+                  "nombre_mascota": "Logan",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "10.5",
+                  "fila_origen": "24"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        25
+      ],
+      "customerName": "Rita",
+      "customerWhatsapp": "6791-0923",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Rita",
+        "customerWhatsapp": "6791-0923",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 25",
+        "status": "nuevo",
+        "finalPrice": 9.2,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 9.2,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Balto",
+                "personalization": {
+                  "nombre_mascota": "Balto",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.2",
+                  "total_original": "9.2",
+                  "fila_origen": "25"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 9.2,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        26
+      ],
+      "customerName": "Rita",
+      "customerWhatsapp": "6791-0923",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Rita",
+        "customerWhatsapp": "6791-0923",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 26",
+        "status": "nuevo",
+        "finalPrice": 9.2,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 9.2,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Argos",
+                "personalization": {
+                  "nombre_mascota": "Argos",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.2",
+                  "total_original": "9.2",
+                  "fila_origen": "26"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 9.2,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        27
+      ],
+      "customerName": "Dewyer",
+      "customerWhatsapp": "6726-9325",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Dewyer",
+        "customerWhatsapp": "6726-9325",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 27",
+        "status": "nuevo",
+        "finalPrice": 14,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 2,
+            "unitPrice": 7,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Sansa",
+                "personalization": {
+                  "nombre_mascota": "Sansa",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "2",
+                  "costo_unitario_original": "7",
+                  "total_original": "14",
+                  "fila_origen": "27"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 14,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        28
+      ],
+      "customerName": "Dewyer",
+      "customerWhatsapp": "6726-9325",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Dewyer",
+        "customerWhatsapp": "6726-9325",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 28",
+        "status": "nuevo",
+        "finalPrice": 14,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 2,
+            "unitPrice": 7,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Arya",
+                "personalization": {
+                  "nombre_mascota": "Arya",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "2",
+                  "costo_unitario_original": "7",
+                  "total_original": "14",
+                  "fila_origen": "28"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 14,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        29
+      ],
+      "customerName": "ziva",
+      "customerWhatsapp": "6668-4187",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "ziva",
+        "customerWhatsapp": "6668-4187",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 29",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "kat",
+                "personalization": {
+                  "nombre_mascota": "kat",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "29"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        30
+      ],
+      "customerName": "sra ka",
+      "customerWhatsapp": "6269-3315",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "sra ka",
+        "customerWhatsapp": "6269-3315",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 30",
+        "status": "nuevo",
+        "finalPrice": 10,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "dexter",
+                "personalization": {
+                  "nombre_mascota": "dexter",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "10",
+                  "total_original": "10",
+                  "fila_origen": "30"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        31,
+        32,
+        33
+      ],
+      "customerName": "kadir barria",
+      "customerWhatsapp": "6920-4464",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "kadir barria",
+        "customerWhatsapp": "6920-4464",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 31, 32, 33",
+        "status": "nuevo",
+        "finalPrice": 27.48,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 27.48,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "3"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Max",
+                "personalization": {
+                  "nombre_mascota": "Max",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.16",
+                  "total_original": "9.16",
+                  "fila_origen": "31"
+                }
+              },
+              {
+                "position": 1,
+                "label": "mailo",
+                "personalization": {
+                  "nombre_mascota": "mailo",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.16",
+                  "total_original": "9.16",
+                  "fila_origen": "32"
+                }
+              },
+              {
+                "position": 2,
+                "label": "rocco",
+                "personalization": {
+                  "nombre_mascota": "rocco",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "9.16",
+                  "total_original": "9.16",
+                  "fila_origen": "33"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 2.75,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        34
+      ],
+      "customerName": "Simone",
+      "customerWhatsapp": "6275-7581",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Simone",
+        "customerWhatsapp": "6275-7581",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 34",
+        "status": "nuevo",
+        "finalPrice": 10.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Spritz",
+                "personalization": {
+                  "nombre_mascota": "Spritz",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "10.5",
+                  "total_original": "10.5",
+                  "fila_origen": "34"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        35
+      ],
+      "customerName": "Simone",
+      "customerWhatsapp": "6275-7581",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Simone",
+        "customerWhatsapp": "6275-7581",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 35",
+        "status": "nuevo",
+        "finalPrice": 10.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Limoncello",
+                "personalization": {
+                  "nombre_mascota": "Limoncello",
+                  "tamano": "Grande",
+                  "color": "Verde",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "10.5",
+                  "total_original": "10.5",
+                  "fila_origen": "35"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        36
+      ],
+      "customerName": "Maribel",
+      "customerWhatsapp": "6495-0920",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Maribel",
+        "customerWhatsapp": "6495-0920",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 36",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Dior",
+                "personalization": {
+                  "nombre_mascota": "Dior",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "36"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        37,
+        38
+      ],
+      "customerName": "Olga",
+      "customerWhatsapp": "6949-3956",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "Olga",
+        "customerWhatsapp": "6949-3956",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 37, 38",
+        "status": "nuevo",
+        "finalPrice": 21,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 21,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "2"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "denver",
+                "personalization": {
+                  "nombre_mascota": "denver",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "21",
+                  "total_original": "21",
+                  "fila_origen": "37"
+                }
+              },
+              {
+                "position": 1,
+                "label": "capo",
+                "personalization": {
+                  "nombre_mascota": "capo",
+                  "tamano": "Pequeño",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "38"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        39,
+        40
+      ],
+      "customerName": "ms",
+      "customerWhatsapp": "6679-7096",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "ms",
+        "customerWhatsapp": "6679-7096",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 39, 40",
+        "status": "nuevo",
+        "finalPrice": 21,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 21,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "2"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Kiraneth",
+                "personalization": {
+                  "nombre_mascota": "Kiraneth",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "21",
+                  "total_original": "21",
+                  "fila_origen": "39"
+                }
+              },
+              {
+                "position": 1,
+                "label": "Ragnar",
+                "personalization": {
+                  "nombre_mascota": "Ragnar",
+                  "tamano": "Pequeño",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "40"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        41,
+        42,
+        43
+      ],
+      "customerName": "Transporte",
+      "customerWhatsapp": "6280-9842",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "Transporte",
+        "customerWhatsapp": "6280-9842",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 41, 42, 43",
+        "status": "nuevo",
+        "finalPrice": 27.5,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 27.5,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "3"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Danger",
+                "personalization": {
+                  "nombre_mascota": "Danger",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "27.5",
+                  "total_original": "27.5",
+                  "fila_origen": "41"
+                }
+              },
+              {
+                "position": 1,
+                "label": "Candy",
+                "personalization": {
+                  "nombre_mascota": "Candy",
+                  "tamano": "Pequeño",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "42"
+                }
+              },
+              {
+                "position": 2,
+                "label": "Gali",
+                "personalization": {
+                  "nombre_mascota": "Gali",
+                  "tamano": "Pequeño",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "43"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 8.25,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        44
+      ],
+      "customerName": "Veira",
+      "customerWhatsapp": "6202-4817",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Veira",
+        "customerWhatsapp": "6202-4817",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 44",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Bruno",
+                "personalization": {
+                  "nombre_mascota": "Bruno",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "44"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        45
+      ],
+      "customerName": "mansori",
+      "customerWhatsapp": "6992-2249",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "mansori",
+        "customerWhatsapp": "6992-2249",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 45",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "vito",
+                "personalization": {
+                  "nombre_mascota": "vito",
+                  "tamano": "Pequeño",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "45"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        46
+      ],
+      "customerName": "zulay",
+      "customerWhatsapp": "6640-1445",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "zulay",
+        "customerWhatsapp": "6640-1445",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 46",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "nino",
+                "personalization": {
+                  "nombre_mascota": "nino",
+                  "tamano": "Mediano",
+                  "color": "Azul",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "46"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        47
+      ],
+      "customerName": "Nicolle",
+      "customerWhatsapp": "6763-8104",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Nicolle",
+        "customerWhatsapp": "6763-8104",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 47",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "copito",
+                "personalization": {
+                  "nombre_mascota": "copito",
+                  "tamano": "Pequeño",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "47"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        48
+      ],
+      "customerName": "Travel 2 panama",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Travel 2 panama",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 48",
+        "status": "nuevo",
+        "finalPrice": 10,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 10,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Teo",
+                "personalization": {
+                  "nombre_mascota": "Teo",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "10",
+                  "total_original": "10",
+                  "fila_origen": "48"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        49
+      ],
+      "customerName": "Anne",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Anne",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 49",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Aston",
+                "personalization": {
+                  "nombre_mascota": "Aston",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "SI",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "49"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        50
+      ],
+      "customerName": "Fernando",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Fernando",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 50",
+        "status": "nuevo",
+        "finalPrice": 21,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 21,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Sohpie",
+                "personalization": {
+                  "nombre_mascota": "Sohpie",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "21",
+                  "total_original": "21",
+                  "fila_origen": "50"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        51
+      ],
+      "customerName": "Fernando",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Fernando",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 51",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Kiraneth",
+                "personalization": {
+                  "nombre_mascota": "Kiraneth",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "51"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        52,
+        53,
+        54
+      ],
+      "customerName": "Iris Atencio",
+      "customerWhatsapp": "6892-7181",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "Iris Atencio",
+        "customerWhatsapp": "6892-7181",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 52, 53, 54",
+        "status": "nuevo",
+        "finalPrice": 23,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 23,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "3"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "wolfie",
+                "personalization": {
+                  "nombre_mascota": "wolfie",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "23",
+                  "total_original": "23",
+                  "fila_origen": "52"
+                }
+              },
+              {
+                "position": 1,
+                "label": "leia",
+                "personalization": {
+                  "nombre_mascota": "leia",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "53"
+                }
+              },
+              {
+                "position": 2,
+                "label": "maddy",
+                "personalization": {
+                  "nombre_mascota": "maddy",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "No",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "54"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 7,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        55
+      ],
+      "customerName": "edwin",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "edwin",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 55",
+        "status": "nuevo",
+        "finalPrice": 23,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 23,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Duke",
+                "personalization": {
+                  "nombre_mascota": "Duke",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "23",
+                  "total_original": "23",
+                  "fila_origen": "55"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        56
+      ],
+      "customerName": "edwin",
+      "customerWhatsapp": "IG",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "edwin",
+        "customerWhatsapp": "IG",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 56",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "lulu",
+                "personalization": {
+                  "nombre_mascota": "lulu",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "56"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        57
+      ],
+      "customerName": "yaneth",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "yaneth",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 57",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "zeus",
+                "personalization": {
+                  "nombre_mascota": "zeus",
+                  "tamano": "Pequeño",
+                  "color": "Rojo",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "57"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        58
+      ],
+      "customerName": "Reinaldo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Reinaldo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 58",
+        "status": "nuevo",
+        "finalPrice": 34,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 34,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "jet",
+                "personalization": {
+                  "nombre_mascota": "jet",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "34",
+                  "total_original": "34",
+                  "fila_origen": "58"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 34,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        59
+      ],
+      "customerName": "Reinaldo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Reinaldo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 59",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "boing",
+                "personalization": {
+                  "nombre_mascota": "boing",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "59"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        60
+      ],
+      "customerName": "Reinaldo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Reinaldo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 60",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "piper",
+                "personalization": {
+                  "nombre_mascota": "piper",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "60"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        61
+      ],
+      "customerName": "Reinaldo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Reinaldo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 61",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Max",
+                "personalization": {
+                  "nombre_mascota": "Max",
+                  "tamano": "Pequeño",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "61"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        62
+      ],
+      "customerName": "angla diaz",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "angla diaz",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 62",
+        "status": "nuevo",
+        "finalPrice": 21,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 21,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "doki",
+                "personalization": {
+                  "nombre_mascota": "doki",
+                  "tamano": "Grande",
+                  "color": "Azul",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "21",
+                  "total_original": "21",
+                  "fila_origen": "62"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        63
+      ],
+      "customerName": "angla diaz",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "angla diaz",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 63",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "moshi",
+                "personalization": {
+                  "nombre_mascota": "moshi",
+                  "tamano": "Pequeño",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "63"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        64
+      ],
+      "customerName": "moni",
+      "customerWhatsapp": "6986-3468",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "moni",
+        "customerWhatsapp": "6986-3468",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 64",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "bruce",
+                "personalization": {
+                  "nombre_mascota": "bruce",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "64"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        65
+      ],
+      "customerName": "xiomara",
+      "customerWhatsapp": "6611-1905",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "xiomara",
+        "customerWhatsapp": "6611-1905",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 65",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "Frida",
+                "personalization": {
+                  "nombre_mascota": "Frida",
+                  "tamano": "Grande",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "65"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        66,
+        67,
+        68,
+        69
+      ],
+      "customerName": "manuel",
+      "customerWhatsapp": "6617-3087",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "grouped",
+      "input": {
+        "customerName": "manuel",
+        "customerWhatsapp": "6617-3087",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Filas: 66, 67, 68, 69",
+        "status": "nuevo",
+        "finalPrice": 34,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 34,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota",
+              "registros_agrupados": "4"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "pipa",
+                "personalization": {
+                  "nombre_mascota": "pipa",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "34",
+                  "total_original": "34",
+                  "fila_origen": "66"
+                }
+              },
+              {
+                "position": 1,
+                "label": "pipa",
+                "personalization": {
+                  "nombre_mascota": "pipa",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "67"
+                }
+              },
+              {
+                "position": 2,
+                "label": "pipa",
+                "personalization": {
+                  "nombre_mascota": "pipa",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "68"
+                }
+              },
+              {
+                "position": 3,
+                "label": "bella",
+                "personalization": {
+                  "nombre_mascota": "bella",
+                  "tamano": "Mediano",
+                  "color": "Fucsia",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "69"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.2,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        70
+      ],
+      "customerName": "Diego castillo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Diego castillo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 70",
+        "status": "nuevo",
+        "finalPrice": 21,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 21,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "koda",
+                "personalization": {
+                  "nombre_mascota": "koda",
+                  "tamano": "Grande",
+                  "color": "Rojo",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "21",
+                  "total_original": "21",
+                  "fila_origen": "70"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 6.3,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        71
+      ],
+      "customerName": "Diego castillo",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "Diego castillo",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 71",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "noa",
+                "personalization": {
+                  "nombre_mascota": "noa",
+                  "tamano": "Mediano",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "71"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        72
+      ],
+      "customerName": "jesus",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "jesus",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 72",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "kronos",
+                "personalization": {
+                  "nombre_mascota": "kronos",
+                  "tamano": "Grande",
+                  "color": "Negro",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "72"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 3.6,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        73
+      ],
+      "customerName": "thelma",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "thelma",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 73",
+        "status": "nuevo",
+        "finalPrice": 23,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 23,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "clio",
+                "personalization": {
+                  "nombre_mascota": "clio",
+                  "tamano": "mediana",
+                  "color": "roja",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "23",
+                  "total_original": "23",
+                  "fila_origen": "73"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 10.5,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        74
+      ],
+      "customerName": "thelma",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "thelma",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 74",
+        "status": "nuevo",
+        "finalPrice": 0,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 0,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "clio",
+                "personalization": {
+                  "nombre_mascota": "clio",
+                  "tamano": "mediana",
+                  "color": "roja",
+                  "qr": "si",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "0",
+                  "total_original": "0",
+                  "fila_origen": "74"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": []
+      }
+    },
+    {
+      "sheetName": "Cédulas de mascota",
+      "rowNumbers": [
+        75
+      ],
+      "customerName": "juvenal",
+      "customerWhatsapp": "ig",
+      "createdAt": "2026-08-07T05:00:36.000Z",
+      "mode": "single",
+      "input": {
+        "customerName": "juvenal",
+        "customerWhatsapp": "ig",
+        "customerNote": "",
+        "internalNote": "Importado desde Excel | Hoja: Cédulas de mascota | Fila: 75",
+        "status": "nuevo",
+        "finalPrice": 12,
+        "items": [
+          {
+            "productId": null,
+            "productName": "Cédula de mascota",
+            "quantity": 1,
+            "unitPrice": 12,
+            "extrasTotal": 0,
+            "skuSnapshot": null,
+            "variantNameSnapshot": null,
+            "unitLabel": null,
+            "selectedExtraIds": [],
+            "appliedAdjustments": [],
+            "personalization": {
+              "fecha_original": "2026-08-07",
+              "hoja_origen": "Cédulas de mascota"
+            },
+            "units": [
+              {
+                "position": 0,
+                "label": "bustamente",
+                "personalization": {
+                  "nombre_mascota": "bustamente",
+                  "tamano": "mediana",
+                  "color": "roja",
+                  "qr": "Sí",
+                  "cantidad_original": "1",
+                  "costo_unitario_original": "12",
+                  "total_original": "12",
+                  "fila_origen": "75"
+                }
+              }
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "amount": 12,
+            "method": "yappy",
+            "note": "Importado desde Excel"
+          }
+        ]
+      }
+    }
+  ]
+}
