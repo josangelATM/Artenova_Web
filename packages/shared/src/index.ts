@@ -443,7 +443,7 @@ export const adminExpenseListResponseSchema = z.object({
 
 export const createOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
-  customerWhatsapp: z.string().min(6).max(40),
+  customerWhatsapp: z.string().trim().max(40).default(""),
   customerNote: z.string().max(1200).optional().default(""),
   items: z.array(orderItemInputSchema).min(1),
 });
@@ -456,7 +456,7 @@ export const updateOrderSchema = z.object({
 
 export const createAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
-  customerWhatsapp: z.string().trim().min(2).max(40),
+  customerWhatsapp: z.string().trim().max(40).default(""),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),
@@ -467,7 +467,7 @@ export const createAdminOrderSchema = z.object({
 
 export const updateAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
-  customerWhatsapp: z.string().trim().min(2).max(40),
+  customerWhatsapp: z.string().trim().max(40).default(""),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),

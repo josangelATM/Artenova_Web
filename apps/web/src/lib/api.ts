@@ -1,5 +1,91 @@
 import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
 
+export type ApiValidationIssue = {
+  path: Array<string | number>;
+  key: string;
+  message: string;
+  code?: string;
+};
+
+type ApiErrorPayload = {
+  message: string;
+  issues: ApiValidationIssue[];
+  fieldErrors: Record<string, string>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeIssue(value: unknown): ApiValidationIssue | null {
+  if (!isRecord(value) || typeof value.message !== "string") {
+    return null;
+  }
+
+  const path = Array.isArray(value.path)
+    ? value.path.filter((item) => typeof item === "string" || typeof item === "number")
+    : [];
+  const key = typeof value.key === "string"
+    ? value.key
+    : path.map(String).join(".");
+
+  return {
+    path,
+    key,
+    message: value.message,
+    code: typeof value.code === "string" ? value.code : undefined,
+  };
+}
+
+function normalizeFieldErrors(value: unknown) {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => typeof item === "string"),
+  ) as Record<string, string>;
+}
+
+export function parseApiErrorPayload(body: unknown, fallbackMessage: string): ApiErrorPayload {
+  if (!isRecord(body)) {
+    return { message: fallbackMessage, issues: [], fieldErrors: {} };
+  }
+
+  const issues = Array.isArray(body.issues)
+    ? body.issues.map(normalizeIssue).filter((item): item is ApiValidationIssue => Boolean(item))
+    : [];
+  const fieldErrors = normalizeFieldErrors(body.fieldErrors);
+
+  issues.forEach((issue) => {
+    if (issue.key && !fieldErrors[issue.key]) {
+      fieldErrors[issue.key] = issue.message;
+    }
+  });
+
+  return {
+    message: typeof body.message === "string" ? body.message : fallbackMessage,
+    issues,
+    fieldErrors,
+  };
+}
+
+export class ApiRequestError extends Error {
+  status: number;
+  issues: ApiValidationIssue[];
+  fieldErrors: Record<string, string>;
+
+  constructor(status: number, payload: ApiErrorPayload) {
+    super(payload.message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.issues = payload.issues;
+    this.fieldErrors = payload.fieldErrors;
+  }
+}
+
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return error instanceof ApiRequestError;
+}
+
 type AdminProductPayload = Omit<Partial<Product>, "media" | "priceTiers" | "extras" | "customFields" | "variants" | "pricingSummary" | "reviews" | "reviewSummary"> & {
   id?: string;
   media?: Array<Omit<ProductMedia, "id">>;
@@ -31,7 +117,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.message ?? "No se pudo completar la solicitud");
+    throw new ApiRequestError(response.status, parseApiErrorPayload(body, "No se pudo completar la solicitud"));
   }
 
   if (response.status === 204) {

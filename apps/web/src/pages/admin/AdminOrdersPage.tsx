@@ -8,10 +8,22 @@ import { formatCurrency, type AdminOrderPaymentInput, type Order } from "@arteno
 import { Link as RouterLink } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip, adminSurfaceSx } from "./adminUi";
-import { AdminDataGrid, AdminListToolbar } from "./adminCrudUi";
+import { AdminDataGrid, AdminGridAction, AdminListToolbar, adminGridActionIcons } from "./adminCrudUi";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("es-PA", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function summarizeOrderItems(order: Order, limit = 2) {
+  const visibleItems = order.items.slice(0, limit).map((item) => ({
+    id: item.id,
+    label: `${item.quantity} x ${item.productName}`,
+  }));
+
+  return {
+    visibleItems,
+    remainingCount: Math.max(0, order.items.length - visibleItems.length),
+  };
 }
 
 export function AdminOrdersPage() {
@@ -103,26 +115,28 @@ export function AdminOrdersPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      minWidth: 220,
+      minWidth: 196,
       sortable: false,
       filterable: false,
       renderCell: ({ row }) => (
         <Stack direction="row" spacing={0.5}>
-          <Button component={RouterLink} to={`/admin/pedidos/${row.id}`} size="small" variant="text">
-            Ver
-          </Button>
-          <Button component={RouterLink} to={`/admin/pedidos/${row.id}/editar`} size="small" variant="text">
-            Editar
-          </Button>
+          <AdminGridAction label="Ver" icon={adminGridActionIcons.view} to={`/admin/pedidos/${row.id}`} />
+          <AdminGridAction label="Editar" icon={adminGridActionIcons.edit} to={`/admin/pedidos/${row.id}/editar`} />
           {row.balance > 0 && (
-            <Button size="small" variant="text" disabled={updatingId === row.id} onClick={(event) => openPaymentMenu(event, row.id)}>
-              Pagado
-            </Button>
+            <AdminGridAction
+              label="Registrar pago completo"
+              icon={adminGridActionIcons.markPaid}
+              disabled={updatingId === row.id}
+              onClick={(event) => openPaymentMenu(event, row.id)}
+            />
           )}
           {row.status !== "entregado" && (
-            <Button size="small" variant="text" disabled={updatingId === row.id} onClick={() => void markDelivered(row.id)}>
-              Entregado
-            </Button>
+            <AdminGridAction
+              label="Marcar entregado"
+              icon={adminGridActionIcons.markDelivered}
+              disabled={updatingId === row.id}
+              onClick={() => void markDelivered(row.id)}
+            />
           )}
         </Stack>
       ),
@@ -155,6 +169,32 @@ export function AdminOrdersPage() {
       headerName: "Items",
       minWidth: 96,
       valueGetter: (_value, row) => row.items.length,
+    },
+    {
+      field: "itemsPreview",
+      headerName: "Resumen",
+      minWidth: 260,
+      flex: 1.15,
+      sortable: false,
+      filterable: false,
+      renderCell: ({ row }) => {
+        const summary = summarizeOrderItems(row);
+
+        return (
+          <Stack spacing={0.4} minWidth={0} py={0.75}>
+            {summary.visibleItems.map((item) => (
+              <Typography key={item.id} variant="caption" noWrap title={item.label}>
+                {item.label}
+              </Typography>
+            ))}
+            {summary.remainingCount > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                +{summary.remainingCount} mÃ¡s
+              </Typography>
+            )}
+          </Stack>
+        );
+      },
     },
     {
       field: "finalPrice",
@@ -244,9 +284,12 @@ export function AdminOrdersPage() {
               <Typography color="text.secondary">Crea el primer pedido manual para empezar a operar desde Admin.</Typography>
             </Paper>
           )}
-          {orders.map((order) => (
-            <Paper key={order.id} sx={{ ...adminSurfaceSx, p: 1.5 }}>
-              <Stack spacing={1}>
+          {orders.map((order) => {
+            const summary = summarizeOrderItems(order, 3);
+
+            return (
+              <Paper key={order.id} sx={{ ...adminSurfaceSx, p: 1.5 }}>
+                <Stack spacing={1}>
                 <Stack direction="row" justifyContent="space-between" gap={1} alignItems="flex-start">
                   <Stack spacing={0.25}>
                     <Typography fontWeight={900}>{order.code}</Typography>
@@ -256,6 +299,18 @@ export function AdminOrdersPage() {
                 </Stack>
                 <Typography fontWeight={800}>{order.customerName}</Typography>
                 <Typography variant="body2" color="text.secondary">{order.customerWhatsapp}</Typography>
+                <Stack spacing={0.35}>
+                  {summary.visibleItems.map((item) => (
+                    <Typography key={item.id} variant="caption" color="text.secondary" noWrap>
+                      {item.label}
+                    </Typography>
+                  ))}
+                  {summary.remainingCount > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      +{summary.remainingCount} mÃ¡s
+                    </Typography>
+                  )}
+                </Stack>
                 <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
                   <Typography variant="body2">Items: <strong>{order.items.length}</strong></Typography>
                   <Typography variant="body2">Total: <strong>{formatCurrency(order.finalPrice ?? order.itemsTotal)}</strong></Typography>
@@ -282,9 +337,10 @@ export function AdminOrdersPage() {
                     </Button>
                   )}
                 </Stack>
-              </Stack>
-            </Paper>
-          ))}
+                </Stack>
+              </Paper>
+            );
+          })}
         </Stack>
       ) : (
         <AdminDataGrid rows={orders} columns={columns} loading={loading} emptyTitle="Sin pedidos" emptyDescription="Crea el primer pedido manual para empezar a operar desde Admin." />

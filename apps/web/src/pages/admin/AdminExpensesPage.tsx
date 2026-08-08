@@ -64,7 +64,7 @@ export function AdminExpensesPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      minWidth: 180,
+      minWidth: 112,
       sortable: false,
       filterable: false,
       renderCell: ({ row }) => (

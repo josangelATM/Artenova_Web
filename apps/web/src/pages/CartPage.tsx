@@ -99,7 +99,7 @@ export function CartPage() {
           <Stack spacing={2}>
             <Typography variant="h5" fontWeight={900}>Datos de contacto</Typography>
             <TextField label="Nombre" required value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
-            <TextField label="WhatsApp" required value={customerWhatsapp} onChange={(event) => setCustomerWhatsapp(event.target.value)} />
+            <TextField label="WhatsApp" value={customerWhatsapp} onChange={(event) => setCustomerWhatsapp(event.target.value)} />
             <TextField label="Nota para Artenova" multiline minRows={3} value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} />
             <Button disabled={submitting || cart.items.length === 0} variant="contained" size="large" onClick={submit} sx={{ minHeight: 48 }}>
               {submitting ? "Enviando pedido..." : "Enviar pedido"}

@@ -40,7 +40,7 @@ export function AdminCategoriesPage() {
         headerName: "Acciones",
         sortable: false,
         filterable: false,
-        minWidth: 172,
+        minWidth: 112,
         renderCell: ({ row }) => (
           <Stack direction="row" spacing={0.5}>
             {actions.view(row.id)}

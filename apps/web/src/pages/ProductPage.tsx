@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
 import { formatCurrency, resolveFirstStillUrl, resolveMediaStillUrl, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
+import { AutoLinkedText } from "../components/AutoLinkedText";
 import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
 import { ProductReviews } from "../components/ProductReviews";
 import { ProductPageSkeleton } from "../components/SkeletonStates";
@@ -324,8 +325,8 @@ export function ProductPage() {
                   </Typography>
                 </Stack>
               )}
-              <Typography color="text.secondary" mt={1.5} sx={{ maxWidth: "62ch", lineHeight: 1.75 }}>
-                {product.description}
+              <Typography color="text.secondary" mt={1.5} sx={{ maxWidth: "62ch", lineHeight: 1.75, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                <AutoLinkedText text={product.description} />
               </Typography>
 
               {hasVariants && (

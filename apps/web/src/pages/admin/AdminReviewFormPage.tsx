@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Grid, MenuItem, Rating, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Grid, MenuItem, Rating, Stack, TextField, Typography } from "@mui/material";
 import type { Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { AdminPageHeader, AdminSection } from "./adminUi";
+import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
+import { AdminFormErrorAlert } from "./adminFormErrors";
+import { AdminPageHeader, AdminSection } from "./adminUi";
 
 const emptyReview = {
   productId: "",
   rating: 5,
   customerName: "",
   comment: "",
-  isApproved: true
+  isApproved: true,
+};
+
+const fieldLabels: Record<string, string> = {
+  productId: "Producto",
+  rating: "Calificación",
+  customerName: "Nombre visible",
+  comment: "Comentario",
+  isApproved: "Estado",
 };
 
 export function AdminReviewFormPage() {
@@ -21,8 +31,13 @@ export function AdminReviewFormPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState(emptyFormErrorState);
   const isEdit = Boolean(id);
+
+  function updateField<K extends keyof typeof emptyReview>(field: K, value: (typeof emptyReview)[K]) {
+    setDraft((current) => ({ ...current, [field]: value }));
+    setFormError((current) => clearFormErrorField(current, String(field)));
+  }
 
   useEffect(() => {
     let active = true;
@@ -36,7 +51,7 @@ export function AdminReviewFormPage() {
           rating: review.rating,
           customerName: review.customerName,
           comment: review.comment,
-          isApproved: review.isApproved
+          isApproved: review.isApproved,
         });
       } else {
         setDraft((current) => ({ ...current, productId: allProducts[0]?.id ?? "" }));
@@ -44,7 +59,7 @@ export function AdminReviewFormPage() {
       setLoading(false);
     }).catch((err) => {
       if (!active) return;
-      setError(err instanceof Error ? err.message : "No se pudo cargar la reseña");
+      setFormError(createFormErrorState(err, { fallbackMessage: "No se pudo cargar la reseña" }));
       setLoading(false);
     });
     return () => {
@@ -55,11 +70,14 @@ export function AdminReviewFormPage() {
   async function save() {
     try {
       setSaving(true);
-      setError("");
+      setFormError(emptyFormErrorState);
       const saved = await api.saveAdminReview({ id, ...draft });
       navigate(`/admin/resenas/${saved.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar la reseña");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo guardar la reseña",
+        getFieldLabel: (field) => fieldLabels[field] ?? field,
+      }));
     } finally {
       setSaving(false);
     }
@@ -74,18 +92,18 @@ export function AdminReviewFormPage() {
         action={<AdminBackButton to={id ? `/admin/resenas/${id}` : "/admin/resenas"} />}
       />
       <AdminSection title="Contenido" description="Asocia la reseña al producto correcto y revisa su estado de publicación.">
-        {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+        <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 5 }}>
-              <TextField fullWidth select disabled={loading} label="Producto" value={draft.productId} onChange={(event) => setDraft({ ...draft, productId: event.target.value })}>
+              <TextField fullWidth select disabled={loading} label="Producto" value={draft.productId} onChange={(event) => updateField("productId", event.target.value)} error={Boolean(getFieldError(formError, "productId"))} helperText={getFieldError(formError, "productId")}>
                 {products.map((product) => (
                   <MenuItem key={product.id} value={product.id}>{product.name}</MenuItem>
                 ))}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField fullWidth select disabled={loading} label="Estado" value={draft.isApproved ? "approved" : "hidden"} onChange={(event) => setDraft({ ...draft, isApproved: event.target.value === "approved" })}>
+              <TextField fullWidth select disabled={loading} label="Estado" value={draft.isApproved ? "approved" : "hidden"} onChange={(event) => updateField("isApproved", event.target.value === "approved")} error={Boolean(getFieldError(formError, "isApproved"))} helperText={getFieldError(formError, "isApproved")}>
                 <MenuItem value="approved">Publicada</MenuItem>
                 <MenuItem value="hidden">Oculta</MenuItem>
               </TextField>
@@ -93,14 +111,15 @@ export function AdminReviewFormPage() {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={{ minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center", pt: { xs: 0, md: 0.5 } }}>
                 <Typography variant="body2" color="text.secondary">Calificación</Typography>
-                <Rating value={draft.rating} onChange={(_event, value) => setDraft({ ...draft, rating: value ?? 1 })} />
+                <Rating value={draft.rating} onChange={(_event, value) => updateField("rating", value ?? 1)} />
+                {getFieldError(formError, "rating") ? <Typography variant="caption" color="error">{getFieldError(formError, "rating")}</Typography> : null}
               </Box>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth disabled={loading} label="Nombre visible" value={draft.customerName} onChange={(event) => setDraft({ ...draft, customerName: event.target.value })} />
+              <TextField fullWidth disabled={loading} label="Nombre visible" value={draft.customerName} onChange={(event) => updateField("customerName", event.target.value)} error={Boolean(getFieldError(formError, "customerName"))} helperText={getFieldError(formError, "customerName")} />
             </Grid>
             <Grid size={12}>
-              <TextField fullWidth disabled={loading} label="Comentario" multiline minRows={5} value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
+              <TextField fullWidth disabled={loading} label="Comentario" multiline minRows={5} value={draft.comment} onChange={(event) => updateField("comment", event.target.value)} error={Boolean(getFieldError(formError, "comment"))} helperText={getFieldError(formError, "comment")} />
             </Grid>
           </Grid>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>

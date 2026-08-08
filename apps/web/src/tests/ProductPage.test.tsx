@@ -205,6 +205,26 @@ describe("ProductPage", () => {
     expect(screen.getByText("$22.00")).toBeInTheDocument();
   });
 
+  it("renders markdown links in the product description", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      description: "Catalogo:\n[Aqui](https://artenovapty.com/catalogo.pdf)",
+    });
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    const link = screen.getByRole("link", { name: "Aqui" });
+    expect(link).toHaveAttribute("href", "https://artenovapty.com/catalogo.pdf");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+  });
+
   it("keeps the active image when the selected variant changes inside the same visual group", async () => {
     productMock.mockResolvedValue({
       ...product,

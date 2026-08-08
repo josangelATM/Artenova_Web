@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 import { type Order, type Product } from "@artenova/shared";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../lib/api";
-import { AdminPageHeader, AdminSection } from "./adminUi";
+import { type ApiValidationIssue, api } from "../../lib/api";
+import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
+import { AdminFormErrorAlert } from "./adminFormErrors";
 import { buildDraftItemsPayload, buildDraftPaymentsPayload, defaultItem, emptyPaymentDraft, getBalance, getItemsTotal, getPaidTotal, moneyInputAdornment, OrderItemsEditor, OrderSummaryStrip, type DraftOrder, type DraftPayment } from "./adminOrderUi";
+import { AdminPageHeader, AdminSection } from "./adminUi";
 
 const emptyDraft: DraftOrder = {
   customerName: "",
@@ -16,13 +18,53 @@ const emptyDraft: DraftOrder = {
   items: [],
 };
 
+function resolveOrderField(issue: ApiValidationIssue) {
+  if (issue.key === "customerNote") return "note";
+  return issue.key || null;
+}
+
+function getOrderFieldLabel(field: string) {
+  if (field === "customerName") return "Nombre del cliente";
+  if (field === "customerWhatsapp") return "WhatsApp";
+  if (field === "status") return "Estado";
+  if (field === "note") return "Nota";
+
+  const itemMatch = field.match(/^items\.(\d+)\.(.+)$/);
+  if (itemMatch) {
+    const itemIndex = Number(itemMatch[1]) + 1;
+    const nestedField = itemMatch[2] ?? "";
+    if (nestedField === "productName") return `Item ${itemIndex}: Producto`;
+    if (nestedField === "quantity") return `Item ${itemIndex}: Cantidad`;
+    if (nestedField === "unitPrice") return `Item ${itemIndex}: Costo individual`;
+    const adjustmentMatch = nestedField.match(/^appliedAdjustments\.(\d+)\.(label|unitAmount)$/);
+    if (adjustmentMatch) {
+      const adjustmentIndex = Number(adjustmentMatch[1]) + 1;
+      return adjustmentMatch[2] === "label"
+        ? `Item ${itemIndex}: Cargo ${adjustmentIndex}`
+        : `Item ${itemIndex}: Monto del cargo ${adjustmentIndex}`;
+    }
+  }
+
+  const paymentMatch = field.match(/^payments\.(\d+)\.(amount|method|reference|note)$/);
+  if (paymentMatch) {
+    const paymentIndex = Number(paymentMatch[1]) + 1;
+    const paymentField = paymentMatch[2];
+    if (paymentField === "amount") return `Abono ${paymentIndex}: Monto`;
+    if (paymentField === "method") return `Abono ${paymentIndex}: Método`;
+    if (paymentField === "reference") return `Abono ${paymentIndex}: Referencia`;
+    return `Abono ${paymentIndex}: Nota`;
+  }
+
+  return field;
+}
+
 export function AdminOrderFormPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState<DraftOrder>(emptyDraft);
   const [payments, setPayments] = useState<DraftPayment[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState(emptyFormErrorState);
 
   useEffect(() => {
     let active = true;
@@ -40,11 +82,24 @@ export function AdminOrderFormPage() {
   const paidTotal = useMemo(() => getPaidTotal(payments), [payments]);
   const balance = useMemo(() => getBalance(itemsTotal, paidTotal), [itemsTotal, paidTotal]);
 
+  function updateDraftField<K extends keyof DraftOrder>(field: K, value: DraftOrder[K]) {
+    setDraft((current) => ({ ...current, [field]: value }));
+    setFormError((current) => clearFormErrorField(current, String(field)));
+  }
+
+  function clearField(field: string) {
+    setFormError((current) => clearFormErrorField(current, field));
+  }
+
   function addPayment() {
     setPayments((current) => [...current, { ...emptyPaymentDraft }]);
   }
 
   function updatePayment(index: number, patch: Partial<DraftPayment>) {
+    const changedField = Object.keys(patch)[0];
+    if (changedField) {
+      clearField(`payments.${index}.${changedField}`);
+    }
     setPayments((current) => current.map((payment, paymentIndex) => paymentIndex === index ? { ...payment, ...patch } : payment));
   }
 
@@ -55,7 +110,7 @@ export function AdminOrderFormPage() {
   async function save() {
     try {
       setSaving(true);
-      setError("");
+      setFormError(emptyFormErrorState);
       const order = await api.createAdminOrder({
         customerName: draft.customerName,
         customerWhatsapp: draft.customerWhatsapp,
@@ -68,7 +123,11 @@ export function AdminOrderFormPage() {
       });
       navigate(`/admin/pedidos/${order.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear el pedido");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo crear el pedido",
+        resolveField: resolveOrderField,
+        getFieldLabel: getOrderFieldLabel,
+      }));
     } finally {
       setSaving(false);
     }
@@ -81,16 +140,16 @@ export function AdminOrderFormPage() {
 
       <AdminSection title="Cliente">
         <Stack spacing={1.5}>
-          {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+          <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
           <Grid container spacing={1.5}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => setDraft({ ...draft, customerName: event.target.value })} />
+              <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => updateDraftField("customerName", event.target.value)} error={Boolean(getFieldError(formError, "customerName"))} helperText={getFieldError(formError, "customerName")} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => setDraft({ ...draft, customerWhatsapp: event.target.value })} />
+              <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => updateDraftField("customerWhatsapp", event.target.value)} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Order["status"] })}>
+              <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => updateDraftField("status", event.target.value as Order["status"])} error={Boolean(getFieldError(formError, "status"))} helperText={getFieldError(formError, "status")}>
                 <MenuItem value="nuevo">Nuevo</MenuItem>
                 <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>
                 <MenuItem value="pendiente_aprobacion">Pendiente por aprobación</MenuItem>
@@ -105,7 +164,13 @@ export function AdminOrderFormPage() {
       </AdminSection>
 
       <AdminSection title="Items">
-        <OrderItemsEditor items={draft.items} products={products} onChange={(items) => setDraft((current) => ({ ...current, items }))} />
+        <OrderItemsEditor
+          items={draft.items}
+          products={products}
+          onChange={(items) => setDraft((current) => ({ ...current, items }))}
+          getFieldError={(field) => getFieldError(formError, field)}
+          onClearFieldError={clearField}
+        />
       </AdminSection>
 
       <AdminSection title="Abonos" action={<Button variant="outlined" startIcon={<Plus size={18} />} onClick={addPayment}>Agregar abono</Button>}>
@@ -122,17 +187,10 @@ export function AdminOrderFormPage() {
                 </Stack>
                 <Grid container spacing={1.25}>
                   <Grid size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Monto"
-                      value={payment.amount}
-                      onChange={(event) => updatePayment(index, { amount: event.target.value })}
-                      slotProps={{ input: { startAdornment: moneyInputAdornment } }}
-                    />
+                    <TextField fullWidth size="small" label="Monto" value={payment.amount} onChange={(event) => updatePayment(index, { amount: event.target.value })} error={Boolean(getFieldError(formError, `payments.${index}.amount`))} helperText={getFieldError(formError, `payments.${index}.amount`)} slotProps={{ input: { startAdornment: moneyInputAdornment } }} />
                   </Grid>
                   <Grid size={{ xs: 12, md: 3 }}>
-                    <TextField fullWidth size="small" select label="Método" value={payment.method} onChange={(event) => updatePayment(index, { method: event.target.value as DraftPayment["method"] })}>
+                    <TextField fullWidth size="small" select label="Método" value={payment.method} onChange={(event) => updatePayment(index, { method: event.target.value as DraftPayment["method"] })} error={Boolean(getFieldError(formError, `payments.${index}.method`))} helperText={getFieldError(formError, `payments.${index}.method`)}>
                       <MenuItem value="efectivo">Efectivo</MenuItem>
                       <MenuItem value="yappy">Yappy</MenuItem>
                       <MenuItem value="transferencia">Transferencia</MenuItem>
@@ -140,10 +198,10 @@ export function AdminOrderFormPage() {
                     </TextField>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField fullWidth size="small" label="Referencia" value={payment.reference} onChange={(event) => updatePayment(index, { reference: event.target.value })} />
+                    <TextField fullWidth size="small" label="Referencia" value={payment.reference} onChange={(event) => updatePayment(index, { reference: event.target.value })} error={Boolean(getFieldError(formError, `payments.${index}.reference`))} helperText={getFieldError(formError, `payments.${index}.reference`)} />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth size="small" label="Nota" value={payment.note} onChange={(event) => updatePayment(index, { note: event.target.value })} multiline minRows={2} />
+                    <TextField fullWidth size="small" label="Nota" value={payment.note} onChange={(event) => updatePayment(index, { note: event.target.value })} error={Boolean(getFieldError(formError, `payments.${index}.note`))} helperText={getFieldError(formError, `payments.${index}.note`)} multiline minRows={2} />
                   </Grid>
                 </Grid>
               </Stack>
@@ -155,7 +213,7 @@ export function AdminOrderFormPage() {
       <AdminSection title="Nota">
         <Grid container spacing={1.5}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <TextField fullWidth label="Nota" multiline minRows={4} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
+            <TextField fullWidth label="Nota" multiline minRows={4} value={draft.note} onChange={(event) => updateDraftField("note", event.target.value)} error={Boolean(getFieldError(formError, "note"))} helperText={getFieldError(formError, "note")} />
           </Grid>
         </Grid>
       </AdminSection>

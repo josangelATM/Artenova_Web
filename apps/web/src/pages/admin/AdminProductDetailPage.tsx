@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, Grid, Stack, Typography } from "@mui/material
 import { Pencil } from "lucide-react";
 import { formatCurrency, type Product } from "@artenova/shared";
 import { Link as RouterLink, useParams } from "react-router-dom";
+import { AutoLinkedText } from "../../components/AutoLinkedText";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip } from "./adminUi";
 import { AdminBackButton, AdminBreadcrumbs, AdminDetailSection, AdminField } from "./adminCrudUi";
@@ -70,7 +71,7 @@ export function AdminProductDetailPage() {
                       <AdminField label="Precio visible" value={formatCurrency(defaultVariant?.pricingSummary.finalPrice ?? product.pricingSummary.finalPrice, product.currencySymbol)} />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                      <AdminField label="Descripción" value={product.description} />
+                      <AdminField label="Descripción" value={<AutoLinkedText text={product.description} />} />
                     </Grid>
                   </Grid>
                 </AdminDetailSection>

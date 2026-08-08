@@ -1,11 +1,47 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Divider, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Divider, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { formatCurrency, type Order, type Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../../lib/api";
-import { AdminPageHeader, AdminSection } from "./adminUi";
+import { type ApiValidationIssue, api } from "../../lib/api";
+import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
+import { AdminFormErrorAlert } from "./adminFormErrors";
 import { buildDraftItemsPayload, emptyPaymentDraft, getBalance, getItemsTotal, moneyInputAdornment, orderToDraft, OrderItemsEditor, OrderSummaryStrip, toNumberOrZero, type DraftOrder, type DraftPayment } from "./adminOrderUi";
+import { AdminPageHeader, AdminSection } from "./adminUi";
+
+function resolveOrderField(issue: ApiValidationIssue) {
+  if (issue.key === "customerNote") return "note";
+  return issue.key || null;
+}
+
+function getOrderFieldLabel(field: string) {
+  if (field === "customerName") return "Nombre del cliente";
+  if (field === "customerWhatsapp") return "WhatsApp";
+  if (field === "status") return "Estado";
+  if (field === "note") return "Nota";
+  if (field === "amount") return "Monto";
+  if (field === "method") return "Método";
+  if (field === "reference") return "Referencia";
+  if (field === "note") return "Nota";
+
+  const itemMatch = field.match(/^items\.(\d+)\.(.+)$/);
+  if (itemMatch) {
+    const itemIndex = Number(itemMatch[1]) + 1;
+    const nestedField = itemMatch[2] ?? "";
+    if (nestedField === "productName") return `Item ${itemIndex}: Producto`;
+    if (nestedField === "quantity") return `Item ${itemIndex}: Cantidad`;
+    if (nestedField === "unitPrice") return `Item ${itemIndex}: Costo individual`;
+    const adjustmentMatch = nestedField.match(/^appliedAdjustments\.(\d+)\.(label|unitAmount)$/);
+    if (adjustmentMatch) {
+      const adjustmentIndex = Number(adjustmentMatch[1]) + 1;
+      return adjustmentMatch[2] === "label"
+        ? `Item ${itemIndex}: Cargo ${adjustmentIndex}`
+        : `Item ${itemIndex}: Monto del cargo ${adjustmentIndex}`;
+    }
+  }
+
+  return field;
+}
 
 export function AdminOrderDetailPage() {
   const { id } = useParams();
@@ -17,7 +53,7 @@ export function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paying, setPaying] = useState(false);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState(emptyFormErrorState);
 
   useEffect(() => {
     if (!id) return;
@@ -31,7 +67,7 @@ export function AdminOrderDetailPage() {
       setLoading(false);
     }).catch((err) => {
       if (!active) return;
-      setError(err instanceof Error ? err.message : "No se pudo cargar el pedido");
+      setFormError(createFormErrorState(err, { fallbackMessage: "No se pudo cargar el pedido" }));
       setLoading(false);
     });
     return () => {
@@ -43,11 +79,15 @@ export function AdminOrderDetailPage() {
   const paidTotal = useMemo(() => order?.paidTotal ?? 0, [order?.paidTotal]);
   const balance = useMemo(() => getBalance(itemsTotal, paidTotal), [itemsTotal, paidTotal]);
 
+  function clearField(field: string) {
+    setFormError((current) => clearFormErrorField(current, field));
+  }
+
   async function save() {
     if (!id || !draft) return;
     try {
       setSaving(true);
-      setError("");
+      setFormError(emptyFormErrorState);
       const updated = await api.updateAdminOrder(id, {
         customerName: draft.customerName,
         customerWhatsapp: draft.customerWhatsapp,
@@ -61,7 +101,11 @@ export function AdminOrderDetailPage() {
       setOrder(updated);
       setDraft(orderToDraft(updated));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar el pedido");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo guardar el pedido",
+        resolveField: resolveOrderField,
+        getFieldLabel: getOrderFieldLabel,
+      }));
     } finally {
       setSaving(false);
     }
@@ -71,7 +115,7 @@ export function AdminOrderDetailPage() {
     if (!id) return;
     try {
       setPaying(true);
-      setError("");
+      setFormError(emptyFormErrorState);
       const updated = await api.createOrderPayment(id, {
         amount: toNumberOrZero(paymentDraft.amount),
         method: paymentDraft.method,
@@ -81,7 +125,10 @@ export function AdminOrderDetailPage() {
       setOrder(updated);
       setPaymentDraft(emptyPaymentDraft);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo registrar el abono");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo registrar el abono",
+        getFieldLabel: getOrderFieldLabel,
+      }));
     } finally {
       setPaying(false);
     }
@@ -100,18 +147,18 @@ export function AdminOrderDetailPage() {
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Pedidos", to: "/admin/pedidos" }, { label: order.code }]} />
       <AdminPageHeader title={order.code} action={<AdminBackButton to="/admin/pedidos" />} />
-      {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+      <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
 
       <AdminSection title="Cliente">
         <Grid container spacing={1.5}>
           <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => setDraft({ ...draft, customerName: event.target.value })} />
+            <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => { setDraft({ ...draft, customerName: event.target.value }); clearField("customerName"); }} error={Boolean(getFieldError(formError, "customerName"))} helperText={getFieldError(formError, "customerName")} />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => setDraft({ ...draft, customerWhatsapp: event.target.value })} />
+            <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => { setDraft({ ...draft, customerWhatsapp: event.target.value }); clearField("customerWhatsapp"); }} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Order["status"] })}>
+            <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => { setDraft({ ...draft, status: event.target.value as Order["status"] }); clearField("status"); }} error={Boolean(getFieldError(formError, "status"))} helperText={getFieldError(formError, "status")}>
               <MenuItem value="nuevo">Nuevo</MenuItem>
               <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>
               <MenuItem value="pendiente_aprobacion">Pendiente por aprobación</MenuItem>
@@ -125,7 +172,13 @@ export function AdminOrderDetailPage() {
       </AdminSection>
 
       <AdminSection title="Items">
-        <OrderItemsEditor items={draft.items} products={products} onChange={(items) => setDraft((current) => current ? { ...current, items } : current)} />
+        <OrderItemsEditor
+          items={draft.items}
+          products={products}
+          onChange={(items) => setDraft((current) => current ? { ...current, items } : current)}
+          getFieldError={(field) => getFieldError(formError, field)}
+          onClearFieldError={clearField}
+        />
       </AdminSection>
 
       <AdminSection title="Abonos">
@@ -149,16 +202,10 @@ export function AdminOrderDetailPage() {
           <Stack spacing={1.25}>
             <Grid container spacing={1.25}>
               <Grid size={{ xs: 12, md: 3 }}>
-                <TextField
-                  fullWidth
-                  label="Monto"
-                  value={paymentDraft.amount}
-                  onChange={(event) => setPaymentDraft({ ...paymentDraft, amount: event.target.value })}
-                  slotProps={{ input: { startAdornment: moneyInputAdornment } }}
-                />
+                <TextField fullWidth label="Monto" value={paymentDraft.amount} onChange={(event) => { setPaymentDraft({ ...paymentDraft, amount: event.target.value }); clearField("amount"); }} error={Boolean(getFieldError(formError, "amount"))} helperText={getFieldError(formError, "amount")} slotProps={{ input: { startAdornment: moneyInputAdornment } }} />
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
-                <TextField fullWidth select label="Método" value={paymentDraft.method} onChange={(event) => setPaymentDraft({ ...paymentDraft, method: event.target.value as DraftPayment["method"] })}>
+                <TextField fullWidth select label="Método" value={paymentDraft.method} onChange={(event) => { setPaymentDraft({ ...paymentDraft, method: event.target.value as DraftPayment["method"] }); clearField("method"); }} error={Boolean(getFieldError(formError, "method"))} helperText={getFieldError(formError, "method")}>
                   <MenuItem value="efectivo">Efectivo</MenuItem>
                   <MenuItem value="yappy">Yappy</MenuItem>
                   <MenuItem value="transferencia">Transferencia</MenuItem>
@@ -166,10 +213,10 @@ export function AdminOrderDetailPage() {
                 </TextField>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Referencia" value={paymentDraft.reference} onChange={(event) => setPaymentDraft({ ...paymentDraft, reference: event.target.value })} />
+                <TextField fullWidth label="Referencia" value={paymentDraft.reference} onChange={(event) => { setPaymentDraft({ ...paymentDraft, reference: event.target.value }); clearField("reference"); }} error={Boolean(getFieldError(formError, "reference"))} helperText={getFieldError(formError, "reference")} />
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <TextField fullWidth label="Nota" value={paymentDraft.note} onChange={(event) => setPaymentDraft({ ...paymentDraft, note: event.target.value })} multiline minRows={2} />
+                <TextField fullWidth label="Nota" value={paymentDraft.note} onChange={(event) => { setPaymentDraft({ ...paymentDraft, note: event.target.value }); clearField("note"); }} error={Boolean(getFieldError(formError, "note"))} helperText={getFieldError(formError, "note")} multiline minRows={2} />
               </Grid>
             </Grid>
             <Button sx={{ width: { xs: "100%", sm: "auto" } }} variant="contained" onClick={() => void addPayment()} disabled={paying}>
@@ -182,7 +229,7 @@ export function AdminOrderDetailPage() {
       <AdminSection title="Nota">
         <Grid container spacing={1.5}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <TextField fullWidth label="Nota" multiline minRows={4} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
+            <TextField fullWidth label="Nota" multiline minRows={4} value={draft.note} onChange={(event) => { setDraft({ ...draft, note: event.target.value }); clearField("note"); }} error={Boolean(getFieldError(formError, "note"))} helperText={getFieldError(formError, "note")} />
           </Grid>
         </Grid>
       </AdminSection>

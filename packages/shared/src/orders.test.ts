@@ -151,4 +151,15 @@ describe("admin order schemas", () => {
 
     expect(payload.customerWhatsapp).toBe("IG");
   });
+
+  it("accepts empty whatsapp for admin orders", () => {
+    const payload = createAdminOrderSchema.parse({
+      customerName: "Fernando",
+      customerWhatsapp: "",
+      items: [],
+      payments: [],
+    });
+
+    expect(payload.customerWhatsapp).toBe("");
+  });
 });

@@ -58,7 +58,7 @@ export function AdminQRCodesPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      minWidth: 172,
+      minWidth: 112,
       sortable: false,
       filterable: false,
       renderCell: ({ row }) => (

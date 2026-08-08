@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Box, Breadcrumbs, Button, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Box, Breadcrumbs, Button, IconButton, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, type GridColDef, type GridPaginationModel, type GridRowsProp } from "@mui/x-data-grid";
-import { ArrowLeft, Eye, Pencil } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowLeft, CheckCheck, Eye, HandCoins, Pencil } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { AdminEmptyState, adminSurfaceSx } from "./adminUi";
 
@@ -125,7 +126,7 @@ export function AdminField({ label, value }: { label: string; value: ReactNode }
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography fontWeight={800} sx={{ overflowWrap: "anywhere" }}>
+      <Typography fontWeight={800} sx={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
         {value}
       </Typography>
     </Stack>
@@ -140,17 +141,52 @@ export function AdminBackButton({ to, label = "Volver" }: { to: string; label?: 
   );
 }
 
+export function AdminGridAction({
+  label,
+  icon: Icon,
+  to,
+  onClick,
+  disabled = false
+}: {
+  label: string;
+  icon: LucideIcon;
+  to?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip title={label}>
+      <span>
+        <IconButton
+          component={to ? RouterLink : "button"}
+          to={to}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          size="small"
+          sx={{ borderRadius: 2 }}
+        >
+          <Icon size={16} />
+        </IconButton>
+      </span>
+    </Tooltip>
+  );
+}
+
 export function adminViewEditColumns(basePath: string) {
   return {
     view: (id: string) => (
-      <Button component={RouterLink} to={`${basePath}/${id}`} size="small" variant="text" startIcon={<Eye size={16} />}>
-        Ver
-      </Button>
+      <AdminGridAction label="Ver" icon={Eye} to={`${basePath}/${id}`} />
     ),
     edit: (id: string) => (
-      <Button component={RouterLink} to={`${basePath}/${id}/editar`} size="small" variant="text" startIcon={<Pencil size={16} />}>
-        Editar
-      </Button>
+      <AdminGridAction label="Editar" icon={Pencil} to={`${basePath}/${id}/editar`} />
     )
   };
 }
+
+export const adminGridActionIcons = {
+  view: Eye,
+  edit: Pencil,
+  markPaid: HandCoins,
+  markDelivered: CheckCheck
+} as const;

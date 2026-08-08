@@ -282,12 +282,18 @@ export function OrderItemsEditor({
   items,
   products,
   onChange,
+  getFieldError,
+  onClearFieldError,
 }: {
   items: DraftItem[];
   products: Product[];
   onChange: (nextItems: DraftItem[]) => void;
+  getFieldError?: (field: string) => string;
+  onClearFieldError?: (field: string) => void;
 }) {
   const productById = new Map(products.map((product) => [product.id, product]));
+  const fieldErrorFor = (field: string) => getFieldError?.(field) ?? "";
+  const clearField = (field: string) => onClearFieldError?.(field);
 
   function updateItem(index: number, updater: (item: DraftItem) => DraftItem) {
     onChange(items.map((item, itemIndex) => (itemIndex === index ? updater(item) : item)));
@@ -368,6 +374,7 @@ export function OrderItemsEditor({
                 inputValue={item.productName}
                 onInputChange={(_event, nextValue, reason) => {
                   if (reason === "reset") return;
+                  clearField(`items.${index}.productName`);
                   updateItem(index, (current) => ({
                     ...current,
                     productId: "",
@@ -378,6 +385,7 @@ export function OrderItemsEditor({
                   }));
                 }}
                 onChange={(_event, nextValue) => {
+                  clearField(`items.${index}.productName`);
                   if (!nextValue) {
                     updateItem(index, (current) => ({
                       ...current,
@@ -400,7 +408,7 @@ export function OrderItemsEditor({
                     appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, normalizedQuantity(current.quantity)),
                   }));
                 }}
-                renderInput={(params) => <TextField {...params} size="small" label="Producto" />}
+                renderInput={(params) => <TextField {...params} size="small" label="Producto" error={Boolean(fieldErrorFor(`items.${index}.productName`))} helperText={fieldErrorFor(`items.${index}.productName`)} />}
               />
 
               <Grid container spacing={1.25}>
@@ -410,14 +418,19 @@ export function OrderItemsEditor({
                     size="small"
                     label="Cantidad"
                     value={item.quantity}
-                    onChange={(event) => updateItem(index, (current) => {
-                      const quantity = normalizedQuantity(event.target.value);
-                      return {
-                        ...current,
-                        quantity: event.target.value,
-                        appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, quantity),
-                      };
-                    })}
+                    onChange={(event) => {
+                      clearField(`items.${index}.quantity`);
+                      updateItem(index, (current) => {
+                        const quantity = normalizedQuantity(event.target.value);
+                        return {
+                          ...current,
+                          quantity: event.target.value,
+                          appliedAdjustments: syncAdjustmentsQuantity(current.appliedAdjustments, quantity),
+                        };
+                      });
+                    }}
+                    error={Boolean(fieldErrorFor(`items.${index}.quantity`))}
+                    helperText={fieldErrorFor(`items.${index}.quantity`)}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 3 }}>
@@ -426,7 +439,12 @@ export function OrderItemsEditor({
                     size="small"
                     label="Costo individual"
                     value={item.unitPrice}
-                    onChange={(event) => updateItem(index, (current) => ({ ...current, unitPrice: event.target.value }))}
+                    onChange={(event) => {
+                      clearField(`items.${index}.unitPrice`);
+                      updateItem(index, (current) => ({ ...current, unitPrice: event.target.value }));
+                    }}
+                    error={Boolean(fieldErrorFor(`items.${index}.unitPrice`))}
+                    helperText={fieldErrorFor(`items.${index}.unitPrice`)}
                     slotProps={{ input: { startAdornment: moneyInputAdornment } }}
                   />
                 </Grid>
@@ -454,12 +472,17 @@ export function OrderItemsEditor({
                         size="small"
                         label="Cargo"
                         value={adjustment.label}
-                        onChange={(event) => updateItem(index, (current) => ({
-                          ...current,
-                          appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
-                            ? { ...currentAdjustment, label: event.target.value }
-                            : currentAdjustment),
-                        }))}
+                        onChange={(event) => {
+                          clearField(`items.${index}.appliedAdjustments.${adjustmentIndex}.label`);
+                          updateItem(index, (current) => ({
+                            ...current,
+                            appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
+                              ? { ...currentAdjustment, label: event.target.value }
+                              : currentAdjustment),
+                          }));
+                        }}
+                        error={Boolean(fieldErrorFor(`items.${index}.appliedAdjustments.${adjustmentIndex}.label`))}
+                        helperText={fieldErrorFor(`items.${index}.appliedAdjustments.${adjustmentIndex}.label`)}
                       />
                     </Grid>
                     <Grid size={{ xs: 12, md: 3 }}>
@@ -468,20 +491,25 @@ export function OrderItemsEditor({
                         size="small"
                         label="Monto por unidad"
                         value={adjustment.unitAmount}
-                        onChange={(event) => updateItem(index, (current) => {
-                          const quantity = normalizedQuantity(current.quantity);
-                          return {
-                            ...current,
-                            appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
-                              ? {
-                                  ...currentAdjustment,
-                                  unitAmount: event.target.value,
-                                  quantity,
-                                  totalAmount: roundMoney(Math.max(0, toNumberOrZero(event.target.value)) * quantity),
-                                }
-                              : currentAdjustment),
-                          };
-                        })}
+                        onChange={(event) => {
+                          clearField(`items.${index}.appliedAdjustments.${adjustmentIndex}.unitAmount`);
+                          updateItem(index, (current) => {
+                            const quantity = normalizedQuantity(current.quantity);
+                            return {
+                              ...current,
+                              appliedAdjustments: current.appliedAdjustments.map((currentAdjustment, currentIndex) => currentIndex === adjustmentIndex
+                                ? {
+                                    ...currentAdjustment,
+                                    unitAmount: event.target.value,
+                                    quantity,
+                                    totalAmount: roundMoney(Math.max(0, toNumberOrZero(event.target.value)) * quantity),
+                                  }
+                                : currentAdjustment),
+                            };
+                          });
+                        }}
+                        error={Boolean(fieldErrorFor(`items.${index}.appliedAdjustments.${adjustmentIndex}.unitAmount`))}
+                        helperText={fieldErrorFor(`items.${index}.appliedAdjustments.${adjustmentIndex}.unitAmount`)}
                         slotProps={{ input: { startAdornment: moneyInputAdornment } }}
                       />
                     </Grid>

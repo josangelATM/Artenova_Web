@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Checkbox, FormControlLabel, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, FormControlLabel, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type {
   AdminQRCodeInput,
   QRCode,
@@ -9,8 +9,10 @@ import type {
   QRCodeWhatsappDestination,
 } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../../lib/api";
+import { type ApiValidationIssue, api } from "../../lib/api";
+import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
+import { AdminFormErrorAlert } from "./adminFormErrors";
 import { AdminPageHeader, AdminSection } from "./adminUi";
 
 type Draft = {
@@ -155,12 +157,55 @@ function buildPreviewInput(draft: Draft): QRCodePreviewInput {
   return { type: "vcard", designConfig: input.designConfig, destinationConfig: input.destinationConfig };
 }
 
+function resolveQrField(issue: ApiValidationIssue) {
+  const mapping: Record<string, string> = {
+    "designConfig.foregroundColor": "foregroundColor",
+    "designConfig.backgroundColor": "backgroundColor",
+    "designConfig.transparentBackground": "transparentBackground",
+    "designConfig.margin": "margin",
+    "destinationConfig.url": "url",
+    "destinationConfig.phone": "phone",
+    "destinationConfig.message": "message",
+    "destinationConfig.fullName": "fullName",
+    "destinationConfig.company": "company",
+    "destinationConfig.jobTitle": "jobTitle",
+    "destinationConfig.email": "email",
+    "destinationConfig.website": "website",
+    "destinationConfig.address": "address",
+  };
+
+  return mapping[issue.key] ?? issue.key ?? null;
+}
+
+function getQrFieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    name: "Nombre",
+    type: "Tipo",
+    status: "Estado",
+    foregroundColor: "Color principal",
+    backgroundColor: "Color de fondo",
+    transparentBackground: "Fondo transparente",
+    margin: "Margen",
+    url: "URL destino",
+    phone: "Teléfono",
+    message: "Mensaje",
+    fullName: "Nombre completo",
+    company: "Empresa",
+    jobTitle: "Cargo",
+    email: "Email",
+    website: "Sitio web",
+    address: "Dirección",
+  };
+
+  return labels[field] ?? field;
+}
+
 export function AdminQRCodeFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
   const [draft, setDraft] = useState<Draft>(() => createDraft());
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState(emptyFormErrorState);
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -180,7 +225,7 @@ export function AdminQRCodeFormPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "No se pudo cargar el QR");
+        setFormError(createFormErrorState(err, { fallbackMessage: "No se pudo cargar el QR" }));
         setLoading(false);
       });
     return () => {
@@ -193,8 +238,13 @@ export function AdminQRCodeFormPage() {
     [previewSvg],
   );
 
-  function updateDraft(patch: Partial<Draft>) {
+  function clearFields(fields: string[]) {
+    setFormError((current) => fields.reduce((next, field) => clearFormErrorField(next, field), current));
+  }
+
+  function updateDraft(patch: Partial<Draft>, fieldsToClear = Object.keys(patch)) {
     setDraft((current) => ({ ...current, ...patch }));
+    clearFields(fieldsToClear);
     if (previewSvg || resolvedTarget || previewGeneratedOnce) {
       setPreviewSvg("");
       setResolvedTarget("");
@@ -205,7 +255,7 @@ export function AdminQRCodeFormPage() {
   async function generatePreview() {
     if (!canPreview(draft)) return;
     setPreviewLoading(true);
-    setError("");
+    setFormError(emptyFormErrorState);
     try {
       const preview = await api.previewQRCode(buildPreviewInput(draft));
       setPreviewSvg(preview.svg);
@@ -213,7 +263,11 @@ export function AdminQRCodeFormPage() {
       setPreviewGeneratedOnce(true);
       setPreviewDirty(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo generar la vista previa");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo generar la vista previa",
+        resolveField: resolveQrField,
+        getFieldLabel: getQrFieldLabel,
+      }));
       setPreviewSvg("");
       setResolvedTarget("");
     } finally {
@@ -223,12 +277,16 @@ export function AdminQRCodeFormPage() {
 
   async function save() {
     setSaving(true);
-    setError("");
+    setFormError(emptyFormErrorState);
     try {
       const saved = await api.saveAdminQRCode(id, draftToInput(draft));
       navigate(`/admin/qrs/${saved.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar el QR");
+      setFormError(createFormErrorState(err, {
+        fallbackMessage: "No se pudo guardar el QR",
+        resolveField: resolveQrField,
+        getFieldLabel: getQrFieldLabel,
+      }));
     } finally {
       setSaving(false);
     }
@@ -242,23 +300,23 @@ export function AdminQRCodeFormPage() {
         subtitle="Define el destino, el estado y el diseño básico antes de publicarlo."
         action={<AdminBackButton to={id ? `/admin/qrs/${id}` : "/admin/qrs"} />}
       />
-      {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+      <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
 
       <AdminSection title="Configuración" description="Datos operativos y destino principal del QR.">
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TextField fullWidth label="Nombre" value={draft.name} onChange={(event) => updateDraft({ name: event.target.value })} />
+              <TextField fullWidth label="Nombre" value={draft.name} onChange={(event) => updateDraft({ name: event.target.value })} error={Boolean(getFieldError(formError, "name"))} helperText={getFieldError(formError, "name")} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField select fullWidth label="Tipo" value={draft.type} onChange={(event) => updateDraft({ type: event.target.value as Draft["type"] })}>
+              <TextField select fullWidth label="Tipo" value={draft.type} onChange={(event) => updateDraft({ type: event.target.value as Draft["type"] })} error={Boolean(getFieldError(formError, "type"))} helperText={getFieldError(formError, "type")}>
                 <MenuItem value="url">URL</MenuItem>
                 <MenuItem value="whatsapp">WhatsApp</MenuItem>
                 <MenuItem value="vcard">vCard</MenuItem>
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField select fullWidth label="Estado" value={draft.status} onChange={(event) => updateDraft({ status: event.target.value as Draft["status"] })}>
+              <TextField select fullWidth label="Estado" value={draft.status} onChange={(event) => updateDraft({ status: event.target.value as Draft["status"] })} error={Boolean(getFieldError(formError, "status"))} helperText={getFieldError(formError, "status")}>
                 <MenuItem value="active">Activo</MenuItem>
                 <MenuItem value="inactive">Inactivo</MenuItem>
               </TextField>
@@ -266,16 +324,16 @@ export function AdminQRCodeFormPage() {
           </Grid>
 
           {draft.type === "url" && (
-            <TextField fullWidth label="URL destino" placeholder="https://..." value={draft.url} onChange={(event) => updateDraft({ url: event.target.value })} />
+            <TextField fullWidth label="URL destino" placeholder="https://..." value={draft.url} onChange={(event) => updateDraft({ url: event.target.value })} error={Boolean(getFieldError(formError, "url"))} helperText={getFieldError(formError, "url")} />
           )}
 
           {draft.type === "whatsapp" && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 5 }}>
-                <TextField fullWidth label="Teléfono" value={draft.phone} onChange={(event) => updateDraft({ phone: event.target.value })} />
+                <TextField fullWidth label="Teléfono" value={draft.phone} onChange={(event) => updateDraft({ phone: event.target.value })} error={Boolean(getFieldError(formError, "phone"))} helperText={getFieldError(formError, "phone")} />
               </Grid>
               <Grid size={{ xs: 12, md: 7 }}>
-                <TextField fullWidth label="Mensaje" value={draft.message} onChange={(event) => updateDraft({ message: event.target.value })} />
+                <TextField fullWidth label="Mensaje" value={draft.message} onChange={(event) => updateDraft({ message: event.target.value })} error={Boolean(getFieldError(formError, "message"))} helperText={getFieldError(formError, "message")} />
               </Grid>
             </Grid>
           )}
@@ -283,25 +341,25 @@ export function AdminQRCodeFormPage() {
           {draft.type === "vcard" && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Nombre completo" value={draft.fullName} onChange={(event) => updateDraft({ fullName: event.target.value })} />
+                <TextField fullWidth label="Nombre completo" value={draft.fullName} onChange={(event) => updateDraft({ fullName: event.target.value })} error={Boolean(getFieldError(formError, "fullName"))} helperText={getFieldError(formError, "fullName")} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Empresa" value={draft.company} onChange={(event) => updateDraft({ company: event.target.value })} />
+                <TextField fullWidth label="Empresa" value={draft.company} onChange={(event) => updateDraft({ company: event.target.value })} error={Boolean(getFieldError(formError, "company"))} helperText={getFieldError(formError, "company")} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Cargo" value={draft.jobTitle} onChange={(event) => updateDraft({ jobTitle: event.target.value })} />
+                <TextField fullWidth label="Cargo" value={draft.jobTitle} onChange={(event) => updateDraft({ jobTitle: event.target.value })} error={Boolean(getFieldError(formError, "jobTitle"))} helperText={getFieldError(formError, "jobTitle")} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Teléfono" value={draft.phone} onChange={(event) => updateDraft({ phone: event.target.value })} />
+                <TextField fullWidth label="Teléfono" value={draft.phone} onChange={(event) => updateDraft({ phone: event.target.value })} error={Boolean(getFieldError(formError, "phone"))} helperText={getFieldError(formError, "phone")} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Email" value={draft.email} onChange={(event) => updateDraft({ email: event.target.value })} />
+                <TextField fullWidth label="Email" value={draft.email} onChange={(event) => updateDraft({ email: event.target.value })} error={Boolean(getFieldError(formError, "email"))} helperText={getFieldError(formError, "email")} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Sitio web" value={draft.website} onChange={(event) => updateDraft({ website: event.target.value })} />
+                <TextField fullWidth label="Sitio web" value={draft.website} onChange={(event) => updateDraft({ website: event.target.value })} error={Boolean(getFieldError(formError, "website"))} helperText={getFieldError(formError, "website")} />
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <TextField fullWidth label="Dirección" value={draft.address} onChange={(event) => updateDraft({ address: event.target.value })} />
+                <TextField fullWidth label="Dirección" value={draft.address} onChange={(event) => updateDraft({ address: event.target.value })} error={Boolean(getFieldError(formError, "address"))} helperText={getFieldError(formError, "address")} />
               </Grid>
             </Grid>
           )}
@@ -311,7 +369,7 @@ export function AdminQRCodeFormPage() {
       <AdminSection title="Diseño" description="Ajustes básicos de color y margen para impresión o uso digital.">
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField fullWidth type="color" label="Color principal" value={draft.foregroundColor} onChange={(event) => updateDraft({ foregroundColor: event.target.value })} />
+            <TextField fullWidth type="color" label="Color principal" value={draft.foregroundColor} onChange={(event) => updateDraft({ foregroundColor: event.target.value })} error={Boolean(getFieldError(formError, "foregroundColor"))} helperText={getFieldError(formError, "foregroundColor")} />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
@@ -321,11 +379,12 @@ export function AdminQRCodeFormPage() {
               value={draft.backgroundColor}
               onChange={(event) => updateDraft({ backgroundColor: event.target.value })}
               disabled={draft.transparentBackground}
-              helperText={draft.transparentBackground ? "No se usa mientras el fondo transparente esta activado." : undefined}
+              error={Boolean(getFieldError(formError, "backgroundColor"))}
+              helperText={getFieldError(formError, "backgroundColor") || (draft.transparentBackground ? "No se usa mientras el fondo transparente está activado." : undefined)}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
-            <TextField select fullWidth label="Margen" value={String(draft.margin)} onChange={(event) => updateDraft({ margin: Number(event.target.value) })}>
+            <TextField select fullWidth label="Margen" value={String(draft.margin)} onChange={(event) => updateDraft({ margin: Number(event.target.value) })} error={Boolean(getFieldError(formError, "margin"))} helperText={getFieldError(formError, "margin")}>
               {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((value) => (
                 <MenuItem key={value} value={value}>{value}</MenuItem>
               ))}
