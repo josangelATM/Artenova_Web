@@ -91,7 +91,7 @@ type AdminProductPayload = Omit<Partial<Product>, "media" | "priceTiers" | "extr
   media?: Array<Omit<ProductMedia, "id">>;
   priceTiers?: Array<Omit<PriceTier, "id">>;
   extras?: Array<Omit<ProductExtra, "id">>;
-  customFields?: Array<Omit<CustomField, "id">>;
+  customFields?: CustomField[];
   productOptions?: Array<
     Omit<ProductOption, "productId" | "values"> & {
       values?: ProductOptionValue[];

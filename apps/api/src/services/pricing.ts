@@ -43,11 +43,6 @@ export async function priceOrderItems(items: Array<{ productId: string; quantity
       throw new Error(`Producto no disponible: ${item.productId}`);
     }
 
-    const missingRequired = product.customFields.filter((field: any) => field.required && !item.personalization[field.id]);
-    if (missingRequired.length > 0) {
-      throw new Error(`Faltan datos requeridos para ${product.name}`);
-    }
-
     const price = calculateLineTotal(product, item.quantity, item.selectedExtraIds);
 
     return {

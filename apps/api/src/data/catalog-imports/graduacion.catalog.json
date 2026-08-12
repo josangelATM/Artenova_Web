@@ -1,0 +1,295 @@
+{
+  "category": {
+    "name": "Graduacion",
+    "slug": "graduacion",
+    "description": "Catalogo de graduacion importado desde PDF.",
+    "isActive": true
+  },
+  "products": [
+    {
+      "sourceIndex": 1,
+      "name": "Recordatorio de acrílico esmerilado",
+      "slug": "recordatorio-de-acrilico-esmerilado-1",
+      "description": "Recordatorio de acrílico esmerilado con foto de impresión vinil brillante a prueba de agua, marco acrílico dorado espejo. Tamaño de 12.5 cm de alto x 16.8 cm de ancho",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 6.5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 6.5,
+          "totalPrice": 39,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 6,
+          "totalPrice": 72,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 5.5,
+          "totalPrice": 99,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 5,
+          "totalPrice": 120,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 2,
+      "name": "Reconocimiento en acrílico transparente",
+      "slug": "reconocimiento-en-acrilico-transparente",
+      "description": "Reconocimiento vertical en acrílico transparente, con foto de impresión vinil brillante, marco acrílico plateado espejo texto en grabado láser. Tamaño de 16 cm x 12 cm",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 6.5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 6.5,
+          "totalPrice": 39,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 6,
+          "totalPrice": 72,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 5.5,
+          "totalPrice": 99,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 5,
+          "totalPrice": 120,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 3,
+      "name": "Recordatorio de acrílico esmerilado",
+      "slug": "recordatorio-de-acrilico-esmerilado-3",
+      "description": "Recordatorio de acrílico esmerilado con foto de impresión vinil brillante a prueba de agua, marco acrílico dorado espejo. Tamaño de 16 cm de alto x 11.8 cm de ancho, técnica grabado en láser",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 6.5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 6.5,
+          "totalPrice": 39,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 6,
+          "totalPrice": 72,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 5.5,
+          "totalPrice": 99,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 5,
+          "totalPrice": 120,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 4,
+      "name": "Recordatorio en madera",
+      "slug": "recordatorio-en-madera",
+      "description": "Reconocimiento en madera, con foto de impresión vinil brillante, marco de madera técnica en grabado láser. Tamaño de 12.1 cm de alto x 10.2 cm de ancho",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 4.5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 4.5,
+          "totalPrice": 27,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 4,
+          "totalPrice": 48,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 3.75,
+          "totalPrice": 67.5,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 3.5,
+          "totalPrice": 84,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 5,
+      "name": "Recordatorio de acrílico pequeño",
+      "slug": "recordatorio-de-acrilico-pequeno",
+      "description": "Recordatorio de acrílico transparente completamente grabado en láser. Tamaño de 7.2 cm de alto x 3.1 cm de ancho",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 3.75,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 3.75,
+          "totalPrice": 22.5,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 3.5,
+          "totalPrice": 42,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 3.25,
+          "totalPrice": 58.5,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 3,
+          "totalPrice": 72,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 6,
+      "name": "Recordatorio en acrílico esmerilado",
+      "slug": "recordatorio-en-acrilico-esmerilado",
+      "description": "Reconocimiento pequeño en acrílico esmerilado, con foto de impresión vinil brillante con técnica de grabado láser. Tamaño de 7 cm de alto x 10 cm de ancho",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 4,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 4,
+          "totalPrice": 24,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 3.75,
+          "totalPrice": 45,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 3.5,
+          "totalPrice": 63,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 3.25,
+          "totalPrice": 78,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 7,
+      "name": "Recordatorio de acrílico transparente y dorado",
+      "slug": "recordatorio-de-acrilico-transparente-y-dorado",
+      "description": "Recordatorio de acrílico transparente con foto de impresión vinil brillante a prueba de agua, marco acrílico dorado espejo. Tamaño de 14 cm de alto x 11.8 cm de ancho, con opción de grabado láser en la base",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 5,
+          "totalPrice": 30,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 4.5,
+          "totalPrice": 54,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 4.25,
+          "totalPrice": 76.5,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 4,
+          "totalPrice": 96,
+          "label": "24 unidades"
+        }
+      ]
+    },
+    {
+      "sourceIndex": 8,
+      "name": "Recordatorio de acrílico dorado",
+      "slug": "recordatorio-de-acrilico-dorado",
+      "description": "Recordatorio de acrílico transparente con dorado espejo, grabado láser en dorado, silueta,. Tamaño de 15 cm x 9 cm aproximadamente",
+      "isPublished": true,
+      "isFeatured": false,
+      "basePrice": 5,
+      "tiers": [
+        {
+          "minQuantity": 6,
+          "unitPrice": 5,
+          "totalPrice": 30,
+          "label": "6 unidades"
+        },
+        {
+          "minQuantity": 12,
+          "unitPrice": 4.5,
+          "totalPrice": 54,
+          "label": "12 unidades"
+        },
+        {
+          "minQuantity": 18,
+          "unitPrice": 4.25,
+          "totalPrice": 76.5,
+          "label": "18 unidades"
+        },
+        {
+          "minQuantity": 24,
+          "unitPrice": 4,
+          "totalPrice": 96,
+          "label": "24 unidades"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "sourcePdfName": "Catálogo de Graduación.pdf",
+    "extractedAt": "2026-08-12T03:21:20.324Z",
+    "itemCount": 8
+  }
+}

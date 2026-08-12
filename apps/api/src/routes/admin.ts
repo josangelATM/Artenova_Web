@@ -215,7 +215,7 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
     media: ProductMediaInput[];
     priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
     extras: Array<{ name: string; type: string; priceDelta: number }>;
-    customFields: Array<{ label: string; type: "text" | "date" | "select" | "image" | "note"; required: boolean; options: string[]; helpText?: string | null }>;
+    customFields: Array<{ id?: string; label: string; position?: number }>;
   }) {
 
   await tx.productImage.deleteMany({ where: { productId } });
@@ -237,10 +237,14 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
   if (payload.customFields.length > 0) {
     await tx.customField.createMany({
       data: payload.customFields.map((field, position) => ({
-        ...field,
+        id: field.id,
+        label: field.label,
         productId,
         position,
-        options: field.options
+        type: "text",
+        required: false,
+        options: [],
+        helpText: null,
       }))
     });
   }

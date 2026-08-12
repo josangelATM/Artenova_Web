@@ -14,6 +14,7 @@ function computeAdminLineTotal(quantity: number, unitPrice: number, extrasTotal:
 }
 
 export type AdminOrderItemWriteInput = {
+  id?: string;
   productId?: string | null;
   productName: string;
   quantity: number;
@@ -30,6 +31,7 @@ export type AdminOrderItemWriteInput = {
     totalAmount: number;
   }>;
   personalization: Record<string, string | string[]>;
+  isDone?: boolean;
   units: Array<{ position?: number; label?: string | null; personalization: Record<string, string | string[]> }>;
 };
 
@@ -60,7 +62,7 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
   }) as Array<{
     id: string;
     name: string;
-    customFields: Array<{ id?: string | null; required: boolean }>;
+    customFields: Array<{ id?: string | null; label: string }>;
     variants: Array<{ name: string; sku: string | null }>;
   }>;
   const productById = new Map<string, (typeof products)[number]>(products.map((product) => [product.id, product]));
@@ -70,11 +72,6 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
     const product = item.productId ? productById.get(item.productId) : null;
     if (item.productId && !product) {
       throw new Error(`Producto no encontrado: ${item.productId}`);
-    }
-
-    const missingRequired = (product?.customFields ?? []).filter((field: any) => field.required && !item.personalization?.[field.id]);
-    if (missingRequired.length > 0 && product) {
-      throw new Error(`Faltan datos requeridos para ${product.name}`);
     }
 
     const trimmedProductName = item.productName.trim();
@@ -95,6 +92,7 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
 
     await tx.orderItem.create({
       data: {
+        ...(item.id ? { id: item.id } : {}),
         orderId,
         productId: item.productId ?? null,
         productName: product?.name ?? trimmedProductName,
@@ -108,6 +106,7 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
         selectedExtraIds: item.selectedExtraIds as Prisma.InputJsonValue,
         appliedAdjustments: appliedAdjustments as Prisma.InputJsonValue,
         personalization: item.personalization as Prisma.InputJsonValue,
+        isDone: item.isDone ?? false,
         units: item.units.length > 0 ? {
           create: item.units.map((unit, index) => ({
             position: unit.position ?? index,

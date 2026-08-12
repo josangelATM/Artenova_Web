@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { startTransition, useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type {
   Category,
+  CustomField,
   DiscountType,
   Product,
   ProductMedia,
@@ -71,6 +72,9 @@ type DescriptionLinkDraft = {
 type ProductOptionValueInput = ProductOptionValue;
 type ProductOptionInput = Omit<ProductOption, "productId"> & {
   values: ProductOptionValueInput[];
+};
+type CustomFieldInput = Required<Pick<CustomField, "id" | "label">> & {
+  position: number;
 };
 
 type VariantInput = {
@@ -157,6 +161,14 @@ function createVariant(
     optionValueIds,
     images: [],
     priceTiers: [],
+  };
+}
+
+function createCustomField(position: number): CustomFieldInput {
+  return {
+    id: createId(),
+    label: "",
+    position,
   };
 }
 
@@ -335,6 +347,7 @@ export function AdminProductFormPage() {
   const [productOptions, setProductOptions] = useState<ProductOptionInput[]>(
     [],
   );
+  const [customFields, setCustomFields] = useState<CustomFieldInput[]>([]);
   const [variants, setVariants] = useState<VariantInput[]>([]);
   const [defaultVariantId, setDefaultVariantId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -475,6 +488,13 @@ export function AdminProductFormPage() {
               })),
             })),
           );
+          setCustomFields(
+            selected.customFields.map((field, position) => ({
+              id: field.id ?? createId(),
+              label: field.label,
+              position,
+            })),
+          );
           setVariants(
             selected.variants.map((variant, position) => ({
               id: variant.id,
@@ -522,6 +542,7 @@ export function AdminProductFormPage() {
             ...current,
             categoryId: current.categoryId || nextCategories[0]?.id || "",
           }));
+          setCustomFields([]);
           setDefaultVariantId("");
         }
         setLoading(false);
@@ -560,6 +581,13 @@ export function AdminProductFormPage() {
     try {
       setSaving(true);
       setFormError(emptyFormErrorState);
+      const sanitizedCustomFields = customFields
+        .map((field, position) => ({
+          id: field.id,
+          label: field.label.trim(),
+          position,
+        }))
+        .filter((field) => field.label);
       const sanitizedOptions = productOptions
         .map((option, position) => ({
           id: option.id,
@@ -627,7 +655,7 @@ export function AdminProductFormPage() {
             : null,
         variants: normalizedVariants,
         extras: [],
-        customFields: [],
+        customFields: sanitizedCustomFields,
       });
       navigate(id ? `/admin/productos/${id}` : "/admin/productos", {
         replace: true,
@@ -1305,13 +1333,23 @@ export function AdminProductFormPage() {
               disabled={uploadingKey === "product"}
               loadingLabel="Subiendo galeria..."
               idleLabel="Subir galeria del producto"
-              helperText="Arrastra imÃ¡genes o un video aquÃ­, o haz click para seleccionarlos."
+              helperText="Arrastra imágenes o un video aquí, o haz click para seleccionarlos."
               onFilesSelected={(files) => void uploadImages(files, "product")}
             />
             {renderImageEditor(images, setImages)}
           </Stack>
         </AdminSection>
       )}
+
+      <AdminSection
+        title="Campos operativos"
+        description="Declara los datos libres que necesitarás capturar cuando este producto se agregue a un pedido."
+      >
+        <OperationalFieldsEditor
+          fields={customFields}
+          onChange={setCustomFields}
+        />
+      </AdminSection>
 
       <AdminSection
         title="Opciones del producto"
@@ -1899,6 +1937,139 @@ function ImageUploadDropzone({
         }}
       />
     </Box>
+  );
+}
+
+function OperationalFieldsEditor({
+  fields,
+  onChange,
+}: {
+  fields: CustomFieldInput[];
+  onChange: (nextFields: CustomFieldInput[]) => void;
+}) {
+  const [localFields, setLocalFields] = useState<CustomFieldInput[]>(fields);
+
+  useEffect(() => {
+    setLocalFields(fields);
+  }, [fields]);
+
+  function syncFields(nextFields: CustomFieldInput[]) {
+    setLocalFields(nextFields);
+    startTransition(() => {
+      onChange(nextFields);
+    });
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <Button
+        size="small"
+        startIcon={<Plus size={16} />}
+        onClick={() =>
+          syncFields([
+            ...localFields,
+            createCustomField(localFields.length),
+          ])
+        }
+        sx={{ alignSelf: "flex-start" }}
+      >
+        Agregar campo
+      </Button>
+      {localFields.length === 0 && (
+        <Typography color="text.secondary">
+          Si no agregas campos, el pedido usará solo el detalle libre general.
+        </Typography>
+      )}
+      {localFields.map((field, index) => (
+        <Box
+          key={field.id}
+          sx={{
+            p: 1.5,
+            border: "1px solid rgba(64,44,37,.10)",
+            borderRadius: 2,
+          }}
+        >
+          <Grid container spacing={1.25} alignItems="center">
+            <Grid size={{ xs: 12, md: 8 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label={`Campo ${index + 1}`}
+                value={field.label}
+                onChange={(event) =>
+                  syncFields(
+                    localFields.map((item) =>
+                      item.id === field.id
+                        ? { ...item, label: event.target.value }
+                        : item,
+                    ),
+                  )
+                }
+                helperText="Ejemplo: Nombre, Teléfono, Fecha, Mensaje"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <IconButton
+                  aria-label="Subir campo"
+                  onClick={() => {
+                    if (index === 0) return;
+                    const next = [...localFields];
+                    const previous = next[index - 1];
+                    const item = next[index];
+                    if (!previous || !item) return;
+                    next[index - 1] = item;
+                    next[index] = previous;
+                    syncFields(
+                      next.map((current, position) => ({
+                        ...current,
+                        position,
+                      })),
+                    );
+                  }}
+                  disabled={index === 0}
+                >
+                  <ArrowUp size={18} />
+                </IconButton>
+                <IconButton
+                  aria-label="Bajar campo"
+                  onClick={() => {
+                    if (index === localFields.length - 1) return;
+                    const next = [...localFields];
+                    const item = next[index];
+                    const following = next[index + 1];
+                    if (!item || !following) return;
+                    next[index] = following;
+                    next[index + 1] = item;
+                    syncFields(
+                      next.map((current, position) => ({
+                        ...current,
+                        position,
+                      })),
+                    );
+                  }}
+                  disabled={index === localFields.length - 1}
+                >
+                  <ArrowDown size={18} />
+                </IconButton>
+                <IconButton
+                  aria-label="Eliminar campo"
+                  onClick={() =>
+                    syncFields(
+                      localFields
+                        .filter((item) => item.id !== field.id)
+                        .map((item, position) => ({ ...item, position })),
+                    )
+                  }
+                >
+                  <Trash2 size={18} />
+                </IconButton>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Box>
+      ))}
+    </Stack>
   );
 }
 

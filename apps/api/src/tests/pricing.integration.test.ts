@@ -11,7 +11,7 @@ vi.mock("../lib/prisma", () => ({
           basePrice: 16,
           priceTiers: [],
           extras: [{ id: "e1", name: "Dorado", type: "material", priceDelta: 2 }],
-          customFields: [{ id: "name", label: "Nombre", required: true }],
+          customFields: [{ id: "name", label: "Nombre", position: 0 }],
           images: [],
           options: [],
           variants: [
@@ -40,7 +40,7 @@ vi.mock("../lib/prisma", () => ({
 import { priceOrderItems } from "../services/pricing";
 
 describe("priceOrderItems", () => {
-  it("prices public products with required personalization", async () => {
+  it("prices public products with optional personalization", async () => {
     const result = await priceOrderItems([
       { productId: "p1", quantity: 6, selectedExtraIds: ["e1"], personalization: { name: "Spotty" } }
     ]);
@@ -48,9 +48,11 @@ describe("priceOrderItems", () => {
     expect(result[0]?.lineTotal).toBe(39);
   });
 
-  it("rejects missing required personalization", async () => {
-    await expect(
-      priceOrderItems([{ productId: "p1", quantity: 1, selectedExtraIds: [], personalization: {} }])
-    ).rejects.toThrow("Faltan datos requeridos");
+  it("prices products without personalization values", async () => {
+    const result = await priceOrderItems([
+      { productId: "p1", quantity: 1, selectedExtraIds: [], personalization: {} }
+    ]);
+
+    expect(result[0]?.lineTotal).toBe(16);
   });
 });

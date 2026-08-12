@@ -11,6 +11,7 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "media:backfill-video-posters": "tsx src/scripts/backfillVideoPosters.ts",
+    "catalog:extract-graduation": "tsx src/scripts/extractGraduationCatalogPdf.ts",
     "orders:import-workbook": "tsx src/scripts/importOrdersWorkbook.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

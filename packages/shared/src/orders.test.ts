@@ -29,6 +29,7 @@ describe("admin order schemas", () => {
           quantity: 2,
           unitPrice: 12,
           extrasTotal: 0,
+          isDone: true,
           personalization: { owner: "Gabriel" },
           units: [
             { label: "Ambar", personalization: { petName: "Ambar", color: "Fucsia", qr: "Si" } },
@@ -39,6 +40,7 @@ describe("admin order schemas", () => {
     });
 
     expect(payload.items[0]?.units).toHaveLength(2);
+    expect(payload.items[0]?.isDone).toBe(true);
     expect(payload.items[0]?.units[0]?.personalization.petName).toBe("Ambar");
   });
 

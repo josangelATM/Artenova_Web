@@ -10,6 +10,7 @@
     "test": "pnpm --recursive test",
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck",
+    "catalog:extract-graduation": "pnpm --filter @artenova/api catalog:extract-graduation",
     "db:generate": "pnpm --filter @artenova/api db:generate",
     "db:migrate": "pnpm --filter @artenova/api db:migrate",
     "db:seed": "pnpm --filter @artenova/api db:seed"

@@ -318,6 +318,7 @@ model OrderItem {
   selectedExtraIds Json          @default("[]")
   appliedAdjustments Json        @default("[]")
   personalization  Json          @default("{}")
+  isDone           Boolean       @default(false)
   units            OrderItemUnit[]
 }
 

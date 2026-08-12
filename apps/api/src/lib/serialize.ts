@@ -105,8 +105,9 @@ export function productPayload(product: any) {
       priceDelta: toNumber(extra.priceDelta),
     })) ?? [],
     customFields: product.customFields?.map((field: any) => ({
-      ...field,
-      options: Array.isArray(field.options) ? field.options : [],
+      id: field.id,
+      label: field.label,
+      position: field.position ?? 0,
     })) ?? [],
     productOptions: productOptions.map((option: any) => ({
       ...option,
@@ -139,6 +140,7 @@ export function orderPayload(order: any) {
     skuSnapshot: item.skuSnapshot ?? null,
     variantNameSnapshot: item.variantNameSnapshot ?? null,
     unitLabel: item.unitLabel ?? null,
+    isDone: Boolean(item.isDone),
     selectedExtraIds: Array.isArray(item.selectedExtraIds) ? item.selectedExtraIds : [],
     appliedAdjustments: Array.isArray(item.appliedAdjustments)
       ? item.appliedAdjustments.map((adjustment: any) => ({

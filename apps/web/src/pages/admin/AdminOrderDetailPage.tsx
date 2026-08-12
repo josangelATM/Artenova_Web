@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Divider, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, Divider, FormControlLabel, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { formatCurrency, type Order, type Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { type ApiValidationIssue, api } from "../../lib/api";
@@ -43,6 +43,22 @@ function getOrderFieldLabel(field: string) {
   return field;
 }
 
+function summarizeOperationalFields(
+  personalization: Record<string, string>,
+  product?: Product | null,
+) {
+  const fieldLabelByKey = new Map(
+    (product?.customFields ?? []).map((field) => [field.id ?? field.label, field.label]),
+  );
+
+  return Object.entries(personalization)
+    .map(([key, value]) => [
+      (fieldLabelByKey.get(key) ?? (key === "detalle" ? "Detalle" : key)).trim(),
+      value.trim(),
+    ] as const)
+    .filter(([label, value]) => label && value);
+}
+
 export function AdminOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -78,6 +94,7 @@ export function AdminOrderDetailPage() {
   const itemsTotal = useMemo(() => getItemsTotal(draft?.items ?? []), [draft?.items]);
   const paidTotal = useMemo(() => order?.paidTotal ?? 0, [order?.paidTotal]);
   const balance = useMemo(() => getBalance(itemsTotal, paidTotal), [itemsTotal, paidTotal]);
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
 
   function clearField(field: string) {
     setFormError((current) => clearFormErrorField(current, field));
@@ -179,6 +196,61 @@ export function AdminOrderDetailPage() {
           getFieldError={(field) => getFieldError(formError, field)}
           onClearFieldError={clearField}
         />
+      </AdminSection>
+
+      <AdminSection title="Producción" description="Consulta rápida de items y sus campos operativos para marcar avance.">
+        <Stack spacing={1.25}>
+          {draft.items.length === 0 ? (
+            <Typography color="text.secondary">Sin items.</Typography>
+          ) : draft.items.map((item, index) => {
+            const operationalFields = summarizeOperationalFields(
+              item.personalization,
+              item.productId ? productById.get(item.productId) ?? null : null,
+            );
+            return (
+              <Paper key={item.id ?? `production-${index}`} sx={{ border: "1px solid rgba(64,44,37,.10)", boxShadow: "none", p: 1.5 }}>
+                <Stack spacing={1}>
+                  <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+                    <Box>
+                      <Typography fontWeight={900}>{item.productName || `Item ${index + 1}`}</Typography>
+                      <Typography variant="body2" color="text.secondary">Cantidad: {item.quantity}</Typography>
+                    </Box>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={item.isDone}
+                          onChange={(event) =>
+                            setDraft((current) => current ? ({
+                              ...current,
+                              items: current.items.map((currentItem, currentIndex) =>
+                                currentIndex === index
+                                  ? { ...currentItem, isDone: event.target.checked }
+                                  : currentItem,
+                              ),
+                            }) : current)
+                          }
+                        />
+                      }
+                      label="Hecho"
+                      sx={{ mr: 0 }}
+                    />
+                  </Stack>
+                  {operationalFields.length > 0 ? (
+                    <Stack spacing={0.5}>
+                      {operationalFields.map(([label, value]) => (
+                        <Typography key={`${item.id ?? index}-${label}`} variant="body2">
+                          <strong>{label}:</strong> {value}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">Sin campos operativos.</Typography>
+                  )}
+                </Stack>
+              </Paper>
+            );
+          })}
+        </Stack>
       </AdminSection>
 
       <AdminSection title="Abonos">

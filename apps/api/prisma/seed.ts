@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { graduationCatalogSchema, mapGraduationCatalogToSeedData } from "../src/lib/graduationCatalog";
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -109,6 +110,15 @@ type SeedProduct = {
   options?: SeedOption[];
   variants: SeedVariant[];
   defaultVariantKey?: string;
+};
+
+type SeedCategory = {
+  name: string;
+  slug: string;
+  description: string;
+  accentColor?: string;
+  currencySymbol?: string;
+  isActive?: boolean;
 };
 
 type SeedResolvedMedia = {
@@ -489,7 +499,7 @@ const weddingTiersAcrylic: SeedTier[] = [
   { minQuantity: 24, unitPrice: 4, label: "24 unidades - $96.00" },
 ];
 
-const categories = [
+const baseCategories: SeedCategory[] = [
   {
     name: "Mascotas",
     slug: "mascotas",
@@ -519,7 +529,7 @@ const categories = [
   },
 ];
 
-const products: SeedProduct[] = [
+const baseProducts: SeedProduct[] = [
   {
     categorySlug: "mascotas",
     name: "Cédulas personalizadas para mascotas",
@@ -1503,8 +1513,24 @@ async function seedProduct(
   });
 }
 
+async function loadGraduationSeedData(): Promise<{ category: SeedCategory; products: SeedProduct[] }> {
+  const catalogPath = fileURLToPath(new URL("../src/data/catalog-imports/graduacion.catalog.json", import.meta.url));
+  const rawCatalog = await readFile(catalogPath, "utf8");
+  const catalog = graduationCatalogSchema.parse(JSON.parse(rawCatalog));
+  const seedData = mapGraduationCatalogToSeedData(catalog);
+
+  return {
+    category: seedData.category,
+    products: seedData.products,
+  };
+}
+
 async function main() {
-  const resolvedSeedMedia = await syncSeedMedia(products);
+  const graduationSeedData = await loadGraduationSeedData();
+  const categories = [...baseCategories, graduationSeedData.category];
+  const products = [...baseProducts, ...graduationSeedData.products];
+  const productsWithSeedMedia = products.filter((product) => ["recordatorios-memoriales", "deportes"].includes(product.categorySlug));
+  const resolvedSeedMedia = await syncSeedMedia(productsWithSeedMedia);
   const password = process.env.ADMIN_PASSWORD ?? "change-me-now";
   const email = (process.env.ADMIN_EMAIL ?? "admin@artenova.local").toLowerCase();
 

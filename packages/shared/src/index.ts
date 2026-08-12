@@ -15,13 +15,6 @@ export const expenseCategoryValues = ["materia_prima", "servicios", "publicidad"
 export const expensePaymentMethodValues = ["efectivo", "yappy", "transferencia", "tarjeta_credito", "otro"] as const;
 export const qrCodeTypeValues = ["url", "whatsapp", "vcard"] as const;
 export const qrCodeStatusValues = ["active", "inactive"] as const;
-export const customFieldTypes = [
-  "text",
-  "date",
-  "select",
-  "image",
-  "note",
-] as const;
 export const heroSlotValues = ["primary", "secondary"] as const;
 export const productReviewSourceValues = ["customer", "admin"] as const;
 export const discountTypeValues = ["percentage", "fixed"] as const;
@@ -43,7 +36,6 @@ export type ExpenseCategory = (typeof expenseCategoryValues)[number];
 export type ExpensePaymentMethod = (typeof expensePaymentMethodValues)[number];
 export type QRCodeType = (typeof qrCodeTypeValues)[number];
 export type QRCodeStatus = (typeof qrCodeStatusValues)[number];
-export type CustomFieldType = (typeof customFieldTypes)[number];
 export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
 export type DiscountType = (typeof discountTypeValues)[number];
@@ -187,10 +179,7 @@ export const productExtraSchema = z.object({
 export const customFieldSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(2),
-  type: z.enum(customFieldTypes),
-  required: z.boolean().default(false),
-  options: z.array(z.string()).default([]),
-  helpText: z.string().optional().nullable(),
+  position: z.number().int().nonnegative().optional(),
 });
 
 export const productSchema = z.object({
@@ -264,6 +253,7 @@ export const adminOrderItemSchema = z.object({
   personalization: z
     .record(z.string(), z.union([z.string(), z.array(z.string())]))
     .default({}),
+  isDone: z.boolean().default(false),
   units: z.array(orderItemUnitSchema).default([]),
 }).strict();
 
@@ -501,7 +491,7 @@ export const adminProductInputSchema = z.object({
   media: z.array(productMediaSchema.omit({ id: true })).default([]),
   priceTiers: z.array(priceTierSchema.omit({ id: true })).default([]),
   extras: z.array(productExtraSchema.omit({ id: true })).default([]),
-  customFields: z.array(customFieldSchema.omit({ id: true })).default([]),
+  customFields: z.array(customFieldSchema).default([]),
   productOptions: z.array(productOptionSchema.extend({
     values: z.array(productOptionValueSchema).default([]),
   })).default([]),
@@ -611,6 +601,7 @@ export type OrderItem = {
   selectedExtraIds?: string[];
   appliedAdjustments?: AdminOrderItemAdjustment[];
   personalization: Record<string, string | string[]>;
+  isDone: boolean;
   units: OrderItemUnit[];
 };
 

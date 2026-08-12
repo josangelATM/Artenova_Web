@@ -1,4 +1,4 @@
-import { Autocomplete, Box, Button, Grid, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, Button, Grid, IconButton, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { formatCurrency, type AdminOrderItemAdjustment, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
 
@@ -7,6 +7,7 @@ export type DraftItemAdjustment = Omit<AdminOrderItemAdjustment, "unitAmount"> &
 };
 
 export type DraftItem = {
+  id?: string;
   productId: string;
   productName: string;
   quantity: string;
@@ -15,6 +16,7 @@ export type DraftItem = {
   variantNameSnapshot: string;
   appliedAdjustments: DraftItemAdjustment[];
   personalization: Record<string, string>;
+  isDone: boolean;
 };
 
 export type DraftPayment = {
@@ -125,6 +127,7 @@ export function defaultItem(product?: Product, productName = ""): DraftItem {
     variantNameSnapshot: product?.defaultVariant?.name ?? "",
     appliedAdjustments: [],
     personalization: {},
+    isDone: false,
   };
 }
 
@@ -135,6 +138,7 @@ export function orderToDraft(order: Order): DraftOrder {
     note: order.customerNote ?? order.internalNote ?? "",
     status: order.status,
     items: order.items.map((item) => ({
+      id: item.id,
       productId: item.productId ?? "",
       productName: item.productName,
       quantity: String(item.quantity),
@@ -148,6 +152,7 @@ export function orderToDraft(order: Order): DraftOrder {
         totalAmount: adjustment.totalAmount,
       })),
       personalization: toStringMap(item.personalization ?? {}),
+      isDone: item.isDone ?? false,
     })),
   };
 }
@@ -161,6 +166,7 @@ export function buildDraftItemsPayload(items: DraftItem[]) {
     const extrasTotal = roundMoney(appliedAdjustments.reduce((sum, adjustment) => sum + adjustment.totalAmount, 0));
 
     return {
+      id: item.id,
       productId: item.productId.trim() || null,
       productName: item.productName.trim(),
       quantity,
@@ -174,6 +180,7 @@ export function buildDraftItemsPayload(items: DraftItem[]) {
       personalization: Object.fromEntries(
         Object.entries(item.personalization).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]),
       ),
+      isDone: item.isDone,
       units: [],
     };
   });
@@ -190,39 +197,21 @@ export function buildDraftPaymentsPayload(payments: DraftPayment[]) {
     }));
 }
 
-function buildFieldLabel(field: CustomField) {
-  return field.required ? `${field.label} *` : field.label;
-}
-
 function renderCustomField(
   field: CustomField,
   value: string,
   onChange: (next: string) => void,
   keyPrefix: string,
 ) {
-  if (field.type === "select") {
-    return (
-      <TextField key={keyPrefix} select size="small" fullWidth label={buildFieldLabel(field)} value={value} onChange={(event) => onChange(event.target.value)}>
-        <MenuItem value="">Seleccionar</MenuItem>
-        {field.options.map((option) => (
-          <MenuItem key={`${keyPrefix}-${option}`} value={option}>{option}</MenuItem>
-        ))}
-      </TextField>
-    );
-  }
-
   return (
     <TextField
       key={keyPrefix}
       size="small"
       fullWidth
-      type={field.type === "date" ? "date" : "text"}
-      label={buildFieldLabel(field)}
+      type="text"
+      label={field.label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
-      multiline={field.type === "note" || field.type === "image"}
-      minRows={field.type === "note" || field.type === "image" ? 2 : undefined}
     />
   );
 }
@@ -312,6 +301,7 @@ export function OrderItemsEditor({
     if (!source) return;
     const clone: DraftItem = {
       ...source,
+      id: source.id,
       appliedAdjustments: source.appliedAdjustments.map((adjustment) => ({ ...adjustment })),
       personalization: { ...source.personalization },
     };
@@ -525,35 +515,43 @@ export function OrderItemsEditor({
                 ))}
               </Stack>
 
-              {customFields.length > 0 ? (
-                <Grid container spacing={1.25}>
-                  {customFields.map((field) => {
-                    const fieldKey = field.id ?? field.label;
-                    const isLongField = field.type === "note" || field.type === "image";
-                    return (
-                      <Grid key={`${fieldKey}-${index}`} size={{ xs: 12, md: isLongField ? 12 : 6 }}>
-                        {renderCustomField(
-                          field,
-                          item.personalization[fieldKey] ?? "",
-                          (nextValue) => updateItem(index, (current) => ({
-                            ...current,
-                            personalization: { ...current.personalization, [fieldKey]: nextValue },
-                          })),
-                          `item-${index}-${fieldKey}`,
-                        )}
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              ) : (
-                <GenericPersonalizationField
-                  value={item.personalization.detalle ?? ""}
-                  onChange={(nextValue) => updateItem(index, (current) => ({
-                    ...current,
-                    personalization: { ...current.personalization, detalle: nextValue },
-                  }))}
-                />
-              )}
+              <Stack
+                spacing={1.25}
+                sx={{
+                  pt: 1,
+                  borderTop: "1px solid rgba(64,44,37,.10)",
+                }}
+              >
+                <Typography fontWeight={900}>Campos operativos</Typography>
+                {customFields.length > 0 ? (
+                  <Grid container spacing={1.25}>
+                    {customFields.map((field) => {
+                      const fieldKey = field.id ?? field.label;
+                      return (
+                        <Grid key={`${fieldKey}-${index}`} size={{ xs: 12, md: 6 }}>
+                          {renderCustomField(
+                            field,
+                            item.personalization[fieldKey] ?? "",
+                            (nextValue) => updateItem(index, (current) => ({
+                              ...current,
+                              personalization: { ...current.personalization, [fieldKey]: nextValue },
+                            })),
+                            `item-${index}-${fieldKey}`,
+                          )}
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                ) : (
+                  <GenericPersonalizationField
+                    value={item.personalization.detalle ?? ""}
+                    onChange={(nextValue) => updateItem(index, (current) => ({
+                      ...current,
+                      personalization: { ...current.personalization, detalle: nextValue },
+                    }))}
+                  />
+                )}
+              </Stack>
             </Stack>
           </Paper>
         );

@@ -29,6 +29,7 @@ describe("order serialization", () => {
           lineTotal: 24,
           selectedExtraIds: [],
           personalization: { owner: "Gabriel" },
+          isDone: true,
           units: [
             { id: "u1", position: 0, label: "Ambar", personalization: { petName: "Ambar", qr: "Si" } },
             { id: "u2", position: 1, label: "Nala", personalization: { petName: "Nala", qr: "Si" } }
@@ -45,6 +46,7 @@ describe("order serialization", () => {
     expect(payload.paidTotal).toBe(12);
     expect(payload.balance).toBe(12);
     expect(payload.isPaid).toBe(false);
+    expect(payload.items[0]?.isDone).toBe(true);
     expect(payload.items[0]?.units[1]?.label).toBe("Nala");
   });
 
@@ -119,6 +121,7 @@ describe("order serialization", () => {
           lineTotal: 10,
           selectedExtraIds: [],
           personalization: { detalle: "Texto libre" },
+          isDone: false,
           units: []
         }
       ],
