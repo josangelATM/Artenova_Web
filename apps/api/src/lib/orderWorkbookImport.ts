@@ -281,6 +281,7 @@ function buildRegularOrderPlan(rows: RegularImportRow[], mode: "single" | "group
           hoja_origen: row.sheetName,
           fila_origen: String(row.rowNumber),
         },
+        isDone: false,
         units: [],
       })),
       payments: payment.amount ? [{
@@ -341,6 +342,7 @@ function buildSinglePetOrderPlan(row: PetTagImportRow): WorkbookImportOrderPlan 
           fecha_original: row.dateKey,
           hoja_origen: row.sheetName,
         },
+        isDone: false,
         units: [buildPetUnit(row, 0)],
       }],
       payments: row.paid > 0 ? [{
@@ -390,6 +392,7 @@ function buildGroupedPetOrderPlan(rows: PetTagImportRow[]): WorkbookImportOrderP
           hoja_origen: firstRow.sheetName,
           registros_agrupados: String(rows.length),
         },
+        isDone: false,
         units: rows.map((row, index) => buildPetUnit(row, index)),
       }],
       payments: payment.amount ? [{
