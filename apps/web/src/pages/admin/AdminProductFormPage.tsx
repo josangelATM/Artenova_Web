@@ -2271,6 +2271,14 @@ export function AdminProductFormPage() {
               priceTiers: normalizePriceTiers(variant.priceTiers),
             }))
           : [];
+      const canonicalVariant =
+        variants.find((variant) => variant.id === defaultVariantId) ??
+        variants.find((variant) => variant.isActive) ??
+        variants[0] ??
+        null;
+      const simpleProductMedia = normalizeImages(
+        images.length > 0 ? images : (canonicalVariant?.images ?? []),
+      );
 
       await api.saveAdminProduct({
         ...draft,
@@ -2279,7 +2287,10 @@ export function AdminProductFormPage() {
         basePrice: Number(draft.basePrice) || 0,
         discountType: draft.discountType || null,
         discountValue: draft.discountValue === "" ? null : Number(draft.discountValue),
-        media: normalizeImages(images),
+        media:
+          sanitizedOptions.length > 0
+            ? normalizeImages(images)
+            : simpleProductMedia,
         isHero: false,
         heroSlot: null,
         priceTiers: normalizePriceTiers(priceTiers),
@@ -2401,19 +2412,21 @@ export function AdminProductFormPage() {
         setVariants={setVariants}
       />
 
-      <VariantsSection
-        variants={variants}
-        defaultVariantId={defaultVariantId}
-        setDefaultVariantId={setDefaultVariantId}
-        setVariants={setVariants}
-        uploadingKey={uploadingKey}
-        uploadVariantImages={uploadVariantImages}
-        optionValueById={optionValueById}
-        visualOptionIds={visualOptionIds}
-        duplicateSelectionKeys={duplicateSelectionKeys}
-        getSuggestedBasePrice={getSuggestedBasePrice}
-        onGenerateVariants={generateVariants}
-      />
+      {hasVariantOptions && (
+        <VariantsSection
+          variants={variants}
+          defaultVariantId={defaultVariantId}
+          setDefaultVariantId={setDefaultVariantId}
+          setVariants={setVariants}
+          uploadingKey={uploadingKey}
+          uploadVariantImages={uploadVariantImages}
+          optionValueById={optionValueById}
+          visualOptionIds={visualOptionIds}
+          duplicateSelectionKeys={duplicateSelectionKeys}
+          getSuggestedBasePrice={getSuggestedBasePrice}
+          onGenerateVariants={generateVariants}
+        />
+      )}
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button
