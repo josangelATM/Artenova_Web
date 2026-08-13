@@ -70,6 +70,18 @@ function resolveGalleryItemsForGroup(groups: GalleryGroupMap, groupKey: string) 
   return groups.values().next().value ?? [];
 }
 
+function buildWhatsAppProductMessage(product: Product, selectedVariant: ProductVariant | null) {
+  const productName = product.name.trim();
+  const variantName = selectedVariant?.name.trim() ?? "";
+  const sku = selectedVariant?.sku?.trim() || product.sku?.trim() || "";
+  const displayName = variantName && variantName.localeCompare(productName, undefined, { sensitivity: "accent" }) !== 0
+    ? `${productName} - ${variantName}`
+    : productName;
+  const productUrl = new URL(`/producto/${product.slug}`, window.location.origin).toString();
+
+  return `Hola, estoy interesado en ${displayName}${sku ? ` (REF ${sku})` : ""}. Link del producto: ${productUrl}`;
+}
+
 export function ProductPage() {
   const { slug } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
@@ -293,7 +305,7 @@ export function ProductPage() {
   const hasVariants = productOptions.length > 0;
   const consultUrl = whatsappHref(
     settings?.whatsapp,
-    `Hola, estoy interesado en ${product.name}${selectedVariant ? ` - ${selectedVariant.name}` : ""}${(selectedVariant?.sku ?? product.sku) ? ` (REF ${selectedVariant?.sku ?? product.sku})` : ""}.`
+    buildWhatsAppProductMessage(product, selectedVariant)
   );
 
   return (

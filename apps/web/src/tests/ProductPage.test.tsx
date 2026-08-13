@@ -334,6 +334,56 @@ describe("ProductPage", () => {
     expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
   });
 
+  it("includes the product link in the WhatsApp message", async () => {
+    productMock.mockResolvedValue(product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    const consultLink = await screen.findByRole("link", { name: /consultar por whatsapp/i });
+    const href = consultLink.getAttribute("href");
+
+    expect(href).toBeTruthy();
+    const url = new URL(href!);
+    const text = url.searchParams.get("text");
+    expect(text).toContain(`Link del producto: ${window.location.origin}/producto/letrero-acrilico`);
+  });
+
+  it("does not repeat the product name when the selected variant has the same name and no sku", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      sku: "",
+      variants: [
+        {
+          ...defaultVariant,
+          name: "Letrero acrilico",
+          sku: "",
+          selections: [],
+        },
+      ],
+      defaultVariant: {
+        ...defaultVariant,
+        name: "Letrero acrilico",
+        sku: "",
+        selections: [],
+      },
+      defaultVariantId: "v1",
+      productOptions: [],
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    const consultLink = await screen.findByRole("link", { name: /consultar por whatsapp/i });
+    const href = consultLink.getAttribute("href");
+
+    expect(href).toBeTruthy();
+    const text = new URL(href!).searchParams.get("text");
+    expect(text).toContain("Hola, estoy interesado en Letrero acrilico.");
+    expect(text).not.toContain("Letrero acrilico - Letrero acrilico");
+    expect(text).not.toContain("REF");
+  });
+
   it("keeps the active image when the selected variant changes inside the same visual group", async () => {
     productMock.mockResolvedValue({
       ...product,
