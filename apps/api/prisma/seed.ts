@@ -409,7 +409,7 @@ const petFields: SeedCustomField[] = [
   },
 ];
 
-const petIdFields: SeedCustomField[] = [
+/* const petIdFields: SeedCustomField[] = [
   {
     label: "Nombre de la mascota",
     type: "text",
@@ -485,6 +485,119 @@ const petIdTiers: SeedTier[] = [
   { minQuantity: 6, unitPrice: 6.33, totalPrice: 38, label: "6 unidades - $38.00" },
 ];
 
+];
+*/
+
+const petIdFields: SeedCustomField[] = [
+  {
+    label: "Nombre",
+    type: "text",
+    required: true,
+    options: [],
+    helpText: "Nombre que ira en la cedula",
+    position: 0,
+  },
+  {
+    label: "Fecha de Nacimiento",
+    type: "date",
+    required: false,
+    options: [],
+    helpText: "Opcional",
+    position: 1,
+  },
+  {
+    label: "Especie",
+    type: "text",
+    required: false,
+    options: [],
+    helpText: "Ejemplo: canino o felino",
+    position: 2,
+  },
+  {
+    label: "Raza",
+    type: "text",
+    required: false,
+    options: [],
+    helpText: "Opcional",
+    position: 3,
+  },
+  {
+    label: "Sexo",
+    type: "select",
+    required: false,
+    options: ["Macho", "Hembra"],
+    helpText: "Opcional",
+    position: 4,
+  },
+  {
+    label: "Celular",
+    type: "text",
+    required: true,
+    options: [],
+    helpText: "Numero que aparecera en la cedula",
+    position: 5,
+  },
+];
+
+const petIdTiers: SeedTier[] = [
+  { minQuantity: 1, unitPrice: 10, totalPrice: 10, label: "1 unidad - $10.00" },
+  { minQuantity: 2, unitPrice: 9, totalPrice: 18, label: "2 unidades - $18.00" },
+  { minQuantity: 3, unitPrice: 7.67, totalPrice: 23, label: "3 unidades - $23.00" },
+  { minQuantity: 4, unitPrice: 7, totalPrice: 28, label: "4 unidades - $28.00" },
+  { minQuantity: 5, unitPrice: 6.8, totalPrice: 34, label: "5 unidades - $34.00" },
+  { minQuantity: 6, unitPrice: 6.33, totalPrice: 38, label: "6 unidades - $38.00" },
+];
+
+const petIdFieldsV2: SeedCustomField[] = [
+  { label: "Nombre", type: "text", required: true, options: [], helpText: "Nombre que ira en la cedula", position: 0 },
+  { label: "Fecha de Nacimiento", type: "date", required: false, options: [], helpText: "Opcional", position: 1 },
+  { label: "Especie", type: "text", required: false, options: [], helpText: "Ejemplo: canino o felino", position: 2 },
+  { label: "Raza", type: "text", required: false, options: [], helpText: "Opcional", position: 3 },
+  { label: "Sexo", type: "select", required: false, options: ["Macho", "Hembra"], helpText: "Opcional", position: 4 },
+  { label: "Celular", type: "text", required: true, options: [], helpText: "Numero que aparecera en la cedula", position: 5 },
+];
+
+const petIdColorValues: SeedOptionValue[] = [
+  { key: "fucsia", value: "Fucsia", swatch: "#d81b60" },
+  { key: "azul", value: "Azul", swatch: "#1e88e5" },
+  { key: "negro", value: "Negro", swatch: "#212121" },
+  { key: "rojo", value: "Rojo", swatch: "#e53935" },
+  { key: "verde", value: "Verde", swatch: "#43a047" },
+];
+
+const petIdSizeValues: SeedOptionValue[] = [
+  { key: "grande", value: "Grande - 2 x 1.42 in / 5.08 x 3.61 cm" },
+  { key: "mediana", value: "Mediana - 1.7 x 1.23 in / 4.32 x 3.14 cm" },
+  { key: "pequena", value: "Pequena - 1.2 x 1.11 in / 3.81 x 2.83 cm" },
+];
+
+function buildPetIdVariantsV2(): SeedVariant[] {
+  const sizeMeta = [
+    { key: "grande", name: "Grande", skuSuffix: "G" },
+    { key: "mediana", name: "Mediana", skuSuffix: "M" },
+    { key: "pequena", name: "Pequena", skuSuffix: "P" },
+  ] as const;
+  const colorMeta = [
+    { key: "fucsia", name: "Fucsia", skuSuffix: "FUC" },
+    { key: "azul", name: "Azul", skuSuffix: "AZU" },
+    { key: "negro", name: "Negro", skuSuffix: "NEG" },
+    { key: "rojo", name: "Rojo", skuSuffix: "ROJ" },
+    { key: "verde", name: "Verde", skuSuffix: "VER" },
+  ] as const;
+
+  return sizeMeta.flatMap((size) =>
+    colorMeta.map((color) => ({
+      key: `${size.key}-${color.key}`,
+      name: `${size.name} / ${color.name}`,
+      sku: `PET-ID-${size.skuSuffix}-${color.skuSuffix}`,
+      visualGroupKey: color.key,
+      basePrice: 10,
+      optionValueKeys: [`tamano:${size.key}`, `color:${color.key}`],
+      priceTiers: petIdTiers,
+    })),
+  );
+}
+
 const weddingTiersMdf: SeedTier[] = [
   { minQuantity: 6, unitPrice: 4.5, label: "6 unidades - $27.00" },
   { minQuantity: 12, unitPrice: 4, label: "12 unidades - $48.00" },
@@ -530,6 +643,24 @@ const baseCategories: SeedCategory[] = [
 ];
 
 const baseProducts: SeedProduct[] = [
+  {
+    categorySlug: "mascotas",
+    name: "Cedulas personalizadas para mascotas",
+    slug: "cedulas-personalizadas-mascotas",
+    description:
+      "Cedulas de identificacion personalizadas para mascotas, resistentes al agua, con acabado brillante y capa de resina para mayor durabilidad. Disponibles en tamano Grande, Mediana y Pequena, con variantes por color fucsia, azul, negro, rojo y verde.",
+    featured: true,
+    isHero: true,
+    heroSlot: "primary",
+    customFields: petIdFieldsV2,
+    extras: [{ name: "QR trasero", type: "personalizacion", priceDelta: 2 }],
+    options: [
+      { key: "tamano", name: "Tamano", values: petIdSizeValues },
+      { key: "color", name: "Color", values: petIdColorValues },
+    ],
+    variants: buildPetIdVariantsV2(),
+    defaultVariantKey: "grande-fucsia",
+  },
   {
     categorySlug: "mascotas",
     name: "Cédulas personalizadas para mascotas",
@@ -1363,7 +1494,10 @@ const baseProducts: SeedProduct[] = [
     ],
     defaultVariantKey: "original-10cm",
   },
-].filter((product) => ["recordatorios-memoriales", "deportes"].includes(product.categorySlug));
+].filter((product) =>
+  ["recordatorios-memoriales", "deportes"].includes(product.categorySlug) ||
+  (product.slug === "cedulas-personalizadas-mascotas" && (product.options?.length ?? 0) > 0),
+);
 
 function variantId(productSlug: string, key: string) {
   return key === "default" ? `variant-${productSlug}` : `variant-${productSlug}-${key}`;
@@ -1388,8 +1522,24 @@ async function seedProduct(
   });
 
   if (existing) {
-    console.log(`Skipping existing product: ${product.slug}`);
-    return;
+    if (product.slug === "cedulas-personalizadas-mascotas") {
+      const relatedOrderItems = await prisma.orderItem.count({
+        where: { productId: existing.id },
+      });
+
+      if (relatedOrderItems > 0) {
+        throw new Error(
+          "No se puede recrear cedulas-personalizadas-mascotas porque ya esta asociada a pedidos existentes.",
+        );
+      }
+
+      await prisma.product.delete({
+        where: { id: existing.id },
+      });
+    } else {
+      console.log(`Skipping existing product: ${product.slug}`);
+      return;
+    }
   }
 
   const extras = product.extras ?? [];
