@@ -217,7 +217,8 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
     priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
     extras: Array<{ name: string; type: string; priceDelta: number }>;
     customFields: Array<{ id?: string; label: string; position?: number }>;
-  }) {
+  }, options?: { persistProductMedia?: boolean }) {
+  const persistProductMedia = options?.persistProductMedia ?? true;
 
   await tx.productImage.deleteMany({ where: { productId } });
   await tx.priceTier.deleteMany({ where: { productId } });
@@ -226,7 +227,7 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
 
   validateMediaCollection(payload.media, "La galeria del producto");
 
-  if (payload.media.length > 0) {
+  if (persistProductMedia && payload.media.length > 0) {
     await tx.productImage.createMany({ data: payload.media.map((item) => ({ ...item, productId, posterUrl: item.posterUrl ?? null })) });
   }
   if (payload.priceTiers.length > 0) {
@@ -799,6 +800,8 @@ adminRouter.post("/products", async (req, res) => {
     await replaceProductCollections(tx, created.id, {
       ...input,
       priceTiers: []
+    }, {
+      persistProductMedia: hasOptions
     });
     const { optionValueIds, optionValueLabelById } = await syncProductOptions(tx, created.id, input.productOptions);
     await syncVariants(tx, created.id, variantPayload, optionValueIds, optionValueLabelById);
@@ -856,6 +859,8 @@ adminRouter.put("/products/:id", async (req, res) => {
     await replaceProductCollections(tx, id, {
       ...input,
       priceTiers: []
+    }, {
+      persistProductMedia: hasOptions
     });
     const { optionValueIds, optionValueLabelById } = await syncProductOptions(tx, id, input.productOptions);
     await syncVariants(tx, id, variantPayload, optionValueIds, optionValueLabelById);

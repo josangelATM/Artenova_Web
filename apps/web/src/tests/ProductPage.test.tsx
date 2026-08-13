@@ -216,6 +216,42 @@ describe("ProductPage", () => {
     expectGalleryCounterToEndWith(5);
   });
 
+  it("renders a simple product from canonical variant media when the base gallery is empty", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      productOptions: [],
+      media: [],
+      variants: [
+        {
+          ...defaultVariant,
+          selectionKey: null,
+          visualGroupKey: "default",
+          selections: [],
+          media: [imageMedia("img-simple", "/seed/simple.jpg", "Foto simple", 0)],
+        },
+      ],
+      defaultVariant: {
+        ...defaultVariant,
+        selectionKey: null,
+        visualGroupKey: "default",
+        selections: [],
+        media: [imageMedia("img-simple", "/seed/simple.jpg", "Foto simple", 0)],
+      },
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Letrero acrilico")).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByRole("img", { name: /foto simple/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Imagen siguiente")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Imagen anterior")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pequeno" })).not.toBeInTheDocument();
+  });
+
   it("keeps the global total visible when the user changes to another visual group", async () => {
     productMock.mockResolvedValue({
       ...product,
