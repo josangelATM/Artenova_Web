@@ -32,9 +32,9 @@ Luego abre:
 - Web: `http://localhost:5174`
 - API health: `http://localhost:4000/api/health`
 
-El servicio `api` espera a PostgreSQL, aplica las migraciones versionadas con Prisma y ejecuta el seed antes de arrancar el servidor dev. En volumenes ya inicializados, Prisma no reaplica migraciones existentes; el seed vuelve a sincronizar el admin y los datos demo.
+El servicio `api` espera a PostgreSQL y aplica las migraciones versionadas con Prisma antes de arrancar el servidor dev. En volumenes ya inicializados, Prisma no reaplica migraciones existentes.
 
-Si necesitas correrlos manualmente:
+El seed ya no corre automaticamente ni en desarrollo ni en produccion. Si necesitas ejecutarlo manualmente:
 
 ```powershell
 docker compose --env-file .env -f docker-compose.dev.yml exec api pnpm --filter @artenova/api db:deploy
@@ -51,7 +51,7 @@ El compose de produccion expone HTTP en el puerto `90`; define siempre `PROD_APP
 Define tambien `PROD_API_BASE_URL` con la URL publica de la API, normalmente `https://DOMINIO/api` si el API queda detras del mismo dominio.
 Estas variables alimentan canonical, Open Graph, robots y sitemap; no deben apuntar a `localhost` en produccion.
 El API usa `WEB_INTERNAL_BASE_URL` para leer el `index.html` del servicio web e inyectar Open Graph en URLs de producto; en Docker Compose queda como `http://web`.
-Al iniciar el contenedor `api` en produccion se ejecutan automaticamente `db:deploy` y `db:seed` antes de levantar el servidor.
+Al iniciar el contenedor `api` en produccion se ejecuta automaticamente `db:deploy` antes de levantar el servidor. El seed queda manual.
 
 ## Pruebas
 

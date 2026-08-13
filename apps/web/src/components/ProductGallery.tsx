@@ -368,6 +368,7 @@ export function ProductGallery({
   thumbnailItems,
   activeKey,
   activeThumbnailKey,
+  totalItemsCount,
   onActiveKeyChange
 }: {
   productName: string;
@@ -375,6 +376,7 @@ export function ProductGallery({
   thumbnailItems?: ProductGalleryItem[];
   activeKey: string;
   activeThumbnailKey?: string;
+  totalItemsCount?: number;
   onActiveKeyChange: (key: string) => void;
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -390,6 +392,7 @@ export function ProductGallery({
   const navigationItems = hasMany ? items : previewItems;
   const activeNavigationKey = hasMany ? activeKey : activePreviewKey;
   const navigationIndex = Math.max(0, navigationItems.findIndex((item) => item.key === activeNavigationKey));
+  const visibleTotalCount = Math.max(totalItemsCount ?? items.length, items.length);
   const canNavigate = navigationItems.length > 1;
   const viewerVideoShouldAutoplay = Boolean(viewerOpen && activeMedia?.type === "video");
   const mainVideoShouldAutoplay = Boolean(activeMedia && activeMedia.type === "video" && !viewerOpen);
@@ -615,7 +618,7 @@ export function ProductGallery({
                   fontWeight: 900,
                 }}
               >
-                {activeIndex + 1} / {items.length}
+                {navigationIndex + 1} / {visibleTotalCount}
               </Typography>
             </>
           )}
@@ -766,7 +769,7 @@ export function ProductGallery({
                   <ChevronRight size={18} />
                 </IconButton>
                 <Typography sx={{ position: "absolute", bottom: 18, px: 1.5, py: 0.5, borderRadius: 999, bgcolor: "rgba(255,250,245,.82)", fontWeight: 900, zIndex: 2 }}>
-                  {navigationIndex + 1} / {navigationItems.length}
+                  {navigationIndex + 1} / {visibleTotalCount}
                 </Typography>
               </>
             )}

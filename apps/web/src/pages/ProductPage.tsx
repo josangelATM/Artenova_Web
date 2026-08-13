@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Chip, Container, Grid, Paper, Rating, Stack, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
-import { formatCurrency, resolveFirstStillUrl, resolveMediaStillUrl, type Product, type ProductOption, type ProductVariant, type SiteSettings } from "@artenova/shared";
+import {
+  buildProductMediaInventory,
+  formatCurrency,
+  resolveFirstStillUrl,
+  resolveMediaStillUrl,
+  resolveProductMediaKey,
+  resolveVariantVisualGroupKey,
+  type Product,
+  type ProductOption,
+  type ProductVariant,
+  type SiteSettings,
+} from "@artenova/shared";
 import { AutoLinkedText } from "../components/AutoLinkedText";
 import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
 import { ProductReviews } from "../components/ProductReviews";
@@ -17,10 +28,6 @@ type GalleryImageItem = ProductGalleryItem & {
   visualGroupKey: string;
 };
 type GalleryGroupMap = Map<string, GalleryImageItem[]>;
-
-function resolveVisualGroupKey(variant: ProductVariant | null | undefined) {
-  return variant?.visualGroupKey?.trim() || variant?.id || "base";
-}
 
 function variantSelectionMap(variant: ProductVariant) {
   return Object.fromEntries(variant.selections.map((selection) => [selection.optionId, selection.optionValueId]));
@@ -83,7 +90,7 @@ export function ProductPage() {
       .then(([nextProduct, nextSettings]) => {
         if (!active) return;
         const defaultVariant = nextProduct.defaultVariant ?? nextProduct.variants.find((variant) => variant.isActive) ?? nextProduct.variants[0] ?? null;
-        const defaultVisualGroup = resolveVisualGroupKey(defaultVariant);
+        const defaultVisualGroup = resolveVariantVisualGroupKey(defaultVariant);
         setProduct(nextProduct);
         setSettings(nextSettings);
         setSelectedOptions(defaultVariant ? completeSelectionFromVariant(defaultVariant) : {});
@@ -115,6 +122,14 @@ export function ProductPage() {
     [productOptions],
   );
   const hasOptionSelection = useMemo(() => productOptions.some((option) => Boolean(selectedOptions[option.id])), [productOptions, selectedOptions]);
+  const mediaInventory = useMemo(
+    () => (
+      product
+        ? buildProductMediaInventory(product)
+        : { allMedia: [], totalMedia: 0, extraMediaCount: 0, mediaByVisualGroup: new Map<string, never[]>() }
+    ),
+    [product]
+  );
 
   const selectedVariant = useMemo(() => {
     if (!product) return null;
@@ -129,32 +144,16 @@ export function ProductPage() {
   const visualGalleryMap = useMemo<GalleryGroupMap>(() => {
     if (!product) return new Map<string, GalleryImageItem[]>();
     const groups = new Map<string, GalleryImageItem[]>();
-    if (product.media.length > 0) {
-      groups.set("base", product.media.map((media, index) => ({
-        key: `base:${media.id ?? index}`,
-        media,
-        variantId: null,
-        visualGroupKey: "base",
+    for (const [groupKey, entries] of mediaInventory.mediaByVisualGroup.entries()) {
+      groups.set(groupKey, entries.map((entry) => ({
+        key: `${groupKey}:${entry.variantId ?? "base"}:${resolveProductMediaKey(entry.media)}`,
+        media: entry.media,
+        variantId: entry.variantId,
+        visualGroupKey: entry.visualGroupKey,
       })));
     }
-    for (const variant of activeVariants) {
-      const groupKey = resolveVisualGroupKey(variant);
-      const existingItems = groups.get(groupKey) ?? [];
-      const seenUrls = new Set(existingItems.map((item) => item.media.url));
-      for (const [index, media] of variant.media.entries()) {
-        if (seenUrls.has(media.url)) continue;
-        existingItems.push({
-          key: `visual:${groupKey}:${media.id ?? index}`,
-          media,
-          variantId: variant.id,
-          visualGroupKey: groupKey,
-        });
-        seenUrls.add(media.url);
-      }
-      groups.set(groupKey, existingItems);
-    }
     return groups;
-  }, [activeVariants, product]);
+  }, [mediaInventory, product]);
 
   const galleryItems = useMemo<GalleryImageItem[]>(() => {
     return resolveGalleryItemsForGroup(visualGalleryMap, activeVisualGroup);
@@ -169,7 +168,7 @@ export function ProductPage() {
 
   useEffect(() => {
     if (!selectedVariant) return;
-    const nextGroup = resolveVisualGroupKey(selectedVariant);
+    const nextGroup = resolveVariantVisualGroupKey(selectedVariant);
     setActiveVisualGroup((current) => current || nextGroup);
   }, [selectedVariant]);
 
@@ -214,7 +213,7 @@ export function ProductPage() {
       return;
     }
 
-    const groupVariants = activeVariants.filter((variant) => resolveVisualGroupKey(variant) === nextVisualGroup);
+    const groupVariants = activeVariants.filter((variant) => resolveVariantVisualGroupKey(variant) === nextVisualGroup);
     const preferredVariant = nextThumbnailItem.variantId
       ? groupVariants.find((variant) => variant.id === nextThumbnailItem.variantId)
       : null;
@@ -307,6 +306,7 @@ export function ProductPage() {
             thumbnailItems={galleryThumbnailItems}
             activeKey={activeGalleryItem?.key ?? ""}
             activeThumbnailKey={activeThumbnailKey}
+            totalItemsCount={mediaInventory.totalMedia}
             onActiveKeyChange={handleGalleryKeyChange}
           />
         </Grid>
@@ -355,7 +355,7 @@ export function ProductPage() {
                                   productOptions.every((productOption) => variantSelectionMap(variant)[productOption.id] === nextSelection[productOption.id])
                                 ) ?? null;
                                 if (matchingVariant) {
-                                  const nextVisualGroup = resolveVisualGroupKey(matchingVariant);
+                                  const nextVisualGroup = resolveVariantVisualGroupKey(matchingVariant);
                                   const nextGalleryItems = resolveGalleryItemsForGroup(visualGalleryMap, nextVisualGroup);
                                   const nextGalleryItem = nextGalleryItems[0];
                                   setActiveVisualGroup(nextVisualGroup);

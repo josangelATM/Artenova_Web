@@ -15,4 +15,4 @@ CMD ["pnpm", "--filter", "@artenova/api", "dev"]
 
 FROM base AS prod
 RUN pnpm --filter @artenova/api build
-CMD ["sh", "-c", "pnpm --filter @artenova/api db:deploy && pnpm --filter @artenova/api db:seed && pnpm --filter @artenova/api start"]
+CMD ["sh", "-c", "pnpm --filter @artenova/api db:deploy && pnpm --filter @artenova/api start"]

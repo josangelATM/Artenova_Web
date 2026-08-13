@@ -36,7 +36,6 @@ services:
     command: >
       sh -c "pnpm --filter @artenova/api db:generate &&
       pnpm --filter @artenova/api db:deploy &&
-      pnpm --filter @artenova/api db:seed &&
       pnpm --filter @artenova/api dev"
     ports:
       - "4000:4000"

@@ -118,4 +118,22 @@ describe("ProductGallery", () => {
     expect(rail).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /ver elemento/i })).toHaveLength(8);
   });
+
+  it("renders the global total when the active group has fewer items than the product total", () => {
+    render(
+      <ProductGallery
+        productName="Producto demo"
+        items={[imageItem("img-1", "/seed/uno.jpg", "Imagen uno")]}
+        thumbnailItems={[
+          imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
+          imageItem("img-2", "/seed/dos.jpg", "Imagen dos"),
+        ]}
+        activeKey="img-1"
+        totalItemsCount={5}
+        onActiveKeyChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1 / 5")).toBeInTheDocument();
+  });
 });

@@ -149,6 +149,15 @@ function renderProductPage() {
   );
 }
 
+function expectGalleryCounterToEndWith(total: number) {
+  expect(
+    screen.getByText((_, element) => (
+      element?.tagName.toLowerCase() === "span"
+      && (element.textContent?.endsWith(` / ${total}`) ?? false)
+    ))
+  ).toBeInTheDocument();
+}
+
 describe("ProductPage", () => {
   beforeEach(() => {
     productMock.mockReset();
@@ -183,6 +192,7 @@ describe("ProductPage", () => {
 
     expect(screen.getByText("$20.00")).toBeInTheDocument();
     expect(screen.getAllByRole("img", { name: /foto pequeno/i }).length).toBeGreaterThan(0);
+    expectGalleryCounterToEndWith(5);
     expect(screen.getByRole("button", { name: "Pequeno" })).toHaveClass("MuiChip-filled");
 
     fireEvent.click(screen.getByLabelText("Imagen siguiente"));
@@ -203,6 +213,69 @@ describe("ProductPage", () => {
 
     expect(screen.getByLabelText("Imagen anterior")).toBeInTheDocument();
     expect(screen.getByText("$22.00")).toBeInTheDocument();
+    expectGalleryCounterToEndWith(5);
+  });
+
+  it("keeps the global total visible when the user changes to another visual group", async () => {
+    productMock.mockResolvedValue({
+      ...product,
+      productOptions: [
+        {
+          id: "color",
+          productId: "p1",
+          name: "Color",
+          drivesVisualGroup: true,
+          position: 0,
+          values: [
+            { id: "small", optionId: "color", value: "Pequeno", position: 0, swatch: null },
+            { id: "large", optionId: "color", value: "Grande", position: 1, swatch: null },
+          ],
+        },
+      ],
+      variants: [
+        {
+          ...defaultVariant,
+          id: "v1",
+          name: "Pequeno",
+          selectionKey: "small",
+          visualGroupKey: "small-shape",
+          media: [imageMedia("img-small", "/seed/small.jpg", "Foto pequeno", 0)],
+          selections: [{ optionId: "color", optionName: "Color", optionValueId: "small", value: "Pequeno", position: 0 }],
+        },
+        {
+          ...product.variants[1]!,
+          id: "v2",
+          name: "Grande",
+          selectionKey: "large",
+          visualGroupKey: "large-shape",
+          media: [imageMedia("img-large", "/seed/large.jpg", "Foto grande", 0)],
+          selections: [{ optionId: "color", optionName: "Color", optionValueId: "large", value: "Grande", position: 0 }],
+        },
+      ],
+      defaultVariant: {
+        ...defaultVariant,
+        id: "v1",
+        name: "Pequeno",
+        selectionKey: "small",
+        visualGroupKey: "small-shape",
+        media: [imageMedia("img-small", "/seed/small.jpg", "Foto pequeno", 0)],
+        selections: [{ optionId: "color", optionName: "Color", optionValueId: "small", value: "Pequeno", position: 0 }],
+      },
+    } satisfies Product);
+    settingsMock.mockResolvedValue(settings);
+
+    renderProductPage();
+
+    await waitFor(() => {
+      expectGalleryCounterToEndWith(4);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Grande" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("$22.00")).toBeInTheDocument();
+    });
+    expectGalleryCounterToEndWith(4);
   });
 
   it("renders markdown links in the product description", async () => {

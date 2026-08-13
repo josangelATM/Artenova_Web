@@ -726,6 +726,18 @@ export function formatCurrency(value: number, currencySymbol = "B/."): string {
 
 export type ProductMediaRenderable = Pick<ProductMedia, "type" | "url" | "posterUrl">;
 export type ProductMediaSurface = "hero" | "card" | "thumbnail" | "viewer" | "seo";
+export type ProductMediaInventoryEntry = {
+  mediaKey: string;
+  media: ProductMedia;
+  variantId: string | null;
+  visualGroupKey: string;
+};
+export type ProductMediaInventory = {
+  allMedia: ProductMediaInventoryEntry[];
+  totalMedia: number;
+  extraMediaCount: number;
+  mediaByVisualGroup: Map<string, ProductMediaInventoryEntry[]>;
+};
 
 export function resolveVideoPosterUrl(media?: ProductMediaRenderable | null): string | undefined {
   if (!media || media.type !== "video") return undefined;
@@ -759,6 +771,79 @@ export function resolveFirstStillUrl(mediaItems: readonly ProductMediaRenderable
     if (stillUrl) return stillUrl;
   }
   return undefined;
+}
+
+export function resolveProductMediaKey(media: Pick<ProductMedia, "id" | "url">): string {
+  return media.url || media.id?.trim() || "";
+}
+
+export function resolveVariantVisualGroupKey(
+  variant?: Pick<ProductVariant, "id" | "visualGroupKey"> | null
+): string {
+  return variant?.visualGroupKey?.trim() || variant?.id || "base";
+}
+
+export function buildProductMediaInventory(
+  product: Pick<Product, "media" | "variants">,
+  options?: { includeInactiveVariants?: boolean }
+): ProductMediaInventory {
+  const allMedia: ProductMediaInventoryEntry[] = [];
+  const mediaByVisualGroup = new Map<string, ProductMediaInventoryEntry[]>();
+  const allMediaKeys = new Set<string>();
+  const groupMediaKeys = new Map<string, Set<string>>();
+  const variants = options?.includeInactiveVariants
+    ? product.variants
+    : product.variants.filter((variant) => variant.isActive);
+
+  function appendToGroup(entry: ProductMediaInventoryEntry) {
+    const groupItems = mediaByVisualGroup.get(entry.visualGroupKey) ?? [];
+    const groupKeys = groupMediaKeys.get(entry.visualGroupKey) ?? new Set<string>();
+    if (groupKeys.has(entry.mediaKey)) return;
+    groupItems.push(entry);
+    groupKeys.add(entry.mediaKey);
+    mediaByVisualGroup.set(entry.visualGroupKey, groupItems);
+    groupMediaKeys.set(entry.visualGroupKey, groupKeys);
+  }
+
+  for (const media of product.media) {
+    const mediaKey = resolveProductMediaKey(media);
+    const entry: ProductMediaInventoryEntry = {
+      mediaKey,
+      media,
+      variantId: null,
+      visualGroupKey: "base",
+    };
+    if (!allMediaKeys.has(mediaKey)) {
+      allMedia.push(entry);
+      allMediaKeys.add(mediaKey);
+    }
+    appendToGroup(entry);
+  }
+
+  for (const variant of variants) {
+    const visualGroupKey = resolveVariantVisualGroupKey(variant);
+    for (const media of variant.media) {
+      const mediaKey = resolveProductMediaKey(media);
+      const entry: ProductMediaInventoryEntry = {
+        mediaKey,
+        media,
+        variantId: variant.id,
+        visualGroupKey,
+      };
+      if (!allMediaKeys.has(mediaKey)) {
+        allMedia.push(entry);
+        allMediaKeys.add(mediaKey);
+      }
+      appendToGroup(entry);
+    }
+  }
+
+  return {
+    allMedia,
+    totalMedia: allMedia.length,
+    extraMediaCount: Math.max(0, allMedia.length - 1),
+    mediaByVisualGroup,
+  };
 }
 
 export { applyDiscount, calculateLineTotal, getFromPrice, getUnitPrice, resolveDisplayTiers, resolvePricingSummary, resolveVariantPricing } from "./pricing";

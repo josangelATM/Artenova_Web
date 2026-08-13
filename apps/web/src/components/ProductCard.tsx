@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/material";
 import { ImageIcon, Images, PlayCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { formatCurrency, resolvePreviewMode, resolveMediaStillUrl, type Product } from "@artenova/shared";
+import { buildProductMediaInventory, formatCurrency, resolvePreviewMode, resolveMediaStillUrl, type Product } from "@artenova/shared";
 
 function playVideoElement(video: HTMLVideoElement | null) {
   if (!video) return;
@@ -73,12 +73,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   const previewMode = resolvePreviewMode(previewMedia, "card");
   const image = resolveMediaStillUrl(previewMedia);
   const [imageFailed, setImageFailed] = useState(false);
-  const totalImages = defaultVariantMedia.length
-    ? defaultVariantMedia.length
-    : productMedia.length > 0
-      ? productMedia.length
-      : product.variants.reduce((sum, variant) => sum + ((variant.media ?? (variant as { images?: Product["media"] | undefined }).images) ?? []).length, 0);
-  const extraImages = Math.max(0, totalImages - 1);
+  const extraImages = buildProductMediaInventory(product).extraMediaCount;
   const shouldRenderInlineVideo = previewMode === "video" && Boolean(previewMedia?.type === "video");
   const cardVideo = useCardVideoVisibility(shouldRenderInlineVideo);
   const videoRef = useRef<HTMLVideoElement | null>(null);
