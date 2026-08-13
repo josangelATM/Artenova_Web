@@ -190,6 +190,7 @@ export function buildAdminFinanceOverview(
       outstandingBalance,
       expenseTotal,
       netCashflow,
+      netProfit: netCashflow,
       orderCount: ordersInRange.length,
       expenseCount: expensesInRange.length,
     },

@@ -87,6 +87,7 @@ describe("admin expense schemas", () => {
         outstandingBalance: 60,
         expenseTotal: 45,
         netCashflow: 75,
+        netProfit: 75,
         orderCount: 3,
         expenseCount: 2,
       },
@@ -129,6 +130,7 @@ describe("admin expense schemas", () => {
     });
 
     expect(payload.summary.netCashflow).toBe(75);
+    expect(payload.summary.netProfit).toBe(75);
     expect(payload.topOutstandingOrders[0]?.balance).toBe(60);
   });
 });

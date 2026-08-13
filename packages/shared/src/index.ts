@@ -322,6 +322,7 @@ export const adminFinanceSummarySchema = z.object({
   outstandingBalance: moneySchema,
   expenseTotal: moneySchema,
   netCashflow: z.number().finite(),
+  netProfit: z.number().finite(),
   orderCount: z.number().int().nonnegative(),
   expenseCount: z.number().int().nonnegative(),
 });

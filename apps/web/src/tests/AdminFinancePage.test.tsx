@@ -24,6 +24,7 @@ const overview: AdminFinanceOverview = {
     outstandingBalance: 60,
     expenseTotal: 55,
     netCashflow: 65,
+    netProfit: 65,
     orderCount: 3,
     expenseCount: 2,
   },
@@ -97,6 +98,7 @@ describe("AdminFinancePage", () => {
     await waitFor(() => {
       expect(screen.getByText("Finanzas")).toBeInTheDocument();
       expect(screen.getByText("B/.120.00")).toBeInTheDocument();
+      expect(screen.getByText("Ganancia Neta")).toBeInTheDocument();
     });
 
     expect(adminFinanceOverviewMock).toHaveBeenCalledWith(expect.any(URLSearchParams));

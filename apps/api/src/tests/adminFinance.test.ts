@@ -109,6 +109,7 @@ describe("admin finance overview", () => {
     expect(overview.summary.outstandingBalance).toBe(60);
     expect(overview.summary.expenseTotal).toBe(55);
     expect(overview.summary.netCashflow).toBe(65);
+    expect(overview.summary.netProfit).toBe(65);
     expect(overview.paymentMethodBreakdown.map((item) => item.method)).toEqual(["efectivo", "yappy"]);
     expect(overview.expenseBreakdown[0]).toMatchObject({ category: "servicios", total: 45 });
     expect(overview.topOutstandingOrders[0]).toMatchObject({ code: "2608-001", balance: 60 });

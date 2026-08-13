@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Chip, Grid, Link, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Grid, Link, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from "@mui/material";
 import { expenseCategoryLabels, expensePaymentMethodLabels, formatCurrency, orderStatusLabels, type AdminFinanceOverview, type AdminFinanceRangePreset } from "@artenova/shared";
-import { ArrowRightLeft, CalendarRange, HandCoins, ReceiptText, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowRightLeft, BadgeDollarSign, CalendarRange, HandCoins, Info, Landmark, PiggyBank, ReceiptText, Wallet } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { api } from "../../lib/api";
-import { AdminPageHeader, AdminSection, AdminStat, StatusChip, adminSurfaceSx } from "./adminUi";
+import { AdminPageHeader, AdminSection, StatusChip, adminSurfaceSx } from "./adminUi";
 
 const rangeOptions: Array<{ value: AdminFinanceRangePreset; label: string }> = [
   { value: "today", label: "Hoy" },
-  { value: "last7", label: "7 días" },
+  { value: "last7", label: "7 dias" },
   { value: "thisMonth", label: "Mes" },
-  { value: "last30", label: "30 días" },
+  { value: "last30", label: "30 dias" },
 ];
 
 function formatDateInput(value: Date) {
@@ -63,6 +64,122 @@ function buildExpensesLink(dateFrom: string, dateTo: string, extra?: Record<stri
   return `/admin/gastos?${params.toString()}`;
 }
 
+type FinanceStatTone = "success" | "primary" | "warning" | "expense" | "profit";
+
+const financeToneSx: Record<FinanceStatTone, { border: string; background: string; chipBg: string; chipColor: string; accent: string }> = {
+  success: {
+    border: "rgba(36,119,68,.16)",
+    background: "linear-gradient(180deg, rgba(244,252,247,.98) 0%, rgba(236,248,240,.94) 100%)",
+    chipBg: "rgba(36,119,68,.10)",
+    chipColor: "#247744",
+    accent: "#247744",
+  },
+  primary: {
+    border: "rgba(77,104,186,.16)",
+    background: "linear-gradient(180deg, rgba(246,248,255,.98) 0%, rgba(237,241,252,.94) 100%)",
+    chipBg: "rgba(77,104,186,.10)",
+    chipColor: "#4d68ba",
+    accent: "#4d68ba",
+  },
+  warning: {
+    border: "rgba(191,120,28,.18)",
+    background: "linear-gradient(180deg, rgba(255,250,242,.98) 0%, rgba(252,244,228,.94) 100%)",
+    chipBg: "rgba(191,120,28,.12)",
+    chipColor: "#bf781c",
+    accent: "#bf781c",
+  },
+  expense: {
+    border: "rgba(164,85,44,.16)",
+    background: "linear-gradient(180deg, rgba(255,247,244,.98) 0%, rgba(249,239,233,.94) 100%)",
+    chipBg: "rgba(164,85,44,.10)",
+    chipColor: "#a4552c",
+    accent: "#a4552c",
+  },
+  profit: {
+    border: "rgba(28,138,95,.18)",
+    background: "linear-gradient(135deg, rgba(242,253,247,.99) 0%, rgba(228,247,237,.96) 100%)",
+    chipBg: "rgba(28,138,95,.12)",
+    chipColor: "#1c8a5f",
+    accent: "#1c8a5f",
+  },
+};
+
+function FinanceStatCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone,
+  href,
+  highlight = false,
+  helper,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: LucideIcon;
+  tone: FinanceStatTone;
+  href?: string;
+  highlight?: boolean;
+  helper?: string;
+}) {
+  const toneSx = financeToneSx[tone];
+  const content = (
+    <Paper
+      sx={{
+        ...adminSurfaceSx,
+        p: 2.5,
+        borderColor: toneSx.border,
+        background: toneSx.background,
+        boxShadow: highlight ? "0 18px 38px rgba(28,138,95,.16)" : "0 10px 26px rgba(64,44,37,.06)",
+        minHeight: "100%",
+      }}
+    >
+      <Stack spacing={1.5}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
+          <Stack spacing={0.5}>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
+            <Typography variant="h4" fontWeight={900} sx={{ fontSize: { xs: 34, md: highlight ? 42 : 38 }, lineHeight: 1.05 }}>
+              {value}
+            </Typography>
+          </Stack>
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: 3,
+              bgcolor: toneSx.chipBg,
+              color: toneSx.chipColor,
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={22} />
+          </Box>
+        </Stack>
+        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Box sx={{ width: 28, height: 4, borderRadius: 999, bgcolor: toneSx.accent }} />
+          <Typography variant="caption" color="text.secondary">{detail}</Typography>
+          {helper ? (
+            <Tooltip title={helper}>
+              <Box component="span" sx={{ display: "inline-grid", placeItems: "center", color: "text.secondary" }}>
+                <Info size={14} />
+              </Box>
+            </Tooltip>
+          ) : null}
+        </Stack>
+      </Stack>
+    </Paper>
+  );
+
+  return href ? (
+    <Link component={RouterLink} to={href} underline="none" color="inherit" sx={{ display: "block", height: "100%" }}>
+      {content}
+    </Link>
+  ) : content;
+}
+
 function BreakdownBars({ title, rows, emptyLabel, valueLabel, actionBuilder }: {
   title: string;
   rows: Array<{ key: string; label: string; total: number; count: number }>;
@@ -109,7 +226,7 @@ function CashflowChart({ overview }: { overview: AdminFinanceOverview }) {
   );
 
   return (
-    <AdminSection title="Evolución diaria" description="Cobros reales frente a gastos del rango activo.">
+    <AdminSection title="Evolucion diaria" description="Cobros reales frente a gastos del rango activo.">
       <Stack spacing={1.25}>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Chip icon={<HandCoins size={14} />} label="Cobrado" size="small" color="success" variant="outlined" />
@@ -189,7 +306,7 @@ export function AdminFinancePage() {
     <Stack spacing={2.5}>
       <AdminPageHeader
         title="Finanzas"
-        subtitle="Consolida cobros, ventas pendientes y gastos operativos desde una sola vista."
+        subtitle="Consolida cobros, pendientes y gastos operativos en una vista mas clara para tomar decisiones."
       />
 
       <Paper sx={{ ...adminSurfaceSx, p: 1.5 }}>
@@ -202,6 +319,13 @@ export function AdminFinancePage() {
                 variant={rangePreset === option.value ? "contained" : "outlined"}
                 startIcon={<CalendarRange size={16} />}
                 onClick={() => applyPreset(option.value)}
+                sx={{
+                  borderRadius: 999,
+                  px: 1.5,
+                  ...(rangePreset === option.value
+                    ? { boxShadow: "0 10px 22px rgba(145,70,199,.20)" }
+                    : { bgcolor: "rgba(255,255,255,.66)" }),
+                }}
               >
                 {option.label}
               </Button>
@@ -239,21 +363,52 @@ export function AdminFinancePage() {
 
       <Grid container spacing={1.5}>
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <AdminStat label="Ingresos cobrados" value={overview ? formatCurrency(overview.summary.paidIncome) : "…"} detail="Pagos reales registrados por fecha de cobro." />
+          <FinanceStatCard
+            label="Ingresos cobrados"
+            value={overview ? formatCurrency(overview.summary.paidIncome) : "..."}
+            detail="Dinero que ya entro realmente en el rango."
+            icon={HandCoins}
+            tone="success"
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <AdminStat label="Ventas comprometidas" value={overview ? formatCurrency(overview.summary.committedSales) : "…"} detail="Total de pedidos creados en el rango." />
+          <FinanceStatCard
+            label="Ventas comprometidas"
+            value={overview ? formatCurrency(overview.summary.committedSales) : "..."}
+            detail="Valor vendido en pedidos creados dentro del rango."
+            icon={ReceiptText}
+            tone="primary"
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <Link component={RouterLink} to={buildOrdersLink(dateFrom, dateTo, { hasBalance: "true" })} underline="none" color="inherit">
-            <AdminStat label="Cuentas por cobrar" value={overview ? formatCurrency(overview.summary.outstandingBalance) : "…"} detail="Pedidos del rango con saldo pendiente." />
-          </Link>
+          <FinanceStatCard
+            label="Cuentas por cobrar"
+            value={overview ? formatCurrency(overview.summary.outstandingBalance) : "..."}
+            detail="Saldo pendiente por cobrar en pedidos del rango."
+            icon={Landmark}
+            tone="warning"
+            href={buildOrdersLink(dateFrom, dateTo, { hasBalance: "true" })}
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 6, lg: 6 }}>
-          <AdminStat label="Gastos" value={overview ? formatCurrency(overview.summary.expenseTotal) : "…"} detail="Egresos por fecha del gasto." />
+          <FinanceStatCard
+            label="Gastos"
+            value={overview ? formatCurrency(overview.summary.expenseTotal) : "..."}
+            detail="Dinero que salio segun la fecha registrada del gasto."
+            icon={Wallet}
+            tone="expense"
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 6, lg: 6 }}>
-          <AdminStat label="Flujo neto" value={overview ? formatCurrency(overview.summary.netCashflow) : "…"} detail="Cobrado menos gastado." />
+          <FinanceStatCard
+            label="Ganancia Neta"
+            value={overview ? formatCurrency(overview.summary.netProfit) : "..."}
+            detail="Cobrado menos gastado dentro del periodo."
+            icon={PiggyBank}
+            tone="profit"
+            highlight
+            helper="Ganancia neta operativa del rango. No reemplaza una utilidad contable completa."
+          />
         </Grid>
       </Grid>
 
@@ -265,7 +420,14 @@ export function AdminFinancePage() {
             </Grid>
             <Grid size={{ xs: 12, lg: 4 }}>
               <AdminSection title="Resumen operativo" description={`Del ${overview.dateFrom} al ${overview.dateTo}.`}>
-                <Stack spacing={1}>
+                <Stack spacing={1.1}>
+                  <Stack spacing={0.35}>
+                    <Typography variant="body2" color="text.secondary">Flujo neto operativo</Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <BadgeDollarSign size={18} color="#1c8a5f" />
+                      <Typography variant="h5" fontWeight={900}>{formatCurrency(overview.summary.netCashflow)}</Typography>
+                    </Stack>
+                  </Stack>
                   <Typography variant="body2" color="text.secondary">Pedidos en rango</Typography>
                   <Typography variant="h5" fontWeight={900}>{overview.summary.orderCount}</Typography>
                   <Typography variant="body2" color="text.secondary">Gastos en rango</Typography>
@@ -284,14 +446,14 @@ export function AdminFinancePage() {
           <Grid container spacing={1.5}>
             <Grid size={{ xs: 12, lg: 4 }}>
               <BreakdownBars
-                title="Gastos por categoría"
+                title="Gastos por categoria"
                 rows={overview.expenseBreakdown.map((item) => ({
                   key: item.category,
                   label: expenseCategoryLabels[item.category],
                   total: item.total,
                   count: item.count,
                 }))}
-                emptyLabel="Aún no hay gastos en este rango."
+                emptyLabel="Aun no hay gastos en este rango."
                 valueLabel="gastos"
                 actionBuilder={(category) => buildExpensesLink(dateFrom, dateTo, { category })}
               />
@@ -312,7 +474,7 @@ export function AdminFinancePage() {
             </Grid>
             <Grid size={{ xs: 12, lg: 4 }}>
               <BreakdownBars
-                title="Cobros por método"
+                title="Cobros por metodo"
                 rows={overview.paymentMethodBreakdown.map((item) => ({
                   key: item.method,
                   label: expensePaymentMethodLabels[item.method],
@@ -331,7 +493,7 @@ export function AdminFinancePage() {
                 {overview.topOutstandingOrders.length === 0 ? (
                   <Typography color="text.secondary">No hay pedidos con saldo pendiente en este rango.</Typography>
                 ) : (
-                  <Table size="small">
+                  <Table size="small" sx={{ "& .MuiTableCell-head": { fontWeight: 900, color: "text.secondary" } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Pedido</TableCell>
@@ -345,10 +507,10 @@ export function AdminFinancePage() {
                         <TableRow key={order.id} hover>
                           <TableCell>
                             <Link component={RouterLink} to={`/admin/pedidos/${order.id}`} color="inherit" underline="none">
-                            <Stack spacing={0.25}>
-                              <Typography fontWeight={800}>{order.code}</Typography>
-                              <Typography variant="caption" color="text.secondary">{order.createdAt.slice(0, 10)}</Typography>
-                            </Stack>
+                              <Stack spacing={0.25}>
+                                <Typography fontWeight={800}>{order.code}</Typography>
+                                <Typography variant="caption" color="text.secondary">{order.createdAt.slice(0, 10)}</Typography>
+                              </Stack>
                             </Link>
                           </TableCell>
                           <TableCell>{order.customerName}</TableCell>
@@ -362,16 +524,16 @@ export function AdminFinancePage() {
               </AdminSection>
             </Grid>
             <Grid size={{ xs: 12, xl: 6 }}>
-              <AdminSection title="Últimos gastos" description="Movimientos recientes dentro del rango.">
+              <AdminSection title="Ultimos gastos" description="Movimientos recientes dentro del rango.">
                 {overview.recentExpenses.length === 0 ? (
                   <Typography color="text.secondary">No hay gastos recientes para mostrar.</Typography>
                 ) : (
-                  <Table size="small">
+                  <Table size="small" sx={{ "& .MuiTableCell-head": { fontWeight: 900, color: "text.secondary" } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Fecha</TableCell>
-                        <TableCell>Categoría</TableCell>
-                        <TableCell>Descripción</TableCell>
+                        <TableCell>Categoria</TableCell>
+                        <TableCell>Descripcion</TableCell>
                         <TableCell align="right">Monto</TableCell>
                       </TableRow>
                     </TableHead>
