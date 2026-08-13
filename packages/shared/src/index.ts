@@ -266,6 +266,8 @@ export const adminOrderPaymentInputSchema = z.object({
 
 export const expenseCategorySchema = z.enum(expenseCategoryValues);
 export const expensePaymentMethodSchema = z.enum(expensePaymentMethodValues);
+export const adminFinanceRangePresetValues = ["today", "last7", "thisMonth", "last30", "custom"] as const;
+export const adminFinanceRangePresetSchema = z.enum(adminFinanceRangePresetValues);
 
 export const adminExpenseInputSchema = z.object({
   category: expenseCategorySchema,
@@ -306,6 +308,82 @@ export const adminExpenseSummarySchema = z.object({
   todayTotal: moneySchema,
   monthTotal: moneySchema,
   filteredTotal: moneySchema,
+});
+
+export const adminFinanceQuerySchema = z.object({
+  rangePreset: adminFinanceRangePresetSchema.default("thisMonth"),
+  dateFrom: z.string().date().optional(),
+  dateTo: z.string().date().optional(),
+});
+
+export const adminFinanceSummarySchema = z.object({
+  paidIncome: moneySchema,
+  committedSales: moneySchema,
+  outstandingBalance: moneySchema,
+  expenseTotal: moneySchema,
+  netCashflow: z.number().finite(),
+  orderCount: z.number().int().nonnegative(),
+  expenseCount: z.number().int().nonnegative(),
+});
+
+export const adminFinanceSeriesPointSchema = z.object({
+  date: z.string().date(),
+  paidIncome: moneySchema,
+  expenseTotal: moneySchema,
+  net: z.number().finite(),
+});
+
+export const adminFinanceExpenseBreakdownItemSchema = z.object({
+  category: expenseCategorySchema,
+  total: moneySchema,
+  count: z.number().int().nonnegative(),
+});
+
+export const adminFinanceOrderStatusBreakdownItemSchema = z.object({
+  status: z.enum(orderStatusValues),
+  total: moneySchema,
+  count: z.number().int().nonnegative(),
+});
+
+export const adminFinancePaymentMethodBreakdownItemSchema = z.object({
+  method: z.enum(orderPaymentMethodValues),
+  total: moneySchema,
+  count: z.number().int().nonnegative(),
+});
+
+export const adminFinanceOutstandingOrderSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  customerName: z.string(),
+  status: z.enum(orderStatusValues),
+  createdAt: z.string(),
+  finalPrice: z.number().nullable().optional(),
+  itemsTotal: moneySchema,
+  paidTotal: moneySchema,
+  balance: moneySchema,
+});
+
+export const adminFinanceRecentExpenseSchema = z.object({
+  id: z.string(),
+  expenseDate: z.string(),
+  category: expenseCategorySchema,
+  description: z.string(),
+  amount: moneySchema,
+  paymentMethod: expensePaymentMethodSchema.optional().nullable(),
+  reference: z.string().nullable().optional(),
+});
+
+export const adminFinanceOverviewSchema = z.object({
+  rangePreset: adminFinanceRangePresetSchema,
+  dateFrom: z.string().date(),
+  dateTo: z.string().date(),
+  summary: adminFinanceSummarySchema,
+  timeSeries: z.array(adminFinanceSeriesPointSchema),
+  expenseBreakdown: z.array(adminFinanceExpenseBreakdownItemSchema),
+  orderStatusBreakdown: z.array(adminFinanceOrderStatusBreakdownItemSchema),
+  paymentMethodBreakdown: z.array(adminFinancePaymentMethodBreakdownItemSchema),
+  topOutstandingOrders: z.array(adminFinanceOutstandingOrderSchema),
+  recentExpenses: z.array(adminFinanceRecentExpenseSchema),
 });
 
 export const qrCodeDesignSchema = z.object({
@@ -551,6 +629,11 @@ export type AdminExpenseQuery = z.infer<typeof adminExpenseQuerySchema>;
 export type AdminExpense = z.infer<typeof expenseSchema>;
 export type AdminExpenseSummary = z.infer<typeof adminExpenseSummarySchema>;
 export type AdminExpenseListResponse = z.infer<typeof adminExpenseListResponseSchema>;
+export type AdminFinanceRangePreset = z.infer<typeof adminFinanceRangePresetSchema>;
+export type AdminFinanceQuery = z.infer<typeof adminFinanceQuerySchema>;
+export type AdminFinanceSummary = z.infer<typeof adminFinanceSummarySchema>;
+export type AdminFinanceSeriesPoint = z.infer<typeof adminFinanceSeriesPointSchema>;
+export type AdminFinanceOverview = z.infer<typeof adminFinanceOverviewSchema>;
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 export type QRCode = z.infer<typeof qrCodeSchema>;
 export type QRCodeDesign = z.infer<typeof qrCodeDesignSchema>;

@@ -1,4 +1,4 @@
-import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminFinanceOverview, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
 
 export type ApiValidationIssue = {
   path: Array<string | number>;
@@ -168,6 +168,7 @@ export const api = {
   adminMe: () => request<{ sub: string; email: string }>("/api/admin/me"),
   adminDashboard: () =>
     request<{ counts: { orders: number; products: number; categories: number; reviews?: number }; latestOrders: Order[] }>("/api/admin/dashboard"),
+  adminFinanceOverview: (params: URLSearchParams) => request<AdminFinanceOverview>(`/api/admin/finance/overview?${params.toString()}`),
   adminCategories: () => request<Category[]>("/api/admin/categories"),
   adminCategory: (id: string) => request<Category>(`/api/admin/categories/${id}`),
   saveAdminCategory: (category: AdminCategoryInput & { id?: string }) =>

@@ -213,6 +213,9 @@ export function AdminOrderDetailPage() {
                   <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
                     <Box>
                       <Typography fontWeight={900}>{item.productName || `Item ${index + 1}`}</Typography>
+                      {item.variantNameSnapshot && (
+                        <Typography variant="body2" color="text.secondary">Variante: {item.variantNameSnapshot}</Typography>
+                      )}
                       <Typography variant="body2" color="text.secondary">Cantidad: {item.quantity}</Typography>
                     </Box>
                     <FormControlLabel

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
-import { adminCategoryInputSchema, adminExpenseQuerySchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminOrderPaymentInputSchema, createAdminExpenseSchema, createAdminOrderSchema, updateAdminExpenseSchema, updateAdminOrderSchema, updateAdminOrderStatusSchema, updateReviewApprovalSchema } from "@artenova/shared";
+import { adminCategoryInputSchema, adminExpenseQuerySchema, adminFinanceQuerySchema, adminLoginSchema, adminProductInputSchema, adminProductReviewInputSchema, adminOrderPaymentInputSchema, createAdminExpenseSchema, createAdminOrderSchema, updateAdminExpenseSchema, updateAdminOrderSchema, updateAdminOrderStatusSchema, updateReviewApprovalSchema } from "@artenova/shared";
+import { buildAdminFinanceOverview, resolveAdminFinanceRange } from "../lib/adminFinance";
 import { createOrderPayments, isCodeConflict, syncOrderItems } from "../lib/adminOrderMutations";
 import { createOrderCode } from "../lib/orderCode";
 import { prisma } from "../lib/prisma";
@@ -441,6 +442,49 @@ adminRouter.get("/dashboard", async (_req, res) => {
     take: 6
   });
   res.json({ counts: { orders, products, categories, reviews }, latestOrders: latestOrders.map(orderPayload) });
+});
+
+adminRouter.get("/finance/overview", async (req, res) => {
+  const query = adminFinanceQuerySchema.parse(req.query);
+  const resolvedRange = resolveAdminFinanceRange(query, new Date());
+
+  const [orders, payments, expenses] = await Promise.all([
+    db.order.findMany({
+      where: {
+        createdAt: {
+          gte: resolvedRange.dateFrom,
+          lte: resolvedRange.dateTo,
+        },
+      },
+      include: orderInclude,
+      orderBy: { createdAt: "desc" },
+    }),
+    db.orderPayment.findMany({
+      where: {
+        createdAt: {
+          gte: resolvedRange.dateFrom,
+          lte: resolvedRange.dateTo,
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.expense.findMany({
+      where: {
+        expenseDate: {
+          gte: resolvedRange.dateFrom,
+          lte: resolvedRange.dateTo,
+        },
+      },
+      orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
+    }),
+  ]);
+
+  res.json(buildAdminFinanceOverview(query, {
+    now: new Date(),
+    orders,
+    payments,
+    expenses,
+  }));
 });
 
 adminRouter.get("/categories", async (_req, res) => {

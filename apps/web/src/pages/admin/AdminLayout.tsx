@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Container, Paper, Stack } from "@mui/material";
-import { Boxes, Eye, FolderTree, Home, MessageSquareText, QrCode, ReceiptText, Wallet } from "lucide-react";
+import { Boxes, ChartColumnIncreasing, Eye, FolderTree, Home, MessageSquareText, QrCode, ReceiptText, Wallet } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { applySeo } from "../../lib/seo";
@@ -8,6 +8,7 @@ import { adminSurfaceSx } from "./adminUi";
 
 const tabs = [
   { label: "Inicio", to: "/admin", icon: Home },
+  { label: "Finanzas", to: "/admin/finanzas", icon: ChartColumnIncreasing },
   { label: "Gastos", to: "/admin/gastos", icon: Wallet },
   { label: "Pedidos", to: "/admin/pedidos", icon: ReceiptText },
   { label: "Productos", to: "/admin/productos", icon: Boxes },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminExpenseQuerySchema, createAdminExpenseSchema, expenseCategoryLabels } from "./index";
+import { adminExpenseQuerySchema, adminFinanceOverviewSchema, adminFinanceQuerySchema, createAdminExpenseSchema, expenseCategoryLabels } from "./index";
 
 describe("admin expense schemas", () => {
   it("accepts a valid expense with optional payment method omitted", () => {
@@ -58,5 +58,77 @@ describe("admin expense schemas", () => {
     });
 
     expect(payload.paymentMethod).toBe("tarjeta_credito");
+  });
+
+  it("parses finance query presets and custom ranges", () => {
+    expect(adminFinanceQuerySchema.parse({})).toMatchObject({
+      rangePreset: "thisMonth",
+    });
+
+    expect(adminFinanceQuerySchema.parse({
+      rangePreset: "last30",
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-13",
+    })).toMatchObject({
+      rangePreset: "last30",
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-13",
+    });
+  });
+
+  it("accepts a finance overview payload", () => {
+    const payload = adminFinanceOverviewSchema.parse({
+      rangePreset: "thisMonth",
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-13",
+      summary: {
+        paidIncome: 120,
+        committedSales: 180,
+        outstandingBalance: 60,
+        expenseTotal: 45,
+        netCashflow: 75,
+        orderCount: 3,
+        expenseCount: 2,
+      },
+      timeSeries: [
+        { date: "2026-08-13", paidIncome: 20, expenseTotal: 5, net: 15 },
+      ],
+      expenseBreakdown: [
+        { category: "servicios", total: 45, count: 2 },
+      ],
+      orderStatusBreakdown: [
+        { status: "pendiente_fabricacion", total: 180, count: 3 },
+      ],
+      paymentMethodBreakdown: [
+        { method: "yappy", total: 120, count: 2 },
+      ],
+      topOutstandingOrders: [
+        {
+          id: "o1",
+          code: "2608-001",
+          customerName: "Ana",
+          status: "pendiente_fabricacion",
+          createdAt: "2026-08-13T10:00:00.000Z",
+          finalPrice: 100,
+          itemsTotal: 100,
+          paidTotal: 40,
+          balance: 60,
+        },
+      ],
+      recentExpenses: [
+        {
+          id: "e1",
+          expenseDate: "2026-08-13T12:00:00.000Z",
+          category: "servicios",
+          description: "Pago mensual",
+          amount: 45,
+          paymentMethod: "transferencia",
+          reference: "TRX-1",
+        },
+      ],
+    });
+
+    expect(payload.summary.netCashflow).toBe(75);
+    expect(payload.topOutstandingOrders[0]?.balance).toBe(60);
   });
 });

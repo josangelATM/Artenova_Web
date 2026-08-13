@@ -27,6 +27,8 @@ describe("order serialization", () => {
           unitPrice: 12,
           extrasTotal: 0,
           lineTotal: 24,
+          skuSnapshot: "PLA-ROJ-01",
+          variantNameSnapshot: "Rojo",
           selectedExtraIds: [],
           personalization: { owner: "Gabriel" },
           isDone: true,
@@ -47,6 +49,8 @@ describe("order serialization", () => {
     expect(payload.balance).toBe(12);
     expect(payload.isPaid).toBe(false);
     expect(payload.items[0]?.isDone).toBe(true);
+    expect(payload.items[0]?.skuSnapshot).toBe("PLA-ROJ-01");
+    expect(payload.items[0]?.variantNameSnapshot).toBe("Rojo");
     expect(payload.items[0]?.units[1]?.label).toBe("Nala");
   });
 

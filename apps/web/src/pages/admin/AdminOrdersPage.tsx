@@ -5,7 +5,7 @@ import type { GridColDef } from "@mui/x-data-grid";
 import { useTheme } from "@mui/material/styles";
 import { FilterX, Plus } from "lucide-react";
 import { formatCurrency, type AdminOrderPaymentInput, type Order } from "@artenova/shared";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip, adminSurfaceSx } from "./adminUi";
 import { AdminDataGrid, AdminGridAction, AdminListToolbar, adminGridActionIcons } from "./adminCrudUi";
@@ -27,14 +27,15 @@ function summarizeOrderItems(order: Order, limit = 2) {
 }
 
 export function AdminOrdersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [orders, setOrders] = useState<Order[]>([]);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [balanceOnly, setBalanceOnly] = useState(false);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
+  const [balanceOnly, setBalanceOnly] = useState(searchParams.get("hasBalance") === "true");
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
@@ -46,6 +47,16 @@ export function AdminOrdersPage() {
     { value: "transferencia", label: "Transferencia" },
     { value: "otro", label: "Otro" },
   ];
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    if (query.trim()) nextParams.set("q", query.trim());
+    if (statusFilter !== "all") nextParams.set("status", statusFilter);
+    if (balanceOnly) nextParams.set("hasBalance", "true");
+    if (dateFrom) nextParams.set("dateFrom", dateFrom);
+    if (dateTo) nextParams.set("dateTo", dateTo);
+    setSearchParams(nextParams, { replace: true });
+  }, [balanceOnly, dateFrom, dateTo, query, setSearchParams, statusFilter]);
 
   useEffect(() => {
     let active = true;

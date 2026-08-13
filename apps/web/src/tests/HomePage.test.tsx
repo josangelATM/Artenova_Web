@@ -84,8 +84,12 @@ describe("HomePage", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getAllByRole("link", { name: /ver catálogo completo/i })[0]).toHaveAttribute("href", "/catalogo");
-    expect(screen.queryByText(/cómo trabajamos/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /ver cat.+logo completo/i })[0]).toHaveAttribute("href", "/catalogo");
+    expect(screen.getByRole("link", { name: /ver cédulas personalizadas para mascotas/i })).toHaveAttribute(
+      "href",
+      "https://artenovapty.com/producto/cedulas-personalizadas-mascotas",
+    );
+    expect(screen.queryByText(/c.+mo trabajamos/i)).not.toBeInTheDocument();
 
     await waitFor(() => {
       const productLinks = screen
@@ -95,6 +99,6 @@ describe("HomePage", () => {
     });
 
     expect(screen.queryByPlaceholderText(/buscar por producto o referencia/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("Categorías")).not.toBeInTheDocument();
+    expect(screen.queryByText(/categor.+as/i)).not.toBeInTheDocument();
   });
 });

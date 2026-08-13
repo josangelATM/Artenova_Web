@@ -3,7 +3,7 @@ import { Button, Grid, IconButton, MenuItem, Stack, TextField, Tooltip } from "@
 import type { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { expenseCategoryLabels, expenseCategoryValues, formatCurrency, type AdminExpense } from "@artenova/shared";
 import { FilterX, Plus } from "lucide-react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminDataGrid, AdminListToolbar, adminViewEditColumns } from "./adminCrudUi";
 import { AdminPageHeader, AdminStat } from "./adminUi";
@@ -13,16 +13,23 @@ function formatDate(value: string) {
 }
 
 export function AdminExpensesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<AdminExpense[]>([]);
-  const [queryDraft, setQueryDraft] = useState("");
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const initialQuery = searchParams.get("q") ?? "";
+  const initialCategory = searchParams.get("category") ?? "";
+  const initialDateFrom = searchParams.get("dateFrom") ?? "";
+  const initialDateTo = searchParams.get("dateTo") ?? "";
+  const initialPage = Number(searchParams.get("page") ?? "1");
+  const initialPageSize = Number(searchParams.get("pageSize") ?? "20");
+  const [queryDraft, setQueryDraft] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
+  const [category, setCategory] = useState(initialCategory);
+  const [dateFrom, setDateFrom] = useState(initialDateFrom);
+  const [dateTo, setDateTo] = useState(initialDateTo);
   const [loading, setLoading] = useState(true);
   const [rowCount, setRowCount] = useState(0);
   const [summary, setSummary] = useState({ todayTotal: 0, monthTotal: 0, filteredTotal: 0 });
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 20 });
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: Math.max(initialPage - 1, 0), pageSize: Number.isFinite(initialPageSize) && initialPageSize > 0 ? initialPageSize : 20 });
   const actions = adminViewEditColumns("/admin/gastos");
 
   useEffect(() => {
@@ -32,6 +39,17 @@ export function AdminExpensesPage() {
     }, 500);
     return () => window.clearTimeout(timeout);
   }, [queryDraft]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    if (query) nextParams.set("q", query);
+    if (category) nextParams.set("category", category);
+    if (dateFrom) nextParams.set("dateFrom", dateFrom);
+    if (dateTo) nextParams.set("dateTo", dateTo);
+    if (paginationModel.page > 0) nextParams.set("page", String(paginationModel.page + 1));
+    if (paginationModel.pageSize !== 20) nextParams.set("pageSize", String(paginationModel.pageSize));
+    setSearchParams(nextParams, { replace: true });
+  }, [category, dateFrom, dateTo, paginationModel.page, paginationModel.pageSize, query, setSearchParams]);
 
   useEffect(() => {
     let active = true;

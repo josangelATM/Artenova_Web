@@ -29,6 +29,8 @@ describe("admin order schemas", () => {
           quantity: 2,
           unitPrice: 12,
           extrasTotal: 0,
+          skuSnapshot: "PLA-ROJ-01",
+          variantNameSnapshot: "Rojo",
           isDone: true,
           personalization: { owner: "Gabriel" },
           units: [
@@ -41,6 +43,8 @@ describe("admin order schemas", () => {
 
     expect(payload.items[0]?.units).toHaveLength(2);
     expect(payload.items[0]?.isDone).toBe(true);
+    expect(payload.items[0]?.skuSnapshot).toBe("PLA-ROJ-01");
+    expect(payload.items[0]?.variantNameSnapshot).toBe("Rojo");
     expect(payload.items[0]?.units[0]?.personalization.petName).toBe("Ambar");
   });
 

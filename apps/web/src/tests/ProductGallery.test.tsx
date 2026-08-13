@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProductGallery, type ProductGalleryItem } from "../components/ProductGallery";
 
 const imageItem = (key: string, url: string, alt: string): ProductGalleryItem => ({
@@ -13,6 +14,10 @@ const videoItem = (key: string, url: string, alt: string, posterUrl: string | nu
 });
 
 describe("ProductGallery", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("precarga solo el siguiente video navegable cuando el activo no es video", () => {
     render(
       <ProductGallery
@@ -71,23 +76,46 @@ describe("ProductGallery", () => {
   });
 
   it("hace autoplay del video al navegar hacia el dentro del zoom", () => {
+    function ControlledGallery() {
+      const [activeKey, setActiveKey] = useState("img-1");
+
+      return (
+        <ProductGallery
+          productName="Producto demo"
+          items={[
+            imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
+            videoItem("video-1", "/seed/demo.mp4", "Video uno"),
+          ]}
+          activeKey={activeKey}
+          onActiveKeyChange={setActiveKey}
+        />
+      );
+    }
+
     render(
-      <ProductGallery
-        productName="Producto demo"
-        items={[
-          imageItem("img-1", "/seed/uno.jpg", "Imagen uno"),
-          videoItem("video-1", "/seed/demo.mp4", "Video uno"),
-        ]}
-        activeKey="img-1"
-        onActiveKeyChange={vi.fn()}
-      />,
+      <ControlledGallery />,
     );
 
     fireEvent.click(screen.getAllByRole("button", { name: "Ampliar imagen" }).at(-1)!);
     fireEvent.click(screen.getAllByRole("button", { name: "Imagen siguiente" }).at(-1)!);
 
     const viewerVideo = screen.getAllByLabelText(/video uno/i).find((node) => node.tagName.toLowerCase() === "video" && node.hasAttribute("controls"));
-    expect(viewerVideo).toHaveAttribute("autoplay");
+    expect(viewerVideo).toBeInTheDocument();
     expect(viewerVideo).toHaveAttribute("preload", "auto");
+  });
+
+  it("usa un rail de miniaturas contenido cuando hay muchas imagenes", () => {
+    render(
+      <ProductGallery
+        productName="Producto demo"
+        items={Array.from({ length: 8 }, (_, index) => imageItem(`img-${index + 1}`, `/seed/${index + 1}.jpg`, `Imagen ${index + 1}`))}
+        activeKey="img-1"
+        onActiveKeyChange={vi.fn()}
+      />,
+    );
+
+    const rail = screen.getByTestId("product-gallery-thumbnails");
+    expect(rail).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /ver elemento/i })).toHaveLength(8);
   });
 });

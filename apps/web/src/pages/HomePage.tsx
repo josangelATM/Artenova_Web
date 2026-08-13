@@ -103,11 +103,25 @@ export function HomePage() {
               </Grid>
               <Grid size={{ xs: 12, md: 5.5 }}>
                 <Box
-                  component="img"
-                  src="/seed/mascotas/cedulas-personalizadas-mascotas-hero.png"
-                  alt="Ejemplos de identificaciones personalizadas para mascotas"
-                  className="home-hero-image"
-                />
+                  component="a"
+                  href="https://artenovapty.com/producto/cedulas-personalizadas-mascotas"
+                  aria-label="Ver cédulas personalizadas para mascotas"
+                  sx={{
+                    display: "block",
+                    borderRadius: 2,
+                    "&:focus-visible": {
+                      outline: "3px solid rgba(196,110,78,.42)",
+                      outlineOffset: 4,
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/seed/mascotas/cedulas-personalizadas-mascotas-hero.png"
+                    alt="Ejemplos de identificaciones personalizadas para mascotas"
+                    className="home-hero-image"
+                  />
+                </Box>
               </Grid>
             </Grid>
           </Paper>

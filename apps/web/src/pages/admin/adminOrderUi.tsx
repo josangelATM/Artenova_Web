@@ -1,6 +1,6 @@
-import { Autocomplete, Box, Button, Grid, IconButton, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, Button, Grid, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Copy, Plus, Trash2 } from "lucide-react";
-import { formatCurrency, type AdminOrderItemAdjustment, type AdminOrderPaymentInput, type CustomField, type Order, type Product } from "@artenova/shared";
+import { formatCurrency, type AdminOrderItemAdjustment, type AdminOrderPaymentInput, type CustomField, type Order, type Product, type ProductVariant } from "@artenova/shared";
 
 export type DraftItemAdjustment = Omit<AdminOrderItemAdjustment, "unitAmount"> & {
   unitAmount: string;
@@ -94,6 +94,41 @@ function resolveSuggestedUnitPrice(product?: Product) {
     ?? 0;
 }
 
+function getActiveVariants(product?: Product | null) {
+  return (product?.variants ?? []).filter((variant) => variant.isActive);
+}
+
+function getEffectiveDefaultVariant(product?: Product | null) {
+  const activeVariants = getActiveVariants(product);
+  if (!product || activeVariants.length === 0) return null;
+  return activeVariants.find((variant) => variant.id === product.defaultVariant?.id)
+    ?? product.defaultVariant
+    ?? activeVariants[0]
+    ?? null;
+}
+
+function resolveVariantUnitPrice(variant?: ProductVariant | null, product?: Product | null) {
+  if (variant) return variant.pricingSummary.finalPrice;
+  return resolveSuggestedUnitPrice(product ?? undefined);
+}
+
+function resolveVariantBySnapshot(product: Product | null | undefined, snapshot: { variantNameSnapshot?: string; skuSnapshot?: string }) {
+  const activeVariants = getActiveVariants(product);
+  if (activeVariants.length === 0) return null;
+  return activeVariants.find((variant) => variant.sku && variant.sku === snapshot.skuSnapshot)
+    ?? activeVariants.find((variant) => variant.name === snapshot.variantNameSnapshot)
+    ?? getEffectiveDefaultVariant(product);
+}
+
+function applyVariantSnapshot(current: DraftItem, product?: Product | null, variant?: ProductVariant | null) {
+  return {
+    ...current,
+    skuSnapshot: variant?.sku ?? "",
+    variantNameSnapshot: variant?.name ?? "",
+    unitPrice: String(resolveVariantUnitPrice(variant, product)),
+  };
+}
+
 export function getItemAdjustmentsTotal(item: DraftItem) {
   return roundMoney(
     item.appliedAdjustments.reduce((sum, adjustment) => sum + roundMoney(toNumberOrZero(adjustment.unitAmount) * normalizedQuantity(item.quantity)), 0),
@@ -118,13 +153,14 @@ export function getBalance(total: number, paid: number) {
 
 export function defaultItem(product?: Product, productName = ""): DraftItem {
   const quantity = 1;
+  const variant = getEffectiveDefaultVariant(product);
   return {
     productId: product?.id ?? "",
     productName: product?.name ?? productName,
     quantity: String(quantity),
-    unitPrice: String(resolveSuggestedUnitPrice(product)),
-    skuSnapshot: product?.defaultVariant?.sku ?? "",
-    variantNameSnapshot: product?.defaultVariant?.name ?? "",
+    unitPrice: String(resolveVariantUnitPrice(variant, product)),
+    skuSnapshot: variant?.sku ?? "",
+    variantNameSnapshot: variant?.name ?? "",
     appliedAdjustments: [],
     personalization: {},
     isDone: false,
@@ -337,6 +373,8 @@ export function OrderItemsEditor({
       {items.length === 0 && <Typography color="text.secondary">Sin items.</Typography>}
       {items.map((item, index) => {
         const selectedProduct = item.productId ? productById.get(item.productId) ?? null : null;
+        const activeVariants = getActiveVariants(selectedProduct);
+        const selectedVariant = resolveVariantBySnapshot(selectedProduct, item);
         const customFields = selectedProduct?.customFields ?? [];
         const lineTotal = getItemLineTotal(item);
         const adjustmentsTotal = getItemAdjustmentsTotal(item);
@@ -371,6 +409,7 @@ export function OrderItemsEditor({
                     productName: nextValue,
                     skuSnapshot: "",
                     variantNameSnapshot: "",
+                    unitPrice: current.productName === nextValue ? current.unitPrice : "",
                     personalization: current.productName === nextValue ? current.personalization : {},
                   }));
                 }}
@@ -380,8 +419,11 @@ export function OrderItemsEditor({
                     updateItem(index, (current) => ({
                       ...current,
                       productId: "",
+                      productName: "",
+                      unitPrice: "",
                       skuSnapshot: "",
                       variantNameSnapshot: "",
+                      personalization: {},
                     }));
                     return;
                   }
@@ -400,6 +442,26 @@ export function OrderItemsEditor({
                 }}
                 renderInput={(params) => <TextField {...params} size="small" label="Producto" error={Boolean(fieldErrorFor(`items.${index}.productName`))} helperText={fieldErrorFor(`items.${index}.productName`)} />}
               />
+
+              {selectedProduct && activeVariants.length > 0 && (
+                <TextField
+                  fullWidth
+                  select
+                  size="small"
+                  label="Variante"
+                  value={selectedVariant?.id ?? ""}
+                  onChange={(event) => {
+                    const nextVariant = activeVariants.find((variant) => variant.id === event.target.value) ?? null;
+                    updateItem(index, (current) => applyVariantSnapshot(current, selectedProduct, nextVariant));
+                  }}
+                >
+                  {activeVariants.map((variant) => (
+                    <MenuItem key={variant.id} value={variant.id}>
+                      {variant.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
 
               <Grid container spacing={1.25}>
                 <Grid size={{ xs: 12, md: 3 }}>

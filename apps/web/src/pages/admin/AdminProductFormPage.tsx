@@ -1,4 +1,15 @@
-import { startTransition, useEffect, useMemo, useState, type DragEvent } from "react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+  type Dispatch,
+  type DragEvent,
+  type SetStateAction,
+} from "react";
 import {
   Box,
   Button,
@@ -26,7 +37,6 @@ import type {
   Category,
   CustomField,
   DiscountType,
-  Product,
   ProductMedia,
   ProductOption,
   ProductOptionValue,
@@ -38,6 +48,7 @@ import {
   createFormErrorState,
   emptyFormErrorState,
   getFieldError,
+  type FormErrorState,
 } from "../../lib/formErrors";
 import { AdminEmptyState, AdminPageHeader, AdminSection } from "./adminUi";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -91,6 +102,12 @@ type VariantInput = {
   images: ProductImageInput[];
   priceTiers: PriceTierInput[];
 };
+export type { VariantInput };
+
+type OptionValueLookup = Map<
+  string,
+  { optionId: string; optionName: string; value: string; position: number }
+>;
 
 const emptyProduct: DraftProduct = {
   name: "",
@@ -114,8 +131,8 @@ function getProductFieldLabel(field: string) {
     name: "Nombre",
     slug: "Enlace corto",
     sku: "Referencia",
-    description: "Descripción",
-    categoryId: "Categoría",
+    description: "Descripcion",
+    categoryId: "Categoria",
     basePrice: "Precio",
     discountType: "Descuento",
     discountValue: "Monto o porcentaje",
@@ -238,11 +255,9 @@ async function createPosterFromVideo(file: File) {
       );
     });
 
-    return new File(
-      [blob],
-      `${file.name.replace(/\.[^.]+$/, "")}-poster.webp`,
-      { type: "image/webp" },
-    );
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}-poster.webp`, {
+      type: "image/webp",
+    });
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -273,10 +288,7 @@ function normalizeVisualGroupSegment(value: string) {
 
 function deriveVisualGroupKey(
   optionValueIds: string[],
-  optionValueById: Map<
-    string,
-    { optionId: string; optionName: string; value: string; position: number }
-  >,
+  optionValueById: OptionValueLookup,
   visualOptionIds: Set<string>,
 ) {
   const segments = optionValueIds
@@ -302,10 +314,7 @@ function deriveVisualGroupKey(
 
 function describeVisualGroup(
   optionValueIds: string[],
-  optionValueById: Map<
-    string,
-    { optionId: string; optionName: string; value: string; position: number }
-  >,
+  optionValueById: OptionValueLookup,
   visualOptionIds: Set<string>,
 ) {
   const labels = optionValueIds
@@ -337,6 +346,1482 @@ function cartesianProduct<T>(input: T[][]): T[][] {
   );
 }
 
+function reorderItems<T>(items: T[], fromIndex: number, toIndex: number) {
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  if (!item) return items;
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
+function setAtIndex<T>(items: T[], index: number, value: T) {
+  return items.map((item, itemIndex) => (itemIndex === index ? value : item));
+}
+
+function updateArrayItem<T extends { id: string }>(
+  items: T[],
+  id: string,
+  patch: Partial<T>,
+) {
+  return items.map((item) => (item.id === id ? { ...item, ...patch } : item));
+}
+
+function resequenceItems<T extends { position: number }>(items: T[]) {
+  return items.map((item, position) => ({ ...item, position }));
+}
+
+function computeVariantLabel(
+  optionValueIds: string[],
+  optionValueById: OptionValueLookup,
+) {
+  return optionValueIds
+    .map((valueId) => optionValueById.get(valueId)?.value)
+    .filter(Boolean)
+    .join(" / ");
+}
+
+type BaseProductSectionProps = {
+  loading: boolean;
+  draft: DraftProduct;
+  categories: Category[];
+  formError: FormErrorState;
+  descriptionLinkDraft: DescriptionLinkDraft;
+  hasVariantOptions: boolean;
+  onDraftFieldChange: <K extends keyof DraftProduct>(
+    field: K,
+    value: DraftProduct[K],
+  ) => void;
+  onDescriptionLinkDraftChange: (patch: Partial<DescriptionLinkDraft>) => void;
+  onInsertDescriptionLink: () => void;
+};
+
+const BaseProductSection = memo(function BaseProductSection({
+  loading,
+  draft,
+  categories,
+  formError,
+  descriptionLinkDraft,
+  hasVariantOptions,
+  onDraftFieldChange,
+  onDescriptionLinkDraftChange,
+  onInsertDescriptionLink,
+}: BaseProductSectionProps) {
+  return (
+    <AdminSection
+      title="Datos base"
+      description="Informacion general y comercial inicial del producto."
+    >
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            disabled={loading}
+            fullWidth
+            label="Nombre"
+            value={draft.name}
+            onChange={(event) => onDraftFieldChange("name", event.target.value)}
+            error={Boolean(getFieldError(formError, "name"))}
+            helperText={getFieldError(formError, "name")}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            disabled={loading}
+            fullWidth
+            label="Enlace corto"
+            value={draft.slug}
+            onChange={(event) => onDraftFieldChange("slug", event.target.value)}
+            error={Boolean(getFieldError(formError, "slug"))}
+            helperText={
+              getFieldError(formError, "slug") || "Ejemplo: retrato-mascota"
+            }
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            disabled={loading}
+            fullWidth
+            label={hasVariantOptions ? "Referencia sugerida" : "Referencia"}
+            value={draft.sku}
+            onChange={(event) => onDraftFieldChange("sku", event.target.value)}
+            error={Boolean(getFieldError(formError, "sku"))}
+            helperText={getFieldError(formError, "sku")}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            disabled={loading}
+            fullWidth
+            type="text"
+            label={
+              hasVariantOptions
+                ? "Precio sugerido para variantes nuevas"
+                : "Precio"
+            }
+            value={draft.basePrice}
+            onChange={(event) =>
+              onDraftFieldChange("basePrice", event.target.value)
+            }
+            error={Boolean(getFieldError(formError, "basePrice"))}
+            helperText={getFieldError(formError, "basePrice")}
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            disabled={loading}
+            select
+            fullWidth
+            label={hasVariantOptions ? "Descuento sugerido" : "Descuento"}
+            value={draft.discountType}
+            onChange={(event) =>
+              onDraftFieldChange(
+                "discountType",
+                event.target.value as DiscountType | "",
+              )
+            }
+            error={Boolean(getFieldError(formError, "discountType"))}
+            helperText={getFieldError(formError, "discountType")}
+          >
+            <MenuItem value="">Sin descuento</MenuItem>
+            <MenuItem value="percentage">Porcentaje</MenuItem>
+            <MenuItem value="fixed">Monto fijo</MenuItem>
+          </TextField>
+        </Grid>
+        {draft.discountType && (
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              disabled={loading}
+              fullWidth
+              type="text"
+              label={
+                draft.discountType === "percentage" ? "Porcentaje" : "Monto"
+              }
+              value={draft.discountValue}
+              onChange={(event) =>
+                onDraftFieldChange("discountValue", event.target.value)
+              }
+              error={Boolean(getFieldError(formError, "discountValue"))}
+              helperText={getFieldError(formError, "discountValue")}
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
+            />
+          </Grid>
+        )}
+        <Grid size={{ xs: 12 }}>
+          <Stack spacing={1.25}>
+            <TextField
+              disabled={loading}
+              fullWidth
+              multiline
+              minRows={3}
+              label="Descripcion"
+              value={draft.description}
+              onChange={(event) =>
+                onDraftFieldChange("description", event.target.value)
+              }
+            />
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              <TextField
+                disabled={loading}
+                size="small"
+                fullWidth
+                label="Texto del enlace"
+                placeholder="Aqui"
+                value={descriptionLinkDraft.label}
+                onChange={(event) =>
+                  onDescriptionLinkDraftChange({ label: event.target.value })
+                }
+              />
+              <TextField
+                disabled={loading}
+                size="small"
+                fullWidth
+                label="URL del enlace"
+                placeholder="https://artenovapty.com/catalogo.pdf"
+                value={descriptionLinkDraft.url}
+                onChange={(event) =>
+                  onDescriptionLinkDraftChange({ url: event.target.value })
+                }
+              />
+              <Button
+                disabled={
+                  loading || !/^https?:\/\//i.test(descriptionLinkDraft.url.trim())
+                }
+                variant="outlined"
+                onClick={onInsertDescriptionLink}
+                sx={{
+                  alignSelf: { xs: "stretch", md: "center" },
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  minWidth: { md: 152 },
+                }}
+              >
+                Insertar enlace
+              </Button>
+            </Stack>
+          </Stack>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            disabled={loading}
+            select
+            fullWidth
+            label="Categoria"
+            value={draft.categoryId}
+            onChange={(event) =>
+              onDraftFieldChange("categoryId", event.target.value)
+            }
+          >
+            {categories.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+      </Grid>
+      <Stack direction="row" spacing={2}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={draft.isPublished}
+              onChange={(event) =>
+                onDraftFieldChange("isPublished", event.target.checked)
+              }
+            />
+          }
+          label="Publicado"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={draft.isFeatured}
+              onChange={(event) =>
+                onDraftFieldChange("isFeatured", event.target.checked)
+              }
+            />
+          }
+          label="Destacado"
+        />
+      </Stack>
+    </AdminSection>
+  );
+});
+
+type SimpleProductPricingSectionProps = {
+  basePrice: string;
+  priceTiers: PriceTierInput[];
+  setPriceTiers: Dispatch<SetStateAction<PriceTierInput[]>>;
+};
+
+const SimpleProductPricingSection = memo(function SimpleProductPricingSection({
+  basePrice,
+  priceTiers,
+  setPriceTiers,
+}: SimpleProductPricingSectionProps) {
+  return (
+    <AdminSection
+      title="Precios por cantidad"
+      description="Se guardan en la variante unica automatica."
+    >
+      <Stack spacing={1.5}>
+        <Button
+          size="small"
+          startIcon={<Plus size={16} />}
+          onClick={() =>
+            setPriceTiers((current) => [
+              ...current,
+              {
+                minQuantity: "2",
+                unitPrice: basePrice || "0",
+                totalPrice: "",
+                label: "",
+              },
+            ])
+          }
+        >
+          Agregar precio
+        </Button>
+        {priceTiers.length === 0 && (
+          <Typography color="text.secondary">
+            Sin precios por cantidad. Se usara el precio base.
+          </Typography>
+        )}
+        {priceTiers.map((tier, index) => (
+          <MemoPriceTierEditor
+            key={`product-tier-${index}`}
+            tier={tier}
+            onChange={(patch) =>
+              setPriceTiers((current) =>
+                current.map((item, itemIndex) =>
+                  itemIndex === index ? { ...item, ...patch } : item,
+                ),
+              )
+            }
+            onDuplicate={() =>
+              setPriceTiers((current) => [
+                ...current.slice(0, index + 1),
+                { ...tier },
+                ...current.slice(index + 1),
+              ])
+            }
+            onDelete={() =>
+              setPriceTiers((current) =>
+                current.filter((_, itemIndex) => itemIndex !== index),
+              )
+            }
+          />
+        ))}
+      </Stack>
+    </AdminSection>
+  );
+});
+
+type ProductImagesSectionProps = {
+  title: string;
+  description: string;
+  uploadLabel: string;
+  helperText: string;
+  uploading: boolean;
+  items: ProductImageInput[];
+  onFilesSelected: (files: File[]) => void;
+  onChange: Dispatch<SetStateAction<ProductImageInput[]>>;
+};
+
+const ProductImagesSection = memo(function ProductImagesSection({
+  title,
+  description,
+  uploadLabel,
+  helperText,
+  uploading,
+  items,
+  onFilesSelected,
+  onChange,
+}: ProductImagesSectionProps) {
+  return (
+    <AdminSection title={title} description={description}>
+      <Stack spacing={2}>
+        <MemoImageUploadDropzone
+          disabled={uploading}
+          loadingLabel="Subiendo galeria..."
+          idleLabel={uploadLabel}
+          helperText={helperText}
+          onFilesSelected={onFilesSelected}
+        />
+        <MemoImageEditor items={items} onChange={onChange} />
+      </Stack>
+    </AdminSection>
+  );
+});
+
+type ProductOptionsSectionProps = {
+  productOptions: ProductOptionInput[];
+  setProductOptions: Dispatch<SetStateAction<ProductOptionInput[]>>;
+  setVariants: Dispatch<SetStateAction<VariantInput[]>>;
+};
+
+const ProductOptionsSection = memo(function ProductOptionsSection({
+  productOptions,
+  setProductOptions,
+  setVariants,
+}: ProductOptionsSectionProps) {
+  return (
+    <AdminSection
+      title="Opciones del producto"
+      description="Define los ejes dinamicos del producto, por ejemplo Color, Talla o Material."
+      action={
+        <Button
+          size="small"
+          startIcon={<Plus size={16} />}
+          onClick={() =>
+            setProductOptions((current) => [
+              ...current,
+              createOption(current.length),
+            ])
+          }
+        >
+          Agregar opcion
+        </Button>
+      }
+    >
+      <Stack spacing={2}>
+        {productOptions.length === 0 && (
+          <Typography color="text.secondary">
+            Si no agregas opciones, el producto seguira siendo simple.
+          </Typography>
+        )}
+        {productOptions.map((option, optionIndex) => (
+          <MemoProductOptionCard
+            key={option.id}
+            option={option}
+            optionIndex={optionIndex}
+            setProductOptions={setProductOptions}
+            setVariants={setVariants}
+          />
+        ))}
+      </Stack>
+    </AdminSection>
+  );
+});
+
+type VariantsSectionProps = {
+  variants: VariantInput[];
+  defaultVariantId: string;
+  setDefaultVariantId: Dispatch<SetStateAction<string>>;
+  setVariants: Dispatch<SetStateAction<VariantInput[]>>;
+  uploadingKey: string;
+  uploadVariantImages: (files: File[], variantId: string) => Promise<void>;
+  optionValueById: OptionValueLookup;
+  visualOptionIds: Set<string>;
+  duplicateSelectionKeys: Set<string>;
+  getSuggestedBasePrice: () => string;
+  onGenerateVariants: () => void;
+  onRender?: () => void;
+};
+
+export const VariantsSection = memo(function VariantsSection({
+  variants,
+  defaultVariantId,
+  setDefaultVariantId,
+  setVariants,
+  uploadingKey,
+  uploadVariantImages,
+  optionValueById,
+  visualOptionIds,
+  duplicateSelectionKeys,
+  getSuggestedBasePrice,
+  onGenerateVariants,
+  onRender,
+}: VariantsSectionProps) {
+  onRender?.();
+  return (
+    <AdminSection
+      title="Combinaciones"
+      description="Genera variantes reales, define su precio y marca cual sera la variante por defecto."
+      action={
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<Sparkles size={16} />}
+          onClick={onGenerateVariants}
+        >
+          Generar combinaciones
+        </Button>
+      }
+    >
+      <Stack spacing={2}>
+        {variants.length === 0 && (
+          <Typography color="text.secondary">
+            Todavia no hay combinaciones generadas.
+          </Typography>
+        )}
+        {variants.map((variant) => (
+          <MemoVariantCard
+            key={variant.id}
+            variant={variant}
+            defaultVariantId={defaultVariantId}
+            setDefaultVariantId={setDefaultVariantId}
+            setVariants={setVariants}
+            uploading={uploadingKey === variant.id}
+            uploadVariantImages={uploadVariantImages}
+            optionValueById={optionValueById}
+            visualOptionIds={visualOptionIds}
+            isDuplicateSelection={duplicateSelectionKeys.has(
+              normalizeSelectionKey(variant.optionValueIds),
+            )}
+            getSuggestedBasePrice={getSuggestedBasePrice}
+          />
+        ))}
+      </Stack>
+    </AdminSection>
+  );
+});
+
+type ProductImagesEditorProps = {
+  items: ProductImageInput[];
+  onChange: Dispatch<SetStateAction<ProductImageInput[]>>;
+};
+
+const ImageEditor = function ImageEditor({
+  items,
+  onChange,
+}: ProductImagesEditorProps) {
+  if (items.length === 0) {
+    return (
+      <AdminEmptyState
+        title="Sin galeria"
+        description="Sube imagenes o un video para mostrar mejor este elemento."
+      />
+    );
+  }
+
+  return (
+    <Grid container spacing={2}>
+      {items.map((image, index) => (
+        <MemoImageEditorCard
+          key={`${image.url}-${index}`}
+          image={image}
+          index={index}
+          isFirst={index === 0}
+          isLast={index === items.length - 1}
+          setImages={onChange}
+        />
+      ))}
+    </Grid>
+  );
+};
+
+const MemoImageEditor = memo(ImageEditor);
+
+type ImageEditorCardProps = {
+  image: ProductImageInput;
+  index: number;
+  isFirst: boolean;
+  isLast: boolean;
+  setImages: Dispatch<SetStateAction<ProductImageInput[]>>;
+};
+
+const MemoImageEditorCard = memo(function ImageEditorCard({
+  image,
+  index,
+  isFirst,
+  isLast,
+  setImages,
+}: ImageEditorCardProps) {
+  return (
+    <Grid size={{ xs: 12, sm: 6 }}>
+      <Box
+        sx={{
+          p: 1.25,
+          border: "1px solid rgba(64,44,37,.10)",
+          borderRadius: 2,
+        }}
+      >
+        <Stack spacing={1}>
+          <Box sx={{ position: "relative" }}>
+            {image.type === "video" ? (
+              <Box
+                component="video"
+                src={image.url}
+                poster={image.posterUrl ?? undefined}
+                controls
+                playsInline
+                sx={{
+                  width: "100%",
+                  aspectRatio: "4/3",
+                  objectFit: "cover",
+                  borderRadius: 1,
+                }}
+              />
+            ) : (
+              <Box
+                component="img"
+                src={image.url}
+                alt={image.alt}
+                sx={{
+                  width: "100%",
+                  aspectRatio: "4/3",
+                  objectFit: "cover",
+                  borderRadius: 1,
+                }}
+              />
+            )}
+            {isFirst && (
+              <Chip
+                size="small"
+                icon={<Star size={14} />}
+                label="Principal"
+                sx={{
+                  position: "absolute",
+                  left: 8,
+                  top: 8,
+                  bgcolor: "rgba(255,250,245,.94)",
+                  fontWeight: 900,
+                }}
+              />
+            )}
+          </Box>
+          <TextField
+            size="small"
+            label={
+              image.type === "video"
+                ? "Descripcion del video"
+                : "Descripcion de la imagen"
+            }
+            value={image.alt}
+            onChange={(event) =>
+              setImages((current) =>
+                current.map((item, itemIndex) =>
+                  itemIndex === index ? { ...item, alt: event.target.value } : item,
+                ),
+              )
+            }
+          />
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography variant="caption" color="text.secondary">
+              {image.type === "video" ? `Video ${index + 1}` : `Imagen ${index + 1}`}
+            </Typography>
+            <Stack direction="row" spacing={0.5}>
+              <IconButton
+                aria-label="Hacer imagen principal"
+                disabled={isFirst}
+                onClick={() =>
+                  setImages((current) => {
+                    const next = [...current];
+                    const [item] = next.splice(index, 1);
+                    if (!item) return current;
+                    return normalizeImages([item, ...next]);
+                  })
+                }
+              >
+                <Star size={18} />
+              </IconButton>
+              <IconButton
+                aria-label="Subir imagen"
+                disabled={isFirst}
+                onClick={() =>
+                  setImages((current) => normalizeImages(reorderItems(current, index, index - 1)))
+                }
+              >
+                <ArrowUp size={18} />
+              </IconButton>
+              <IconButton
+                aria-label="Bajar imagen"
+                disabled={isLast}
+                onClick={() =>
+                  setImages((current) => normalizeImages(reorderItems(current, index, index + 1)))
+                }
+              >
+                <ArrowDown size={18} />
+              </IconButton>
+              <IconButton
+                aria-label="Eliminar imagen"
+                onClick={() =>
+                  setImages((current) =>
+                    normalizeImages(current.filter((_, itemIndex) => itemIndex !== index)),
+                  )
+                }
+              >
+                <Trash2 size={18} />
+              </IconButton>
+            </Stack>
+          </Stack>
+        </Stack>
+      </Box>
+    </Grid>
+  );
+});
+
+type ProductOptionCardProps = {
+  option: ProductOptionInput;
+  optionIndex: number;
+  setProductOptions: Dispatch<SetStateAction<ProductOptionInput[]>>;
+  setVariants: Dispatch<SetStateAction<VariantInput[]>>;
+};
+
+const MemoProductOptionCard = memo(function ProductOptionCard({
+  option,
+  optionIndex,
+  setProductOptions,
+  setVariants,
+}: ProductOptionCardProps) {
+  return (
+    <Box
+      sx={{
+        p: 2,
+        border: "1px solid rgba(64,44,37,.10)",
+        borderRadius: 2,
+      }}
+    >
+      <Stack spacing={2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography fontWeight={900}>Opcion {optionIndex + 1}</Typography>
+          <IconButton
+            aria-label="Eliminar opcion"
+            onClick={() => {
+              const removedValueIds = new Set(option.values.map((value) => value.id));
+              setProductOptions((current) =>
+                resequenceItems(current.filter((item) => item.id !== option.id)),
+              );
+              setVariants((current) =>
+                resequenceItems(
+                  current.filter((variant) =>
+                    variant.optionValueIds.every((valueId) => !removedValueIds.has(valueId)),
+                  ),
+                ),
+              );
+            }}
+          >
+            <Trash2 size={18} />
+          </IconButton>
+        </Stack>
+        <TextField
+          fullWidth
+          label="Nombre de la opcion"
+          value={option.name}
+          onChange={(event) =>
+            setProductOptions((current) =>
+              updateArrayItem(current, option.id, { name: event.target.value }),
+            )
+          }
+          helperText="Ejemplo: Color, Talla, Acabado"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={option.drivesVisualGroup}
+              onChange={(event) =>
+                setProductOptions((current) =>
+                  updateArrayItem(current, option.id, {
+                    drivesVisualGroup: event.target.checked,
+                  }),
+                )
+              }
+            />
+          }
+          label="Esta opcion cambia la apariencia/imagen"
+        />
+        <Stack spacing={1.25}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography fontWeight={900}>Valores</Typography>
+            <Button
+              size="small"
+              startIcon={<Plus size={16} />}
+              onClick={() =>
+                setProductOptions((current) =>
+                  current.map((item) =>
+                    item.id === option.id
+                      ? {
+                          ...item,
+                          values: [
+                            ...item.values,
+                            createOptionValue(option.id, item.values.length),
+                          ],
+                        }
+                      : item,
+                  ),
+                )
+              }
+            >
+              Agregar valor
+            </Button>
+          </Stack>
+          {option.values.length === 0 && (
+            <Typography color="text.secondary">
+              Agrega al menos un valor para esta opcion.
+            </Typography>
+          )}
+          {option.values.map((value, valueIndex) => (
+            <MemoOptionValueRow
+              key={value.id}
+              option={option}
+              value={value}
+              valueIndex={valueIndex}
+              setProductOptions={setProductOptions}
+              setVariants={setVariants}
+            />
+          ))}
+        </Stack>
+      </Stack>
+    </Box>
+  );
+});
+
+type OptionValueRowProps = {
+  option: ProductOptionInput;
+  value: ProductOptionValueInput;
+  valueIndex: number;
+  setProductOptions: Dispatch<SetStateAction<ProductOptionInput[]>>;
+  setVariants: Dispatch<SetStateAction<VariantInput[]>>;
+};
+
+const MemoOptionValueRow = memo(function OptionValueRow({
+  option,
+  value,
+  valueIndex,
+  setProductOptions,
+  setVariants,
+}: OptionValueRowProps) {
+  return (
+    <Grid container spacing={1.5} alignItems="center">
+      <Grid size={{ xs: 12, md: 10 }}>
+        <TextField
+          fullWidth
+          size="small"
+          label={`Valor ${valueIndex + 1}`}
+          value={value.value}
+          onChange={(event) =>
+            setProductOptions((current) =>
+              current.map((item) =>
+                item.id === option.id
+                  ? {
+                      ...item,
+                      values: item.values.map((currentValue) =>
+                        currentValue.id === value.id
+                          ? { ...currentValue, value: event.target.value }
+                          : currentValue,
+                      ),
+                    }
+                  : item,
+              ),
+            )
+          }
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 2 }}>
+        <IconButton
+          aria-label="Eliminar valor"
+          onClick={() => {
+            setProductOptions((current) =>
+              current.map((item) =>
+                item.id === option.id
+                  ? {
+                      ...item,
+                      values: resequenceItems(
+                        item.values.filter((entry) => entry.id !== value.id),
+                      ),
+                    }
+                  : item,
+              ),
+            );
+            setVariants((current) =>
+              resequenceItems(
+                current.filter((variant) => !variant.optionValueIds.includes(value.id)),
+              ),
+            );
+          }}
+        >
+          <Trash2 size={18} />
+        </IconButton>
+      </Grid>
+    </Grid>
+  );
+});
+
+type VariantCardProps = {
+  variant: VariantInput;
+  defaultVariantId: string;
+  setDefaultVariantId: Dispatch<SetStateAction<string>>;
+  setVariants: Dispatch<SetStateAction<VariantInput[]>>;
+  uploading: boolean;
+  uploadVariantImages: (files: File[], variantId: string) => Promise<void>;
+  optionValueById: OptionValueLookup;
+  visualOptionIds: Set<string>;
+  isDuplicateSelection: boolean;
+  getSuggestedBasePrice: () => string;
+  onRender?: () => void;
+};
+
+export const VariantCard = function VariantCard({
+  variant,
+  defaultVariantId,
+  setDefaultVariantId,
+  setVariants,
+  uploading,
+  uploadVariantImages,
+  optionValueById,
+  visualOptionIds,
+  isDuplicateSelection,
+  getSuggestedBasePrice,
+  onRender,
+}: VariantCardProps) {
+  onRender?.();
+  const label = useMemo(
+    () => computeVariantLabel(variant.optionValueIds, optionValueById),
+    [optionValueById, variant.optionValueIds],
+  );
+  const selectionKey = useMemo(
+    () => normalizeSelectionKey(variant.optionValueIds),
+    [variant.optionValueIds],
+  );
+  const visualGroupDescription = useMemo(
+    () =>
+      describeVisualGroup(variant.optionValueIds, optionValueById, visualOptionIds),
+    [optionValueById, variant.optionValueIds, visualOptionIds],
+  );
+
+  return (
+    <Box
+      sx={{
+        p: 2,
+        border: "1px solid rgba(64,44,37,.10)",
+        borderRadius: 2,
+      }}
+    >
+      <Stack spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          gap={2}
+        >
+          <Box>
+            <Typography fontWeight={900}>
+              {label || "Combinacion sin nombre"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {variant.optionValueIds
+                .map((valueId) => {
+                  const value = optionValueById.get(valueId);
+                  return value ? `${value.optionName}: ${value.value}` : valueId;
+                })
+                .join(" - ")}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {defaultVariantId === variant.id && (
+              <Chip size="small" color="secondary" label="Por defecto" />
+            )}
+            {isDuplicateSelection && (
+              <Chip size="small" color="warning" label="Duplicada" />
+            )}
+            <IconButton
+              aria-label="Eliminar variante"
+              onClick={() =>
+                setVariants((current) =>
+                  resequenceItems(current.filter((item) => item.id !== variant.id)),
+                )
+              }
+            >
+              <Trash2 size={18} />
+            </IconButton>
+          </Stack>
+        </Stack>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Nombre visible"
+              value={variant.name}
+              onChange={(event) =>
+                setVariants((current) =>
+                  updateArrayItem(current, variant.id, { name: event.target.value }),
+                )
+              }
+              helperText="Si lo dejas vacio, se usara la combinacion de valores."
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="SKU variante"
+              value={variant.sku}
+              onChange={(event) =>
+                setVariants((current) =>
+                  updateArrayItem(current, variant.id, { sku: event.target.value }),
+                )
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              type="text"
+              label="Precio base"
+              value={variant.basePrice}
+              onChange={(event) =>
+                setVariants((current) =>
+                  updateArrayItem(current, variant.id, {
+                    basePrice: event.target.value,
+                  }),
+                )
+              }
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              select
+              fullWidth
+              label="Descuento variante"
+              value={variant.discountType}
+              onChange={(event) =>
+                setVariants((current) =>
+                  updateArrayItem(current, variant.id, {
+                    discountType: event.target.value as DiscountType | "",
+                  }),
+                )
+              }
+            >
+              <MenuItem value="">Sin descuento</MenuItem>
+              <MenuItem value="percentage">Porcentaje</MenuItem>
+              <MenuItem value="fixed">Monto fijo</MenuItem>
+            </TextField>
+          </Grid>
+          {variant.discountType && (
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField
+                fullWidth
+                type="text"
+                label={
+                  variant.discountType === "percentage" ? "Porcentaje" : "Monto"
+                }
+                value={variant.discountValue}
+                onChange={(event) =>
+                  setVariants((current) =>
+                    updateArrayItem(current, variant.id, {
+                      discountValue: event.target.value,
+                    }),
+                  )
+                }
+                slotProps={{ htmlInput: { inputMode: "decimal" } }}
+              />
+            </Grid>
+          )}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={variant.isActive}
+                  onChange={(event) =>
+                    setVariants((current) =>
+                      updateArrayItem(current, variant.id, {
+                        isActive: event.target.checked,
+                      }),
+                    )
+                  }
+                />
+              }
+              label="Activa"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={defaultVariantId === variant.id}
+                  onChange={(event) =>
+                    setDefaultVariantId(event.target.checked ? variant.id : "")
+                  }
+                />
+              }
+              label="Variante por defecto"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Grupo visual derivado"
+              value={variant.visualGroupKey || "Sin opciones visuales"}
+              helperText={visualGroupDescription}
+              slotProps={{ input: { readOnly: true } }}
+            />
+          </Grid>
+        </Grid>
+
+        <Stack spacing={1.5}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography fontWeight={900}>Precios por cantidad</Typography>
+            <Button
+              size="small"
+              startIcon={<Plus size={16} />}
+              onClick={() =>
+                setVariants((current) =>
+                  current.map((item) =>
+                    item.id === variant.id
+                      ? {
+                          ...item,
+                          priceTiers: [
+                            ...item.priceTiers,
+                            {
+                              minQuantity: "2",
+                              unitPrice: item.basePrice || getSuggestedBasePrice() || "0",
+                              totalPrice: "",
+                              label: "",
+                            },
+                          ],
+                        }
+                      : item,
+                  ),
+                )
+              }
+            >
+              Agregar precio
+            </Button>
+          </Stack>
+          {variant.priceTiers.length === 0 && (
+            <Typography color="text.secondary">
+              Si no agregas precios aqui, esta variante usara solo su precio base.
+            </Typography>
+          )}
+          {variant.priceTiers.map((tier, tierIndex) => (
+            <MemoPriceTierEditor
+              key={`${variant.id}-tier-${tierIndex}`}
+              tier={tier}
+              onChange={(patch) =>
+                setVariants((current) =>
+                  current.map((item) =>
+                    item.id === variant.id
+                      ? {
+                          ...item,
+                          priceTiers: item.priceTiers.map((entry, index) =>
+                            index === tierIndex ? { ...entry, ...patch } : entry,
+                          ),
+                        }
+                      : item,
+                  ),
+                )
+              }
+              onDuplicate={() =>
+                setVariants((current) =>
+                  current.map((item) =>
+                    item.id === variant.id
+                      ? {
+                          ...item,
+                          priceTiers: [
+                            ...item.priceTiers.slice(0, tierIndex + 1),
+                            { ...tier },
+                            ...item.priceTiers.slice(tierIndex + 1),
+                          ],
+                        }
+                      : item,
+                  ),
+                )
+              }
+              onDelete={() =>
+                setVariants((current) =>
+                  current.map((item) =>
+                    item.id === variant.id
+                      ? {
+                          ...item,
+                          priceTiers: item.priceTiers.filter(
+                            (_, itemIndex) => itemIndex !== tierIndex,
+                          ),
+                        }
+                      : item,
+                  ),
+                )
+              }
+            />
+          ))}
+        </Stack>
+
+        <Stack spacing={1.5}>
+          <MemoImageUploadDropzone
+            disabled={uploading}
+            loadingLabel="Subiendo galeria..."
+            idleLabel="Subir galeria de variante"
+            helperText="Arrastra imagenes o un video de esta variante, o haz click para seleccionarlos. Las variantes con el mismo grupo visual pueden compartir la misma apariencia."
+            onFilesSelected={(files) => void uploadVariantImages(files, variant.id)}
+          />
+          <MemoImageEditor
+            items={variant.images}
+            onChange={(nextState) =>
+              setVariants((current) =>
+                current.map((item) =>
+                  item.id === variant.id
+                    ? {
+                        ...item,
+                        images:
+                          typeof nextState === "function"
+                            ? nextState(item.images)
+                            : nextState,
+                      }
+                    : item,
+                ),
+              )
+            }
+          />
+        </Stack>
+      </Stack>
+    </Box>
+  );
+};
+
+const MemoVariantCard = memo(VariantCard);
+export { MemoVariantCard };
+
+function ImageUploadDropzone({
+  disabled,
+  idleLabel,
+  loadingLabel,
+  helperText,
+  onFilesSelected,
+}: {
+  disabled: boolean;
+  idleLabel: string;
+  loadingLabel: string;
+  helperText: string;
+  onFilesSelected: (files: File[]) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  function preventDefaults(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    preventDefaults(event);
+    if (disabled) return;
+    setIsDragging(false);
+    const files = Array.from(event.dataTransfer.files ?? []).filter(isMediaFile);
+    if (files.length > 0) {
+      onFilesSelected(files);
+    }
+  }
+
+  return (
+    <Box
+      component="label"
+      onDragEnter={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (!disabled) setIsDragging(true);
+      }}
+      onDragOver={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (!disabled) setIsDragging(true);
+      }}
+      onDragLeave={(event: DragEvent<HTMLLabelElement>) => {
+        preventDefaults(event);
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setIsDragging(false);
+      }}
+      onDrop={handleDrop}
+      sx={{
+        border: "1.5px dashed",
+        borderColor: isDragging ? "primary.main" : "rgba(64,44,37,.20)",
+        borderRadius: 2,
+        px: 2,
+        py: 2.25,
+        cursor: disabled ? "not-allowed" : "pointer",
+        bgcolor: isDragging ? "rgba(224,122,95,.08)" : "rgba(255,250,245,.6)",
+        transition:
+          "border-color .2s ease, background-color .2s ease, transform .2s ease",
+        "&:hover": disabled
+          ? undefined
+          : {
+              borderColor: "primary.main",
+              bgcolor: "rgba(224,122,95,.05)",
+            },
+      }}
+    >
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        justifyContent="space-between"
+      >
+        <Stack spacing={0.5}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <ImagePlus size={18} />
+            <Typography fontWeight={900}>
+              {disabled ? loadingLabel : idleLabel}
+            </Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            {disabled ? "Procesando archivos..." : helperText}
+          </Typography>
+        </Stack>
+        <Button component="span" variant="outlined" disabled={disabled}>
+          Seleccionar
+        </Button>
+      </Stack>
+      <input
+        hidden
+        accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+        multiple
+        type="file"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []).filter(isMediaFile);
+          event.target.value = "";
+          if (files.length > 0) {
+            onFilesSelected(files);
+          }
+        }}
+      />
+    </Box>
+  );
+}
+
+const MemoImageUploadDropzone = memo(ImageUploadDropzone);
+
+function OperationalFieldsEditor({
+  fields,
+  onChange,
+}: {
+  fields: CustomFieldInput[];
+  onChange: (nextFields: CustomFieldInput[]) => void;
+}) {
+  const [localFields, setLocalFields] = useState<CustomFieldInput[]>(fields);
+
+  useEffect(() => {
+    setLocalFields(fields);
+  }, [fields]);
+
+  function syncFields(nextFields: CustomFieldInput[]) {
+    setLocalFields(nextFields);
+    startTransition(() => {
+      onChange(nextFields);
+    });
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <Button
+        size="small"
+        startIcon={<Plus size={16} />}
+        onClick={() => syncFields([...localFields, createCustomField(localFields.length)])}
+        sx={{ alignSelf: "flex-start" }}
+      >
+        Agregar campo
+      </Button>
+      {localFields.length === 0 && (
+        <Typography color="text.secondary">
+          Si no agregas campos, el pedido usara solo el detalle libre general.
+        </Typography>
+      )}
+      {localFields.map((field, index) => (
+        <Box
+          key={field.id}
+          sx={{
+            p: 1.5,
+            border: "1px solid rgba(64,44,37,.10)",
+            borderRadius: 2,
+          }}
+        >
+          <Grid container spacing={1.25} alignItems="center">
+            <Grid size={{ xs: 12, md: 8 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label={`Campo ${index + 1}`}
+                value={field.label}
+                onChange={(event) =>
+                  syncFields(
+                    localFields.map((item) =>
+                      item.id === field.id
+                        ? { ...item, label: event.target.value }
+                        : item,
+                    ),
+                  )
+                }
+                helperText="Ejemplo: Nombre, Telefono, Fecha, Mensaje"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <IconButton
+                  aria-label="Subir campo"
+                  onClick={() => {
+                    if (index === 0) return;
+                    syncFields(
+                      resequenceItems(reorderItems(localFields, index, index - 1)),
+                    );
+                  }}
+                  disabled={index === 0}
+                >
+                  <ArrowUp size={18} />
+                </IconButton>
+                <IconButton
+                  aria-label="Bajar campo"
+                  onClick={() => {
+                    if (index === localFields.length - 1) return;
+                    syncFields(
+                      resequenceItems(reorderItems(localFields, index, index + 1)),
+                    );
+                  }}
+                  disabled={index === localFields.length - 1}
+                >
+                  <ArrowDown size={18} />
+                </IconButton>
+                <IconButton
+                  aria-label="Eliminar campo"
+                  onClick={() =>
+                    syncFields(
+                      resequenceItems(localFields.filter((item) => item.id !== field.id)),
+                    )
+                  }
+                >
+                  <Trash2 size={18} />
+                </IconButton>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+const MemoOperationalFieldsEditor = memo(OperationalFieldsEditor);
+
+function PriceTierEditor({
+  tier,
+  onChange,
+  onDuplicate,
+  onDelete,
+}: {
+  tier: PriceTierInput;
+  onChange: (patch: Partial<PriceTierInput>) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Box sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)", borderRadius: 2 }}>
+      <Grid container spacing={1.5} alignItems="center">
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="text"
+            label="Cantidad minima"
+            value={tier.minQuantity}
+            onChange={(event) => onChange({ minQuantity: event.target.value })}
+            slotProps={{ htmlInput: { inputMode: "numeric" } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="text"
+            label="Precio unitario"
+            value={tier.unitPrice}
+            onChange={(event) => onChange({ unitPrice: event.target.value })}
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="text"
+            label="Precio total exacto"
+            value={tier.totalPrice ?? ""}
+            onChange={(event) => onChange({ totalPrice: event.target.value })}
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Texto visible"
+            value={tier.label ?? ""}
+            onChange={(event) => onChange({ label: event.target.value })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 2 }}>
+          <Stack direction="row" justifyContent={{ xs: "flex-start", md: "flex-end" }}>
+            <IconButton aria-label="Duplicar precio" onClick={onDuplicate}>
+              <Copy size={18} />
+            </IconButton>
+            <IconButton aria-label="Eliminar precio" onClick={onDelete}>
+              <Trash2 size={18} />
+            </IconButton>
+          </Stack>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+const MemoPriceTierEditor = memo(PriceTierEditor);
+
 export function AdminProductFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -344,9 +1829,7 @@ export function AdminProductFormPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [images, setImages] = useState<ProductImageInput[]>([]);
   const [priceTiers, setPriceTiers] = useState<PriceTierInput[]>([]);
-  const [productOptions, setProductOptions] = useState<ProductOptionInput[]>(
-    [],
-  );
+  const [productOptions, setProductOptions] = useState<ProductOptionInput[]>([]);
   const [customFields, setCustomFields] = useState<CustomFieldInput[]>([]);
   const [variants, setVariants] = useState<VariantInput[]>([]);
   const [defaultVariantId, setDefaultVariantId] = useState("");
@@ -359,31 +1842,44 @@ export function AdminProductFormPage() {
   const isEdit = Boolean(id);
   const hasVariantOptions = productOptions.length > 0;
 
-  function clearField(field: string) {
+  const clearField = useCallback((field: string) => {
     setFormError((current) => clearFormErrorField(current, field));
-  }
+  }, []);
 
-  function updateDraftField<K extends keyof DraftProduct>(
-    field: K,
-    value: DraftProduct[K],
-  ) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    clearField(String(field));
-  }
+  const updateDraftField = useCallback(
+    <K extends keyof DraftProduct>(field: K, value: DraftProduct[K]) => {
+      setDraft((current) => ({ ...current, [field]: value }));
+      clearField(String(field));
+    },
+    [clearField],
+  );
 
-  function insertDescriptionLink() {
-    const url = descriptionLinkDraft.url.trim();
+  const updateDescriptionLinkDraft = useCallback(
+    (patch: Partial<DescriptionLinkDraft>) => {
+      setDescriptionLinkDraft((current) => ({ ...current, ...patch }));
+    },
+    [],
+  );
+
+  const getCurrentDescriptionValues = useEffectEvent(() => ({
+    description: draft.description,
+    linkDraft: descriptionLinkDraft,
+  }));
+
+  const insertDescriptionLink = useCallback(() => {
+    const { description, linkDraft } = getCurrentDescriptionValues();
+    const url = linkDraft.url.trim();
     if (!/^https?:\/\//i.test(url)) return;
 
-    const label = descriptionLinkDraft.label.trim() || "Aquí";
+    const label = linkDraft.label.trim() || "Aqui";
     const markdownLink = `[${label}](${url})`;
-    const nextDescription = draft.description.trimEnd()
-      ? `${draft.description.trimEnd()}\n${markdownLink}`
+    const nextDescription = description.trimEnd()
+      ? `${description.trimEnd()}\n${markdownLink}`
       : markdownLink;
 
     updateDraftField("description", nextDescription);
     setDescriptionLinkDraft({ label: "", url: "" });
-  }
+  }, [getCurrentDescriptionValues, updateDraftField]);
 
   const optionValueById = useMemo(() => {
     const map = new Map<
@@ -402,6 +1898,7 @@ export function AdminProductFormPage() {
     });
     return map;
   }, [productOptions]);
+
   const visualOptionIds = useMemo(
     () =>
       new Set(
@@ -412,11 +1909,10 @@ export function AdminProductFormPage() {
     [productOptions],
   );
 
-  const variantLabel = (optionValueIds: string[]) =>
-    optionValueIds
-      .map((valueId) => optionValueById.get(valueId)?.value)
-      .filter(Boolean)
-      .join(" / ");
+  const variantLabel = useCallback(
+    (optionValueIds: string[]) => computeVariantLabel(optionValueIds, optionValueById),
+    [optionValueById],
+  );
 
   useEffect(() => {
     let active = true;
@@ -441,9 +1937,7 @@ export function AdminProductFormPage() {
             sku: primaryVariant?.sku ?? selected.sku ?? "",
             description: selected.description,
             categoryId: selected.categoryId,
-            basePrice: String(
-              primaryVariant?.basePrice ?? selected.basePrice ?? 0,
-            ),
+            basePrice: String(primaryVariant?.basePrice ?? selected.basePrice ?? 0),
             discountType: primaryVariant?.discountType ?? "",
             discountValue:
               primaryVariant?.discountValue == null
@@ -504,9 +1998,7 @@ export function AdminProductFormPage() {
               basePrice: String(variant.basePrice),
               discountType: variant.discountType ?? "",
               discountValue:
-                variant.discountValue == null
-                  ? ""
-                  : String(variant.discountValue),
+                variant.discountValue == null ? "" : String(variant.discountValue),
               isActive: variant.isActive,
               position,
               optionValueIds: variant.selections.map(
@@ -577,7 +2069,156 @@ export function AdminProductFormPage() {
     }
   }, [defaultVariantId, hasVariantOptions, variants]);
 
-  async function save() {
+  const getUploadDefaults = useEffectEvent((target: "product" | string) => {
+    const existingImages =
+      target === "product"
+        ? images
+        : variants.find((variant) => variant.id === target)?.images ?? [];
+    return {
+      existingImages,
+      slug: `${draft.slug || id || "product"}${target === "product" ? "" : `-${target}`}`,
+      alt: draft.name,
+    };
+  });
+
+  const uploadImages = useCallback(
+    async (files: File[], target: "product" | string) => {
+      if (files.length === 0) return;
+      try {
+        setUploadingKey(target);
+        setFormError(emptyFormErrorState);
+        const { existingImages, slug, alt } = getUploadDefaults(target);
+        const existingVideoCount = existingImages.filter(
+          (item) => item.type === "video",
+        ).length;
+        const incomingVideoCount = files.filter((file) => isVideoFile(file)).length;
+        if (existingVideoCount + incomingVideoCount > 1) {
+          throw new Error("Solo puedes subir un video por galeria en esta version.");
+        }
+
+        const uploadedImages: ProductImageInput[] = [];
+        for (const [offset, file] of files.entries()) {
+          const poster = isVideoFile(file) ? await createPosterFromVideo(file) : null;
+          const uploaded = await api.uploadProductMedia({
+            file,
+            poster,
+            slug,
+            alt: alt || file.name,
+            position: existingImages.length + offset,
+          });
+          uploadedImages.push(uploaded);
+        }
+
+        if (target === "product") {
+          setImages((current) => normalizeImages([...current, ...uploadedImages]));
+          return;
+        }
+
+        setVariants((current) =>
+          current.map((variant) =>
+            variant.id === target
+              ? {
+                  ...variant,
+                  images: normalizeImages([...(variant.images ?? []), ...uploadedImages]),
+                }
+              : variant,
+          ),
+        );
+      } catch (err) {
+        setFormError(
+          createFormErrorState(err, {
+            fallbackMessage: "No se pudo subir el archivo",
+          }),
+        );
+      } finally {
+        setUploadingKey("");
+      }
+    },
+    [getUploadDefaults, id],
+  );
+
+  const uploadProductImages = useCallback(
+    (files: File[]) => uploadImages(files, "product"),
+    [uploadImages],
+  );
+
+  const uploadVariantImages = useCallback(
+    (files: File[], variantId: string) => uploadImages(files, variantId),
+    [uploadImages],
+  );
+
+  const getSuggestedBasePrice = useEffectEvent(() => draft.basePrice);
+
+  const generateVariants = useCallback(() => {
+    const cleanOptions = productOptions
+      .map((option) => ({
+        ...option,
+        name: option.name.trim(),
+        values: option.values.filter((value) => value.value.trim()),
+      }))
+      .filter((option) => option.name && option.values.length > 0);
+
+    if (cleanOptions.length === 0) {
+      setVariants([]);
+      setDefaultVariantId("");
+      return;
+    }
+
+    const combinations = cartesianProduct(cleanOptions.map((option) => option.values));
+    const existingByKey = new Map(
+      variants.map((variant) => [normalizeSelectionKey(variant.optionValueIds), variant]),
+    );
+
+    const nextVariants = combinations.map((combo, position) => {
+      const optionValueIds = combo.map((value) => value.id);
+      const key = normalizeSelectionKey(optionValueIds);
+      const existing = existingByKey.get(key);
+      const visualGroupKey = deriveVisualGroupKey(
+        optionValueIds,
+        optionValueById,
+        visualOptionIds,
+      );
+      if (existing) {
+        return {
+          ...existing,
+          optionValueIds,
+          position,
+          visualGroupKey,
+          name: existing.name || combo.map((value) => value.value).join(" / "),
+        };
+      }
+      const variant = createVariant(position, optionValueIds);
+      return {
+        ...variant,
+        name: combo.map((value) => value.value).join(" / "),
+        visualGroupKey,
+        basePrice: getSuggestedBasePrice() || "0",
+      };
+    });
+
+    setVariants(nextVariants);
+    setDefaultVariantId((current) =>
+      current && nextVariants.some((variant) => variant.id === current)
+        ? current
+        : (nextVariants[0]?.id ?? ""),
+    );
+  }, [getSuggestedBasePrice, optionValueById, productOptions, variants, visualOptionIds]);
+
+  const duplicateSelectionKeys = useMemo(() => {
+    const counts = new Map<string, number>();
+    variants.forEach((variant) => {
+      const key = normalizeSelectionKey(variant.optionValueIds);
+      if (!key) return;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return new Set(
+      Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([key]) => key),
+    );
+  }, [variants]);
+
+  const save = useCallback(async () => {
     try {
       setSaving(true);
       setFormError(emptyFormErrorState);
@@ -621,9 +2262,7 @@ export function AdminProductFormPage() {
               basePrice: Number(variant.basePrice) || 0,
               discountType: variant.discountType || null,
               discountValue:
-                variant.discountValue === ""
-                  ? null
-                  : Number(variant.discountValue),
+                variant.discountValue === "" ? null : Number(variant.discountValue),
               isActive: variant.isActive,
               position,
               selectionKey: normalizeSelectionKey(variant.optionValueIds),
@@ -639,8 +2278,7 @@ export function AdminProductFormPage() {
         sku: draft.sku || null,
         basePrice: Number(draft.basePrice) || 0,
         discountType: draft.discountType || null,
-        discountValue:
-          draft.discountValue === "" ? null : Number(draft.discountValue),
+        discountValue: draft.discountValue === "" ? null : Number(draft.discountValue),
         media: normalizeImages(images),
         isHero: false,
         heroSlot: null,
@@ -671,360 +2309,20 @@ export function AdminProductFormPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function uploadImages(files: File[], target: "product" | string) {
-    if (files.length === 0) return;
-    try {
-      setUploadingKey(target);
-      setFormError(emptyFormErrorState);
-      const existingImages =
-        target === "product"
-          ? images
-          : (variants.find((variant) => variant.id === target)?.images ?? []);
-      const existingVideoCount = existingImages.filter(
-        (item) => item.type === "video",
-      ).length;
-      const incomingVideoCount = files.filter((file) =>
-        isVideoFile(file),
-      ).length;
-      if (existingVideoCount + incomingVideoCount > 1) {
-        throw new Error(
-          "Solo puedes subir un video por galeria en esta version.",
-        );
-      }
-      const uploadedImages: ProductImageInput[] = [];
-      for (const [offset, file] of files.entries()) {
-        const poster = isVideoFile(file)
-          ? await createPosterFromVideo(file)
-          : null;
-        const uploaded = await api.uploadProductMedia({
-          file,
-          poster,
-          slug: `${draft.slug || id || "product"}${target === "product" ? "" : `-${target}`}`,
-          alt: draft.name || file.name,
-          position: existingImages.length + offset,
-        });
-        uploadedImages.push(uploaded);
-      }
-      if (target === "product") {
-        setImages((current) =>
-          normalizeImages([...current, ...uploadedImages]),
-        );
-        return;
-      }
-      setVariants((current) =>
-        current.map((variant) =>
-          variant.id === target
-            ? {
-                ...variant,
-                images: normalizeImages([
-                  ...(variant.images ?? []),
-                  ...uploadedImages,
-                ]),
-              }
-            : variant,
-        ),
-      );
-    } catch (err) {
-      setFormError(
-        createFormErrorState(err, {
-          fallbackMessage: "No se pudo subir el archivo",
-        }),
-      );
-    } finally {
-      setUploadingKey("");
-    }
-  }
-
-  function updatePriceTier(index: number, patch: Partial<PriceTierInput>) {
-    setPriceTiers((current) =>
-      current.map((tier, itemIndex) =>
-        itemIndex === index ? { ...tier, ...patch } : tier,
-      ),
-    );
-  }
-
-  function updateOption(optionId: string, patch: Partial<ProductOptionInput>) {
-    setProductOptions((current) =>
-      current.map((option) =>
-        option.id === optionId ? { ...option, ...patch } : option,
-      ),
-    );
-  }
-
-  function updateOptionValue(
-    optionId: string,
-    valueId: string,
-    patch: Partial<ProductOptionValueInput>,
-  ) {
-    setProductOptions((current) =>
-      current.map((option) =>
-        option.id === optionId
-          ? {
-              ...option,
-              values: option.values.map((value) =>
-                value.id === valueId ? { ...value, ...patch } : value,
-              ),
-            }
-          : option,
-      ),
-    );
-  }
-
-  function updateVariant(variantId: string, patch: Partial<VariantInput>) {
-    setVariants((current) =>
-      current.map((variant) =>
-        variant.id === variantId ? { ...variant, ...patch } : variant,
-      ),
-    );
-  }
-
-  function updateVariantPriceTier(
-    variantId: string,
-    tierIndex: number,
-    patch: Partial<PriceTierInput>,
-  ) {
-    setVariants((current) =>
-      current.map((variant) =>
-        variant.id === variantId
-          ? {
-              ...variant,
-              priceTiers: variant.priceTiers.map((tier, index) =>
-                index === tierIndex ? { ...tier, ...patch } : tier,
-              ),
-            }
-          : variant,
-      ),
-    );
-  }
-
-  function renderImageEditor(
-    items: ProductImageInput[],
-    onChange: (nextImages: ProductImageInput[]) => void,
-  ) {
-    return items.length === 0 ? (
-      <AdminEmptyState
-        title="Sin galería"
-        description="Sube imágenes o un video para mostrar mejor este elemento."
-      />
-    ) : (
-      <Grid container spacing={2}>
-        {items.map((image, index) => (
-          <Grid key={`${image.url}-${index}`} size={{ xs: 12, sm: 6 }}>
-            <Box
-              sx={{
-                p: 1.25,
-                border: "1px solid rgba(64,44,37,.10)",
-                borderRadius: 2,
-              }}
-            >
-              <Stack spacing={1}>
-                <Box sx={{ position: "relative" }}>
-                  {image.type === "video" ? (
-                    <Box
-                      component="video"
-                      src={image.url}
-                      poster={image.posterUrl ?? undefined}
-                      controls
-                      playsInline
-                      sx={{
-                        width: "100%",
-                        aspectRatio: "4/3",
-                        objectFit: "cover",
-                        borderRadius: 1,
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      component="img"
-                      src={image.url}
-                      alt={image.alt}
-                      sx={{
-                        width: "100%",
-                        aspectRatio: "4/3",
-                        objectFit: "cover",
-                        borderRadius: 1,
-                      }}
-                    />
-                  )}
-                  {index === 0 && (
-                    <Chip
-                      size="small"
-                      icon={<Star size={14} />}
-                      label="Principal"
-                      sx={{
-                        position: "absolute",
-                        left: 8,
-                        top: 8,
-                        bgcolor: "rgba(255,250,245,.94)",
-                        fontWeight: 900,
-                      }}
-                    />
-                  )}
-                </Box>
-                <TextField
-                  size="small"
-                  label={
-                    image.type === "video"
-                      ? "Descripción del video"
-                      : "Descripción de la imagen"
-                  }
-                  value={image.alt}
-                  onChange={(event) =>
-                    onChange(
-                      items.map((item, itemIndex) =>
-                        itemIndex === index
-                          ? { ...item, alt: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    {image.type === "video"
-                      ? `Video ${index + 1}`
-                      : `Imagen ${index + 1}`}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5}>
-                    <IconButton
-                      aria-label="Hacer imagen principal"
-                      disabled={index === 0}
-                      onClick={() => {
-                        const next = [...items];
-                        const [item] = next.splice(index, 1);
-                        if (!item) return;
-                        onChange(normalizeImages([item, ...next]));
-                      }}
-                    >
-                      <Star size={18} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Subir imagen"
-                      disabled={index === 0}
-                      onClick={() => {
-                        const next = [...items];
-                        const [item] = next.splice(index, 1);
-                        if (!item) return;
-                        next.splice(index - 1, 0, item);
-                        onChange(normalizeImages(next));
-                      }}
-                    >
-                      <ArrowUp size={18} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Bajar imagen"
-                      disabled={index === items.length - 1}
-                      onClick={() => {
-                        const next = [...items];
-                        const [item] = next.splice(index, 1);
-                        if (!item) return;
-                        next.splice(index + 1, 0, item);
-                        onChange(normalizeImages(next));
-                      }}
-                    >
-                      <ArrowDown size={18} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Eliminar imagen"
-                      onClick={() =>
-                        onChange(
-                          normalizeImages(
-                            items.filter((_, itemIndex) => itemIndex !== index),
-                          ),
-                        )
-                      }
-                    >
-                      <Trash2 size={18} />
-                    </IconButton>
-                  </Stack>
-                </Stack>
-              </Stack>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  }
-
-  function generateVariants() {
-    const cleanOptions = productOptions
-      .map((option) => ({
-        ...option,
-        name: option.name.trim(),
-        values: option.values.filter((value) => value.value.trim()),
-      }))
-      .filter((option) => option.name && option.values.length > 0);
-
-    if (cleanOptions.length === 0) {
-      setVariants([]);
-      setDefaultVariantId("");
-      return;
-    }
-
-    const combinations = cartesianProduct(
-      cleanOptions.map((option) => option.values),
-    );
-    const existingByKey = new Map(
-      variants.map((variant) => [
-        normalizeSelectionKey(variant.optionValueIds),
-        variant,
-      ]),
-    );
-
-    const nextVariants = combinations.map((combo, position) => {
-      const optionValueIds = combo.map((value) => value.id);
-      const key = normalizeSelectionKey(optionValueIds);
-      const existing = existingByKey.get(key);
-      const visualGroupKey = deriveVisualGroupKey(
-        optionValueIds,
-        optionValueById,
-        visualOptionIds,
-      );
-      if (existing) {
-        return {
-          ...existing,
-          optionValueIds,
-          position,
-          visualGroupKey,
-          name: existing.name || combo.map((value) => value.value).join(" / "),
-        };
-      }
-      const variant = createVariant(position, optionValueIds);
-      return {
-        ...variant,
-        name: combo.map((value) => value.value).join(" / "),
-        visualGroupKey,
-        basePrice: draft.basePrice || "0",
-      };
-    });
-
-    setVariants(nextVariants);
-    setDefaultVariantId((current) =>
-      current && nextVariants.some((variant) => variant.id === current)
-        ? current
-        : (nextVariants[0]?.id ?? ""),
-    );
-  }
-
-  const duplicateSelectionKeys = useMemo(() => {
-    const counts = new Map<string, number>();
-    variants.forEach((variant) => {
-      const key = normalizeSelectionKey(variant.optionValueIds);
-      if (!key) return;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    });
-    return new Set(
-      Array.from(counts.entries())
-        .filter(([, count]) => count > 1)
-        .map(([key]) => key),
-    );
-  }, [variants]);
+  }, [
+    customFields,
+    defaultVariantId,
+    draft,
+    id,
+    images,
+    navigate,
+    optionValueById,
+    priceTiers,
+    productOptions,
+    variantLabel,
+    variants,
+    visualOptionIds,
+  ]);
 
   return (
     <Stack spacing={3}>
@@ -1038,781 +2336,84 @@ export function AdminProductFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar producto" : "Nuevo producto"}
         subtitle="Configura el producto y, si aplica, sus variantes visibles."
-        action={
-          <AdminBackButton
-            to={id ? `/admin/productos/${id}` : "/admin/productos"}
-          />
-        }
+        action={<AdminBackButton to={id ? `/admin/productos/${id}` : "/admin/productos"} />}
       />
       <AdminFormErrorAlert
         error={formError}
         onClose={() => setFormError(emptyFormErrorState)}
       />
 
-      <AdminSection
-        title="Datos base"
-        description="Información general y comercial inicial del producto."
-      >
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              disabled={loading}
-              fullWidth
-              label="Nombre"
-              value={draft.name}
-              onChange={(event) => updateDraftField("name", event.target.value)}
-              error={Boolean(getFieldError(formError, "name"))}
-              helperText={getFieldError(formError, "name")}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              disabled={loading}
-              fullWidth
-              label="Enlace corto"
-              value={draft.slug}
-              onChange={(event) => updateDraftField("slug", event.target.value)}
-              error={Boolean(getFieldError(formError, "slug"))}
-              helperText={
-                getFieldError(formError, "slug") || "Ejemplo: retrato-mascota"
-              }
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              disabled={loading}
-              fullWidth
-              label={hasVariantOptions ? "Referencia sugerida" : "Referencia"}
-              value={draft.sku}
-              onChange={(event) => updateDraftField("sku", event.target.value)}
-              error={Boolean(getFieldError(formError, "sku"))}
-              helperText={getFieldError(formError, "sku")}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              disabled={loading}
-              fullWidth
-              type="text"
-              label={
-                hasVariantOptions
-                  ? "Precio sugerido para variantes nuevas"
-                  : "Precio"
-              }
-              value={draft.basePrice}
-              onChange={(event) =>
-                updateDraftField("basePrice", event.target.value)
-              }
-              error={Boolean(getFieldError(formError, "basePrice"))}
-              helperText={getFieldError(formError, "basePrice")}
-              slotProps={{ htmlInput: { inputMode: "decimal" } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              disabled={loading}
-              select
-              fullWidth
-              label={hasVariantOptions ? "Descuento sugerido" : "Descuento"}
-              value={draft.discountType}
-              onChange={(event) =>
-                updateDraftField(
-                  "discountType",
-                  event.target.value as DiscountType | "",
-                )
-              }
-              error={Boolean(getFieldError(formError, "discountType"))}
-              helperText={getFieldError(formError, "discountType")}
-            >
-              <MenuItem value="">Sin descuento</MenuItem>
-              <MenuItem value="percentage">Porcentaje</MenuItem>
-              <MenuItem value="fixed">Monto fijo</MenuItem>
-            </TextField>
-          </Grid>
-          {draft.discountType && (
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                disabled={loading}
-                fullWidth
-                type="text"
-                label={
-                  draft.discountType === "percentage" ? "Porcentaje" : "Monto"
-                }
-                value={draft.discountValue}
-                onChange={(event) =>
-                  updateDraftField("discountValue", event.target.value)
-                }
-                error={Boolean(getFieldError(formError, "discountValue"))}
-                helperText={getFieldError(formError, "discountValue")}
-                slotProps={{ htmlInput: { inputMode: "decimal" } }}
-              />
-            </Grid>
-          )}
-          <Grid size={{ xs: 12 }}>
-            <Stack spacing={1.25}>
-              <TextField
-                disabled={loading}
-                fullWidth
-                multiline
-                minRows={3}
-                label="Descripción"
-                value={draft.description}
-                onChange={(event) =>
-                  updateDraftField("description", event.target.value)
-                }
-              />
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                <TextField
-                  disabled={loading}
-                  size="small"
-                  fullWidth
-                  label="Texto del enlace"
-                  placeholder="Aquí"
-                  value={descriptionLinkDraft.label}
-                  onChange={(event) =>
-                    setDescriptionLinkDraft((current) => ({
-                      ...current,
-                      label: event.target.value,
-                    }))
-                  }
-                />
-                <TextField
-                  disabled={loading}
-                  size="small"
-                  fullWidth
-                  label="URL del enlace"
-                  placeholder="https://artenovapty.com/catalogo.pdf"
-                  value={descriptionLinkDraft.url}
-                  onChange={(event) =>
-                    setDescriptionLinkDraft((current) => ({
-                      ...current,
-                      url: event.target.value,
-                    }))
-                  }
-                />
-                <Button
-                  disabled={
-                    loading ||
-                    !/^https?:\/\//i.test(descriptionLinkDraft.url.trim())
-                  }
-                  variant="outlined"
-                  onClick={insertDescriptionLink}
-                  sx={{
-                    alignSelf: { xs: "stretch", md: "center" },
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    minWidth: { md: 152 },
-                  }}
-                >
-                  Insertar enlace
-                </Button>
-              </Stack>
-            </Stack>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              disabled={loading}
-              select
-              fullWidth
-              label="Categoría"
-              value={draft.categoryId}
-              onChange={(event) =>
-                setDraft({ ...draft, categoryId: event.target.value })
-              }
-            >
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        </Grid>
-        <Stack direction="row" spacing={2}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={draft.isPublished}
-                onChange={(event) =>
-                  setDraft({ ...draft, isPublished: event.target.checked })
-                }
-              />
-            }
-            label="Publicado"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={draft.isFeatured}
-                onChange={(event) =>
-                  setDraft({ ...draft, isFeatured: event.target.checked })
-                }
-              />
-            }
-            label="Destacado"
-          />
-        </Stack>
-      </AdminSection>
+      <BaseProductSection
+        loading={loading}
+        draft={draft}
+        categories={categories}
+        formError={formError}
+        descriptionLinkDraft={descriptionLinkDraft}
+        hasVariantOptions={hasVariantOptions}
+        onDraftFieldChange={updateDraftField}
+        onDescriptionLinkDraftChange={updateDescriptionLinkDraft}
+        onInsertDescriptionLink={insertDescriptionLink}
+      />
 
       {!hasVariantOptions && (
         <>
-          <AdminSection
-            title="Precios por cantidad"
-            description="Se guardan en la variante única automática."
-          >
-            <Stack spacing={1.5}>
-              <Button
-                size="small"
-                startIcon={<Plus size={16} />}
-                onClick={() =>
-                  setPriceTiers((current) => [
-                    ...current,
-                    {
-                      minQuantity: "2",
-                      unitPrice: draft.basePrice || "0",
-                      totalPrice: "",
-                      label: "",
-                    },
-                  ])
-                }
-              >
-                Agregar precio
-              </Button>
-              {priceTiers.length === 0 && (
-                <Typography color="text.secondary">
-                  Sin precios por cantidad. Se usará el precio base.
-                </Typography>
-              )}
-              {priceTiers.map((tier, index) => (
-                <PriceTierEditor
-                  key={`product-tier-${index}`}
-                  tier={tier}
-                  onChange={(patch) => updatePriceTier(index, patch)}
-                  onDuplicate={() =>
-                    setPriceTiers((current) => [
-                      ...current.slice(0, index + 1),
-                      { ...tier },
-                      ...current.slice(index + 1),
-                    ])
-                  }
-                  onDelete={() =>
-                    setPriceTiers((current) =>
-                      current.filter((_, itemIndex) => itemIndex !== index),
-                    )
-                  }
-                />
-              ))}
-            </Stack>
-          </AdminSection>
-
-          <AdminSection
-            title="Galería del producto"
-            description="Se guarda en la variante única automática."
-          >
-            <Stack spacing={2}>
-              <ImageUploadDropzone
-                disabled={uploadingKey === "product"}
-                loadingLabel="Subiendo galeria..."
-                idleLabel="Subir galeria"
-                helperText="Arrastra imágenes o un video aquí, o haz click para seleccionarlos."
-                onFilesSelected={(files) => void uploadImages(files, "product")}
-              />
-              {renderImageEditor(images, setImages)}
-            </Stack>
-          </AdminSection>
+          <SimpleProductPricingSection
+            basePrice={draft.basePrice}
+            priceTiers={priceTiers}
+            setPriceTiers={setPriceTiers}
+          />
+          <ProductImagesSection
+            title="Galeria del producto"
+            description="Se guarda en la variante unica automatica."
+            uploadLabel="Subir galeria"
+            helperText="Arrastra imagenes o un video aqui, o haz click para seleccionarlos."
+            uploading={uploadingKey === "product"}
+            items={images}
+            onFilesSelected={uploadProductImages}
+            onChange={setImages}
+          />
         </>
       )}
 
       {hasVariantOptions && (
-        <AdminSection
-          title="Galería descriptiva del producto"
-          description="Es apoyo visual general; la vista pública arrancará desde la variante por defecto."
-        >
-          <Stack spacing={2}>
-            <ImageUploadDropzone
-              disabled={uploadingKey === "product"}
-              loadingLabel="Subiendo galeria..."
-              idleLabel="Subir galeria del producto"
-              helperText="Arrastra imágenes o un video aquí, o haz click para seleccionarlos."
-              onFilesSelected={(files) => void uploadImages(files, "product")}
-            />
-            {renderImageEditor(images, setImages)}
-          </Stack>
-        </AdminSection>
+        <ProductImagesSection
+          title="Galeria descriptiva del producto"
+          description="Es apoyo visual general; la vista publica arrancara desde la variante por defecto."
+          uploadLabel="Subir galeria del producto"
+          helperText="Arrastra imagenes o un video aqui, o haz click para seleccionarlos."
+          uploading={uploadingKey === "product"}
+          items={images}
+          onFilesSelected={uploadProductImages}
+          onChange={setImages}
+        />
       )}
 
       <AdminSection
         title="Campos operativos"
-        description="Declara los datos libres que necesitarás capturar cuando este producto se agregue a un pedido."
+        description="Declara los datos libres que necesitaras capturar cuando este producto se agregue a un pedido."
       >
-        <OperationalFieldsEditor
-          fields={customFields}
-          onChange={setCustomFields}
-        />
+        <MemoOperationalFieldsEditor fields={customFields} onChange={setCustomFields} />
       </AdminSection>
 
-      <AdminSection
-        title="Opciones del producto"
-        description="Define los ejes dinamicos del producto, por ejemplo Color, Talla o Material."
-        action={
-          <Button
-            size="small"
-            startIcon={<Plus size={16} />}
-            onClick={() =>
-              setProductOptions((current) => [
-                ...current,
-                createOption(current.length),
-              ])
-            }
-          >
-            Agregar opción
-          </Button>
-        }
-      >
-        <Stack spacing={2}>
-          {productOptions.length === 0 && (
-            <Typography color="text.secondary">
-              Si no agregas opciones, el producto seguirá siendo simple.
-            </Typography>
-          )}
-          {productOptions.map((option, optionIndex) => (
-            <Box
-              key={option.id}
-              sx={{
-                p: 2,
-                border: "1px solid rgba(64,44,37,.10)",
-                borderRadius: 2,
-              }}
-            >
-              <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography fontWeight={900}>
-                    Opci?n {optionIndex + 1}
-                  </Typography>
-                  <IconButton
-                    aria-label="Eliminar opción"
-                    onClick={() => {
-                      const removedValueIds = new Set(
-                        option.values.map((value) => value.id),
-                      );
-                      setProductOptions((current) =>
-                        current
-                          .filter((item) => item.id !== option.id)
-                          .map((item, position) => ({ ...item, position })),
-                      );
-                      setVariants((current) =>
-                        current
-                          .filter((variant) =>
-                            variant.optionValueIds.every(
-                              (valueId) => !removedValueIds.has(valueId),
-                            ),
-                          )
-                          .map((variant, position) => ({
-                            ...variant,
-                            position,
-                          })),
-                      );
-                    }}
-                  >
-                    <Trash2 size={18} />
-                  </IconButton>
-                </Stack>
-                <TextField
-                  fullWidth
-                  label="Nombre de la opción"
-                  value={option.name}
-                  onChange={(event) =>
-                    updateOption(option.id, { name: event.target.value })
-                  }
-                  helperText="Ejemplo: Color, Talla, Acabado"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={option.drivesVisualGroup}
-                      onChange={(event) =>
-                        updateOption(option.id, {
-                          drivesVisualGroup: event.target.checked,
-                        })
-                      }
-                    />
-                  }
-                  label="Esta opción cambia la apariencia/imagen"
-                />
-                <Stack spacing={1.25}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Typography fontWeight={900}>Valores</Typography>
-                    <Button
-                      size="small"
-                      startIcon={<Plus size={16} />}
-                      onClick={() =>
-                        updateOption(option.id, {
-                          values: [
-                            ...option.values,
-                            createOptionValue(option.id, option.values.length),
-                          ],
-                        })
-                      }
-                    >
-                      Agregar valor
-                    </Button>
-                  </Stack>
-                  {option.values.length === 0 && (
-                    <Typography color="text.secondary">
-                      Agrega al menos un valor para esta opción.
-                    </Typography>
-                  )}
-                  {option.values.map((value, valueIndex) => (
-                    <Grid
-                      key={value.id}
-                      container
-                      spacing={1.5}
-                      alignItems="center"
-                    >
-                      <Grid size={{ xs: 12, md: 10 }}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label={`Valor ${valueIndex + 1}`}
-                          value={value.value}
-                          onChange={(event) =>
-                            updateOptionValue(option.id, value.id, {
-                              value: event.target.value,
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 2 }}>
-                        <IconButton
-                          aria-label="Eliminar valor"
-                          onClick={() => {
-                            updateOption(option.id, {
-                              values: option.values
-                                .filter((item) => item.id !== value.id)
-                                .map((item, position) => ({
-                                  ...item,
-                                  position,
-                                })),
-                            });
-                            setVariants((current) =>
-                              current
-                                .filter(
-                                  (variant) =>
-                                    !variant.optionValueIds.includes(value.id),
-                                )
-                                .map((variant, position) => ({
-                                  ...variant,
-                                  position,
-                                })),
-                            );
-                          }}
-                        >
-                          <Trash2 size={18} />
-                        </IconButton>
-                      </Grid>
-                    </Grid>
-                  ))}
-                </Stack>
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-      </AdminSection>
+      <ProductOptionsSection
+        productOptions={productOptions}
+        setProductOptions={setProductOptions}
+        setVariants={setVariants}
+      />
 
-      <AdminSection
-        title="Combinaciones"
-        description="Genera variantes reales, define su precio y marca cuál será la variante por defecto."
-        action={
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={<Sparkles size={16} />}
-            onClick={generateVariants}
-          >
-            Generar combinaciones
-          </Button>
-        }
-      >
-        <Stack spacing={2}>
-          {variants.length === 0 && (
-            <Typography color="text.secondary">
-              Todavía no hay combinaciones generadas.
-            </Typography>
-          )}
-          {variants.map((variant) => {
-            const label = variantLabel(variant.optionValueIds);
-            const selectionKey = normalizeSelectionKey(variant.optionValueIds);
-            return (
-              <Box
-                key={variant.id}
-                sx={{
-                  p: 2,
-                  border: "1px solid rgba(64,44,37,.10)",
-                  borderRadius: 2,
-                }}
-              >
-                <Stack spacing={2}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Box>
-                      <Typography fontWeight={900}>
-                        {label || "Combinación sin nombre"}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {variant.optionValueIds
-                          .map((valueId) => {
-                            const value = optionValueById.get(valueId);
-                            return value
-                              ? `${value.optionName}: ${value.value}`
-                              : valueId;
-                          })
-                          .join(" - ")}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      {defaultVariantId === variant.id && (
-                        <Chip
-                          size="small"
-                          color="secondary"
-                          label="Por defecto"
-                        />
-                      )}
-                      {duplicateSelectionKeys.has(selectionKey) && (
-                        <Chip size="small" color="warning" label="Duplicada" />
-                      )}
-                      <IconButton
-                        aria-label="Eliminar variante"
-                        onClick={() =>
-                          setVariants((current) =>
-                            current
-                              .filter((item) => item.id !== variant.id)
-                              .map((item, position) => ({ ...item, position })),
-                          )
-                        }
-                      >
-                        <Trash2 size={18} />
-                      </IconButton>
-                    </Stack>
-                  </Stack>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="Nombre visible"
-                        value={variant.name}
-                        onChange={(event) =>
-                          updateVariant(variant.id, {
-                            name: event.target.value,
-                          })
-                        }
-                        helperText="Si lo dejas vacío, se usará la combinación de valores."
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="SKU variante"
-                        value={variant.sku}
-                        onChange={(event) =>
-                          updateVariant(variant.id, { sku: event.target.value })
-                        }
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        type="text"
-                        label="Precio base"
-                        value={variant.basePrice}
-                        onChange={(event) =>
-                          updateVariant(variant.id, {
-                            basePrice: event.target.value,
-                          })
-                        }
-                        slotProps={{ htmlInput: { inputMode: "decimal" } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        select
-                        fullWidth
-                        label="Descuento variante"
-                        value={variant.discountType}
-                        onChange={(event) =>
-                          updateVariant(variant.id, {
-                            discountType: event.target.value as
-                              | DiscountType
-                              | "",
-                          })
-                        }
-                      >
-                        <MenuItem value="">Sin descuento</MenuItem>
-                        <MenuItem value="percentage">Porcentaje</MenuItem>
-                        <MenuItem value="fixed">Monto fijo</MenuItem>
-                      </TextField>
-                    </Grid>
-                    {variant.discountType && (
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <TextField
-                          fullWidth
-                          type="text"
-                          label={
-                            variant.discountType === "percentage"
-                              ? "Porcentaje"
-                              : "Monto"
-                          }
-                          value={variant.discountValue}
-                          onChange={(event) =>
-                            updateVariant(variant.id, {
-                              discountValue: event.target.value,
-                            })
-                          }
-                          slotProps={{ htmlInput: { inputMode: "decimal" } }}
-                        />
-                      </Grid>
-                    )}
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={variant.isActive}
-                            onChange={(event) =>
-                              updateVariant(variant.id, {
-                                isActive: event.target.checked,
-                              })
-                            }
-                          />
-                        }
-                        label="Activa"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={defaultVariantId === variant.id}
-                            onChange={(event) =>
-                              setDefaultVariantId(
-                                event.target.checked ? variant.id : "",
-                              )
-                            }
-                          />
-                        }
-                        label="Variante por defecto"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="Grupo visual derivado"
-                        value={
-                          variant.visualGroupKey || "Sin opciones visuales"
-                        }
-                        helperText={describeVisualGroup(
-                          variant.optionValueIds,
-                          optionValueById,
-                          visualOptionIds,
-                        )}
-                        slotProps={{ input: { readOnly: true } }}
-                      />
-                    </Grid>
-                  </Grid>
-
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography fontWeight={900}>
-                        Precios por cantidad
-                      </Typography>
-                      <Button
-                        size="small"
-                        startIcon={<Plus size={16} />}
-                        onClick={() =>
-                          updateVariant(variant.id, {
-                            priceTiers: [
-                              ...variant.priceTiers,
-                              {
-                                minQuantity: "2",
-                                unitPrice:
-                                  variant.basePrice || draft.basePrice || "0",
-                                totalPrice: "",
-                                label: "",
-                              },
-                            ],
-                          })
-                        }
-                      >
-                        Agregar precio
-                      </Button>
-                    </Stack>
-                    {variant.priceTiers.length === 0 && (
-                      <Typography color="text.secondary">
-                        Si no agregas precios aquí, esta variante usará solo su
-                        precio base.
-                      </Typography>
-                    )}
-                    {variant.priceTiers.map((tier, tierIndex) => (
-                      <PriceTierEditor
-                        key={`${variant.id}-tier-${tierIndex}`}
-                        tier={tier}
-                        onChange={(patch) =>
-                          updateVariantPriceTier(variant.id, tierIndex, patch)
-                        }
-                        onDuplicate={() =>
-                          updateVariant(variant.id, {
-                            priceTiers: [
-                              ...variant.priceTiers.slice(0, tierIndex + 1),
-                              { ...tier },
-                              ...variant.priceTiers.slice(tierIndex + 1),
-                            ],
-                          })
-                        }
-                        onDelete={() =>
-                          updateVariant(variant.id, {
-                            priceTiers: variant.priceTiers.filter(
-                              (_, itemIndex) => itemIndex !== tierIndex,
-                            ),
-                          })
-                        }
-                      />
-                    ))}
-                  </Stack>
-
-                  <Stack spacing={1.5}>
-                    <ImageUploadDropzone
-                      disabled={uploadingKey === variant.id}
-                      loadingLabel="Subiendo galeria..."
-                      idleLabel="Subir galeria de variante"
-                      helperText="Arrastra imágenes o un video de esta variante, o haz click para seleccionarlos. Las variantes con el mismo grupo visual pueden compartir la misma apariencia."
-                      onFilesSelected={(files) =>
-                        void uploadImages(files, variant.id)
-                      }
-                    />
-                    {renderImageEditor(variant.images, (nextImages) =>
-                      updateVariant(variant.id, { images: nextImages }),
-                    )}
-                  </Stack>
-                </Stack>
-              </Box>
-            );
-          })}
-        </Stack>
-      </AdminSection>
+      <VariantsSection
+        variants={variants}
+        defaultVariantId={defaultVariantId}
+        setDefaultVariantId={setDefaultVariantId}
+        setVariants={setVariants}
+        uploadingKey={uploadingKey}
+        uploadVariantImages={uploadVariantImages}
+        optionValueById={optionValueById}
+        visualOptionIds={visualOptionIds}
+        duplicateSelectionKeys={duplicateSelectionKeys}
+        getSuggestedBasePrice={getSuggestedBasePrice}
+        onGenerateVariants={generateVariants}
+      />
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button
@@ -1829,322 +2430,5 @@ export function AdminProductFormPage() {
         />
       </Stack>
     </Stack>
-  );
-}
-
-function ImageUploadDropzone({
-  disabled,
-  idleLabel,
-  loadingLabel,
-  helperText,
-  onFilesSelected,
-}: {
-  disabled: boolean;
-  idleLabel: string;
-  loadingLabel: string;
-  helperText: string;
-  onFilesSelected: (files: File[]) => void;
-}) {
-  const [isDragging, setIsDragging] = useState(false);
-
-  function preventDefaults(event: DragEvent<HTMLElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  function handleDrop(event: DragEvent<HTMLLabelElement>) {
-    preventDefaults(event);
-    if (disabled) return;
-    setIsDragging(false);
-    const files = Array.from(event.dataTransfer.files ?? []).filter(
-      isMediaFile,
-    );
-    if (files.length > 0) {
-      onFilesSelected(files);
-    }
-  }
-
-  return (
-    <Box
-      component="label"
-      onDragEnter={(event: DragEvent<HTMLLabelElement>) => {
-        preventDefaults(event);
-        if (!disabled) setIsDragging(true);
-      }}
-      onDragOver={(event: DragEvent<HTMLLabelElement>) => {
-        preventDefaults(event);
-        if (!disabled) setIsDragging(true);
-      }}
-      onDragLeave={(event: DragEvent<HTMLLabelElement>) => {
-        preventDefaults(event);
-        if (event.currentTarget.contains(event.relatedTarget as Node | null))
-          return;
-        setIsDragging(false);
-      }}
-      onDrop={handleDrop}
-      sx={{
-        border: "1.5px dashed",
-        borderColor: isDragging ? "primary.main" : "rgba(64,44,37,.20)",
-        borderRadius: 2,
-        px: 2,
-        py: 2.25,
-        cursor: disabled ? "not-allowed" : "pointer",
-        bgcolor: isDragging ? "rgba(224,122,95,.08)" : "rgba(255,250,245,.6)",
-        transition:
-          "border-color .2s ease, background-color .2s ease, transform .2s ease",
-        "&:hover": disabled
-          ? undefined
-          : {
-              borderColor: "primary.main",
-              bgcolor: "rgba(224,122,95,.05)",
-            },
-      }}
-    >
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        justifyContent="space-between"
-      >
-        <Stack spacing={0.5}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <ImagePlus size={18} />
-            <Typography fontWeight={900}>
-              {disabled ? loadingLabel : idleLabel}
-            </Typography>
-          </Stack>
-          <Typography variant="body2" color="text.secondary">
-            {disabled ? "Procesando archivos..." : helperText}
-          </Typography>
-        </Stack>
-        <Button component="span" variant="outlined" disabled={disabled}>
-          Seleccionar
-        </Button>
-      </Stack>
-      <input
-        hidden
-        accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
-        multiple
-        type="file"
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? []).filter(
-            isMediaFile,
-          );
-          event.target.value = "";
-          if (files.length > 0) {
-            onFilesSelected(files);
-          }
-        }}
-      />
-    </Box>
-  );
-}
-
-function OperationalFieldsEditor({
-  fields,
-  onChange,
-}: {
-  fields: CustomFieldInput[];
-  onChange: (nextFields: CustomFieldInput[]) => void;
-}) {
-  const [localFields, setLocalFields] = useState<CustomFieldInput[]>(fields);
-
-  useEffect(() => {
-    setLocalFields(fields);
-  }, [fields]);
-
-  function syncFields(nextFields: CustomFieldInput[]) {
-    setLocalFields(nextFields);
-    startTransition(() => {
-      onChange(nextFields);
-    });
-  }
-
-  return (
-    <Stack spacing={1.5}>
-      <Button
-        size="small"
-        startIcon={<Plus size={16} />}
-        onClick={() =>
-          syncFields([
-            ...localFields,
-            createCustomField(localFields.length),
-          ])
-        }
-        sx={{ alignSelf: "flex-start" }}
-      >
-        Agregar campo
-      </Button>
-      {localFields.length === 0 && (
-        <Typography color="text.secondary">
-          Si no agregas campos, el pedido usará solo el detalle libre general.
-        </Typography>
-      )}
-      {localFields.map((field, index) => (
-        <Box
-          key={field.id}
-          sx={{
-            p: 1.5,
-            border: "1px solid rgba(64,44,37,.10)",
-            borderRadius: 2,
-          }}
-        >
-          <Grid container spacing={1.25} alignItems="center">
-            <Grid size={{ xs: 12, md: 8 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label={`Campo ${index + 1}`}
-                value={field.label}
-                onChange={(event) =>
-                  syncFields(
-                    localFields.map((item) =>
-                      item.id === field.id
-                        ? { ...item, label: event.target.value }
-                        : item,
-                    ),
-                  )
-                }
-                helperText="Ejemplo: Nombre, Teléfono, Fecha, Mensaje"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                <IconButton
-                  aria-label="Subir campo"
-                  onClick={() => {
-                    if (index === 0) return;
-                    const next = [...localFields];
-                    const previous = next[index - 1];
-                    const item = next[index];
-                    if (!previous || !item) return;
-                    next[index - 1] = item;
-                    next[index] = previous;
-                    syncFields(
-                      next.map((current, position) => ({
-                        ...current,
-                        position,
-                      })),
-                    );
-                  }}
-                  disabled={index === 0}
-                >
-                  <ArrowUp size={18} />
-                </IconButton>
-                <IconButton
-                  aria-label="Bajar campo"
-                  onClick={() => {
-                    if (index === localFields.length - 1) return;
-                    const next = [...localFields];
-                    const item = next[index];
-                    const following = next[index + 1];
-                    if (!item || !following) return;
-                    next[index] = following;
-                    next[index + 1] = item;
-                    syncFields(
-                      next.map((current, position) => ({
-                        ...current,
-                        position,
-                      })),
-                    );
-                  }}
-                  disabled={index === localFields.length - 1}
-                >
-                  <ArrowDown size={18} />
-                </IconButton>
-                <IconButton
-                  aria-label="Eliminar campo"
-                  onClick={() =>
-                    syncFields(
-                      localFields
-                        .filter((item) => item.id !== field.id)
-                        .map((item, position) => ({ ...item, position })),
-                    )
-                  }
-                >
-                  <Trash2 size={18} />
-                </IconButton>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Box>
-      ))}
-    </Stack>
-  );
-}
-
-function PriceTierEditor({
-  tier,
-  onChange,
-  onDuplicate,
-  onDelete,
-}: {
-  tier: PriceTierInput;
-  onChange: (patch: Partial<PriceTierInput>) => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <Box
-      sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)", borderRadius: 2 }}
-    >
-      <Grid container spacing={1.5} alignItems="center">
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <TextField
-            fullWidth
-            size="small"
-            type="text"
-            label="Cantidad mínima"
-            value={tier.minQuantity}
-            onChange={(event) => onChange({ minQuantity: event.target.value })}
-            slotProps={{ htmlInput: { inputMode: "numeric" } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <TextField
-            fullWidth
-            size="small"
-            type="text"
-            label="Precio unitario"
-            value={tier.unitPrice}
-            onChange={(event) => onChange({ unitPrice: event.target.value })}
-            slotProps={{ htmlInput: { inputMode: "decimal" } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
-          <TextField
-            fullWidth
-            size="small"
-            type="text"
-            label="Precio total exacto"
-            value={tier.totalPrice ?? ""}
-            onChange={(event) => onChange({ totalPrice: event.target.value })}
-            slotProps={{ htmlInput: { inputMode: "decimal" } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
-          <TextField
-            fullWidth
-            size="small"
-            label="Texto visible"
-            value={tier.label ?? ""}
-            onChange={(event) => onChange({ label: event.target.value })}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 2 }}>
-          <Stack
-            direction="row"
-            justifyContent={{ xs: "flex-start", md: "flex-end" }}
-          >
-            <IconButton aria-label="Duplicar precio" onClick={onDuplicate}>
-              <Copy size={18} />
-            </IconButton>
-            <IconButton aria-label="Eliminar precio" onClick={onDelete}>
-              <Trash2 size={18} />
-            </IconButton>
-          </Stack>
-        </Grid>
-      </Grid>
-    </Box>
   );
 }

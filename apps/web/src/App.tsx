@@ -7,6 +7,7 @@ import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminExpenseDetailPage } from "./pages/admin/AdminExpenseDetailPage";
 import { AdminExpenseFormPage } from "./pages/admin/AdminExpenseFormPage";
 import { AdminExpensesPage } from "./pages/admin/AdminExpensesPage";
+import { AdminFinancePage } from "./pages/admin/AdminFinancePage";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminOrderDetailPage } from "./pages/admin/AdminOrderDetailPage";
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminDashboardPage /> },
+          { path: "finanzas", element: <AdminFinancePage /> },
           { path: "gastos", element: <AdminExpensesPage /> },
           { path: "gastos/nuevo", element: <AdminExpenseFormPage /> },
           { path: "gastos/:id", element: <AdminExpenseDetailPage /> },

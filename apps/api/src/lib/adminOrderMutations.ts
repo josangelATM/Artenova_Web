@@ -67,6 +67,19 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
   }>;
   const productById = new Map<string, (typeof products)[number]>(products.map((product) => [product.id, product]));
 
+  function resolveVariantSnapshot(
+    product: (typeof products)[number] | null,
+    item: AdminOrderItemWriteInput,
+  ) {
+    if (!product || product.variants.length === 0) return null;
+    const skuSnapshot = toOptionalString(item.skuSnapshot);
+    const variantNameSnapshot = toOptionalString(item.variantNameSnapshot);
+    return product.variants.find((variant) => variant.sku && variant.sku === skuSnapshot)
+      ?? product.variants.find((variant) => variant.name === variantNameSnapshot)
+      ?? product.variants[0]
+      ?? null;
+  }
+
   let estimatedTotal = 0;
   for (const item of items) {
     const product = item.productId ? productById.get(item.productId) : null;
@@ -78,8 +91,7 @@ export async function syncOrderItems(tx: any, orderId: string, items: AdminOrder
     if (!trimmedProductName) {
       throw new Error("Cada item debe tener un nombre.");
     }
-
-    const variantSnapshot = product?.variants.find((variant: any) => variant.name === item.variantNameSnapshot || variant.sku === item.skuSnapshot) ?? product?.variants[0] ?? null;
+    const variantSnapshot = resolveVariantSnapshot(product ?? null, item);
     const appliedAdjustments = (item.appliedAdjustments ?? []).map((adjustment) => ({
       label: adjustment.label.trim(),
       unitAmount: roundMoney(Math.max(0, adjustment.unitAmount ?? 0)),

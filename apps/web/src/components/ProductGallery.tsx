@@ -335,6 +335,33 @@ function ThumbnailPreview({
   return <MediaPlaceholder label={label} compact />;
 }
 
+const thumbnailRailSx = {
+  order: { xs: 2, md: 1 },
+  alignSelf: { xs: "stretch", md: "flex-start" },
+  minWidth: 0,
+  width: { xs: "100%", md: 96 },
+  maxWidth: "100%",
+  flex: { xs: "0 0 auto", md: "0 0 96px" },
+  overflowX: { xs: "auto", md: "hidden" },
+  overflowY: { xs: "hidden", md: "auto" },
+  overscrollBehaviorX: { xs: "contain", md: "auto" },
+  overscrollBehaviorY: { xs: "auto", md: "contain" },
+  pb: { xs: 0.75, md: 0 },
+  pr: { xs: 0, md: 0.75 },
+  px: { xs: 0.25, md: 0 },
+  py: 0.25,
+  maxHeight: { md: "clamp(360px, 72vh, 560px)" },
+  scrollbarWidth: "thin",
+  "&::-webkit-scrollbar": {
+    width: 8,
+    height: 8,
+  },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: "rgba(64,44,37,.22)",
+    borderRadius: 999,
+  },
+} as const;
+
 export function ProductGallery({
   productName,
   items,
@@ -598,15 +625,8 @@ export function ProductGallery({
           <Stack
             direction={{ xs: "row", md: "column" }}
             spacing={1}
-            sx={{
-              order: { xs: 2, md: 1 },
-              overflowX: { xs: "auto", md: "visible" },
-              overflowY: { xs: "visible", md: "auto" },
-              pb: { xs: 0.5, md: 0 },
-              pr: { md: 0.5 },
-              maxHeight: { md: "min(560px, 72vh)" },
-              flex: { md: "0 0 92px" }
-            }}
+            data-testid="product-gallery-thumbnails"
+            sx={thumbnailRailSx}
           >
             {previewItems.map((item, index) => (
               <Box
@@ -619,11 +639,13 @@ export function ProductGallery({
                   flex: { xs: "0 0 72px", sm: "0 0 84px", md: "0 0 84px" },
                   width: { xs: 72, sm: 84, md: 84 },
                   height: { xs: 72, sm: 84, md: 84 },
-                  p: 0.5,
+                  p: 0.75,
+                  minWidth: 0,
                   borderRadius: 2,
                   border: item.key === activePreviewKey ? "2px solid rgba(196,110,78,1)" : "1px solid rgba(64,44,37,.16)",
                   background: "rgba(255,250,245,.9)",
                   cursor: "pointer",
+                  boxShadow: item.key === activePreviewKey ? "0 10px 24px rgba(196,110,78,.18)" : "none",
                 }}
               >
                 <Box sx={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", borderRadius: 1.5 }}>
