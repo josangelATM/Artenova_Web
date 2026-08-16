@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Checkbox, FormControlLabel, Grid, Stack, TextField } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
+import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -24,6 +25,7 @@ const fieldLabels: Record<string, string> = {
 export function AdminCategoryFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [draft, setDraft] = useState(emptyCategory);
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
@@ -66,7 +68,20 @@ export function AdminCategoryFormPage() {
       setSaving(true);
       setFormError(emptyFormErrorState);
       const saved = await api.saveAdminCategory({ id, ...draft });
-      navigate(`/admin/categorias/${saved.id}`, { replace: true });
+      if (isEdit) {
+        setDraft({
+          name: saved.name,
+          slug: saved.slug,
+          description: saved.description ?? "",
+          isActive: saved.isActive,
+        });
+        showToast({ message: "Categoría guardada", severity: "success" });
+        return;
+      }
+      navigate(`/admin/categorias/${saved.id}`, {
+        replace: true,
+        state: toastNavigationState({ message: "Categoría guardada", severity: "success" }),
+      });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo guardar la categoría",

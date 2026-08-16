@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Checkbox, Divider, FormControlLabel, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { formatCurrency, orderContactMethodLabels, orderContactMethodValues, type Order, type Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "../../components/ToastProvider";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -67,6 +68,7 @@ function summarizeOperationalFields(
 export function AdminOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [draft, setDraft] = useState<DraftOrder | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -123,6 +125,7 @@ export function AdminOrderDetailPage() {
       });
       setOrder(updated);
       setDraft(orderToDraft(updated));
+      showToast({ message: "Pedido guardado", severity: "success" });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo guardar el pedido",

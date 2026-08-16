@@ -9,6 +9,7 @@ import type {
   QRCodeWhatsappDestination,
 } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -203,6 +204,7 @@ function getQrFieldLabel(field: string) {
 export function AdminQRCodeFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const isEdit = Boolean(id);
   const [draft, setDraft] = useState<Draft>(() => createDraft());
   const [formError, setFormError] = useState(emptyFormErrorState);
@@ -280,7 +282,15 @@ export function AdminQRCodeFormPage() {
     setFormError(emptyFormErrorState);
     try {
       const saved = await api.saveAdminQRCode(id, draftToInput(draft));
-      navigate(`/admin/qrs/${saved.id}`, { replace: true });
+      if (isEdit) {
+        setDraft(draftFromQRCode(saved));
+        showToast({ message: "QR guardado", severity: "success" });
+        return;
+      }
+      navigate(`/admin/qrs/${saved.id}`, {
+        replace: true,
+        state: toastNavigationState({ message: "QR guardado", severity: "success" }),
+      });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo guardar el QR",

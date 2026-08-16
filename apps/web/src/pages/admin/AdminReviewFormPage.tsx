@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Box, Button, Grid, MenuItem, Rating, Stack, TextField, Typography } from "@mui/material";
 import type { Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -27,6 +28,7 @@ const fieldLabels: Record<string, string> = {
 export function AdminReviewFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [draft, setDraft] = useState(emptyReview);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,21 @@ export function AdminReviewFormPage() {
       setSaving(true);
       setFormError(emptyFormErrorState);
       const saved = await api.saveAdminReview({ id, ...draft });
-      navigate(`/admin/resenas/${saved.id}`, { replace: true });
+      if (isEdit) {
+        setDraft({
+          productId: saved.productId,
+          rating: saved.rating,
+          customerName: saved.customerName,
+          comment: saved.comment,
+          isApproved: saved.isApproved,
+        });
+        showToast({ message: "Reseña guardada", severity: "success" });
+        return;
+      }
+      navigate(`/admin/resenas/${saved.id}`, {
+        replace: true,
+        state: toastNavigationState({ message: "Reseña guardada", severity: "success" }),
+      });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo guardar la reseña",

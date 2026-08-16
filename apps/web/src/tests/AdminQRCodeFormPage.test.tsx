@@ -8,6 +8,7 @@ import { theme } from "../theme/theme";
 const saveAdminQRCodeMock = vi.fn();
 const previewQRCodeMock = vi.fn();
 const adminQRCodeMock = vi.fn();
+const showToastMock = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -15,6 +16,11 @@ vi.mock("../lib/api", () => ({
     previewQRCode: (...args: unknown[]) => previewQRCodeMock(...args),
     adminQRCode: (...args: unknown[]) => adminQRCodeMock(...args),
   },
+}));
+
+vi.mock("../components/ToastProvider", () => ({
+  useToast: () => ({ showToast: showToastMock }),
+  toastNavigationState: (toast: unknown) => ({ toast }),
 }));
 
 vi.mock("../pages/admin/adminCrudUi", () => ({
@@ -63,6 +69,7 @@ describe("AdminQRCodeFormPage", () => {
     saveAdminQRCodeMock.mockReset();
     previewQRCodeMock.mockReset();
     adminQRCodeMock.mockReset();
+    showToastMock.mockReset();
   });
 
   afterEach(() => {

@@ -38,10 +38,12 @@ import type {
   CustomField,
   DiscountType,
   ProductMedia,
+  Product,
   ProductOption,
   ProductOptionValue,
 } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import {
   clearFormErrorField,
@@ -1853,6 +1855,7 @@ const MemoPriceTierEditor = memo(PriceTierEditor);
 export function AdminProductFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [draft, setDraft] = useState<DraftProduct>(emptyProduct);
   const [categories, setCategories] = useState<Category[]>([]);
   const [images, setImages] = useState<ProductImageInput[]>([]);
@@ -1942,6 +1945,114 @@ export function AdminProductFormPage() {
     [optionValueById],
   );
 
+  const hydrateProductForm = useCallback((selected: Product) => {
+    const hasOptions = selected.productOptions.length > 0;
+    const primaryVariant =
+      selected.defaultVariant ??
+      selected.variants.find((variant) => variant.isActive) ??
+      selected.variants[0] ??
+      null;
+    setDraft({
+      name: selected.name,
+      slug: selected.slug,
+      sku: primaryVariant?.sku ?? selected.sku ?? "",
+      description: selected.description,
+      categoryId: selected.categoryId,
+      basePrice: String(primaryVariant?.basePrice ?? selected.basePrice ?? 0),
+      discountType: primaryVariant?.discountType ?? "",
+      discountValue:
+        primaryVariant?.discountValue == null
+          ? ""
+          : String(primaryVariant.discountValue),
+      isPublished: selected.isPublished,
+      isFeatured: selected.isFeatured,
+    });
+    setImages(
+      (!hasOptions ? (primaryVariant?.media ?? []) : selected.media).map(
+        ({ url, type, alt, position, posterUrl }) => ({
+          url,
+          type,
+          alt,
+          position,
+          posterUrl: posterUrl ?? null,
+        }),
+      ),
+    );
+    setPriceTiers(
+      (!hasOptions ? (primaryVariant?.priceTiers ?? []) : []).map(
+        ({ minQuantity, unitPrice, totalPrice, label }) => ({
+          minQuantity: String(minQuantity),
+          unitPrice: String(unitPrice),
+          totalPrice: totalPrice == null ? "" : String(totalPrice),
+          label,
+        }),
+      ),
+    );
+    setProductOptions(
+      selected.productOptions.map((option, position) => ({
+        id: option.id,
+        name: option.name,
+        drivesVisualGroup: option.drivesVisualGroup ?? false,
+        position,
+        values: option.values.map((value, valuePosition) => ({
+          id: value.id,
+          optionId: option.id,
+          value: value.value,
+          position: valuePosition,
+          swatch: value.swatch ?? null,
+        })),
+      })),
+    );
+    setCustomFields(
+      selected.customFields.map((field, position) => ({
+        id: field.id ?? createId(),
+        label: field.label,
+        type: normalizeCustomFieldType(field.type),
+        position,
+      })),
+    );
+    setVariants(
+      selected.variants.map((variant, position) => ({
+        id: variant.id,
+        name: variant.name,
+        sku: variant.sku ?? "",
+        visualGroupKey: variant.visualGroupKey ?? "",
+        basePrice: String(variant.basePrice),
+        discountType: variant.discountType ?? "",
+        discountValue:
+          variant.discountValue == null ? "" : String(variant.discountValue),
+        isActive: variant.isActive,
+        position,
+        optionValueIds: variant.selections.map(
+          (selection) => selection.optionValueId,
+        ),
+        images: variant.media.map(
+          ({ url, type, alt, position: imagePosition, posterUrl }) => ({
+            url,
+            type,
+            alt,
+            position: imagePosition,
+            posterUrl: posterUrl ?? null,
+          }),
+        ),
+        priceTiers: variant.priceTiers.map(
+          ({ minQuantity, unitPrice, totalPrice, label }) => ({
+            minQuantity: String(minQuantity),
+            unitPrice: String(unitPrice),
+            totalPrice: totalPrice == null ? "" : String(totalPrice),
+            label,
+          }),
+        ),
+      })),
+    );
+    setDefaultVariantId(
+      selected.defaultVariant?.id ??
+        selected.defaultVariantId ??
+        primaryVariant?.id ??
+        "",
+    );
+  }, []);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -1953,111 +2064,7 @@ export function AdminProductFormPage() {
         if (!active) return;
         setCategories(nextCategories);
         if (selected) {
-          const hasOptions = selected.productOptions.length > 0;
-          const primaryVariant =
-            selected.defaultVariant ??
-            selected.variants.find((variant) => variant.isActive) ??
-            selected.variants[0] ??
-            null;
-          setDraft({
-            name: selected.name,
-            slug: selected.slug,
-            sku: primaryVariant?.sku ?? selected.sku ?? "",
-            description: selected.description,
-            categoryId: selected.categoryId,
-            basePrice: String(primaryVariant?.basePrice ?? selected.basePrice ?? 0),
-            discountType: primaryVariant?.discountType ?? "",
-            discountValue:
-              primaryVariant?.discountValue == null
-                ? ""
-                : String(primaryVariant.discountValue),
-            isPublished: selected.isPublished,
-            isFeatured: selected.isFeatured,
-          });
-          setImages(
-            (!hasOptions ? (primaryVariant?.media ?? []) : selected.media).map(
-              ({ url, type, alt, position, posterUrl }) => ({
-                url,
-                type,
-                alt,
-                position,
-                posterUrl: posterUrl ?? null,
-              }),
-            ),
-          );
-          setPriceTiers(
-            (!hasOptions ? (primaryVariant?.priceTiers ?? []) : []).map(
-              ({ minQuantity, unitPrice, totalPrice, label }) => ({
-                minQuantity: String(minQuantity),
-                unitPrice: String(unitPrice),
-                totalPrice: totalPrice == null ? "" : String(totalPrice),
-                label,
-              }),
-            ),
-          );
-          setProductOptions(
-            selected.productOptions.map((option, position) => ({
-              id: option.id,
-              name: option.name,
-              drivesVisualGroup: option.drivesVisualGroup ?? false,
-              position,
-              values: option.values.map((value, valuePosition) => ({
-                id: value.id,
-                optionId: option.id,
-                value: value.value,
-                position: valuePosition,
-                swatch: value.swatch ?? null,
-              })),
-            })),
-          );
-          setCustomFields(
-            selected.customFields.map((field, position) => ({
-              id: field.id ?? createId(),
-              label: field.label,
-              type: normalizeCustomFieldType(field.type),
-              position,
-            })),
-          );
-          setVariants(
-            selected.variants.map((variant, position) => ({
-              id: variant.id,
-              name: variant.name,
-              sku: variant.sku ?? "",
-              visualGroupKey: variant.visualGroupKey ?? "",
-              basePrice: String(variant.basePrice),
-              discountType: variant.discountType ?? "",
-              discountValue:
-                variant.discountValue == null ? "" : String(variant.discountValue),
-              isActive: variant.isActive,
-              position,
-              optionValueIds: variant.selections.map(
-                (selection) => selection.optionValueId,
-              ),
-              images: variant.media.map(
-                ({ url, type, alt, position: imagePosition, posterUrl }) => ({
-                  url,
-                  type,
-                  alt,
-                  position: imagePosition,
-                  posterUrl: posterUrl ?? null,
-                }),
-              ),
-              priceTiers: variant.priceTiers.map(
-                ({ minQuantity, unitPrice, totalPrice, label }) => ({
-                  minQuantity: String(minQuantity),
-                  unitPrice: String(unitPrice),
-                  totalPrice: totalPrice == null ? "" : String(totalPrice),
-                  label,
-                }),
-              ),
-            })),
-          );
-          setDefaultVariantId(
-            selected.defaultVariant?.id ??
-              selected.defaultVariantId ??
-              primaryVariant?.id ??
-              "",
-          );
+          hydrateProductForm(selected);
         } else {
           setDraft((current) => ({
             ...current,
@@ -2080,7 +2087,7 @@ export function AdminProductFormPage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [hydrateProductForm, id]);
 
   useEffect(() => {
     if (!hasVariantOptions) {
@@ -2310,7 +2317,7 @@ export function AdminProductFormPage() {
         images.length > 0 ? images : (canonicalVariant?.images ?? []),
       );
 
-      await api.saveAdminProduct({
+      const saved = await api.saveAdminProduct({
         ...draft,
         id,
         sku: draft.sku || null,
@@ -2336,8 +2343,14 @@ export function AdminProductFormPage() {
         extras: [],
         customFields: sanitizedCustomFields,
       });
-      navigate(id ? `/admin/productos/${id}` : "/admin/productos", {
+      if (isEdit) {
+        hydrateProductForm(saved);
+        showToast({ message: "Producto guardado", severity: "success" });
+        return;
+      }
+      navigate("/admin/productos", {
         replace: true,
+        state: toastNavigationState({ message: "Producto guardado", severity: "success" }),
       });
     } catch (err) {
       setFormError(
@@ -2360,6 +2373,9 @@ export function AdminProductFormPage() {
     optionValueById,
     priceTiers,
     productOptions,
+    hydrateProductForm,
+    isEdit,
+    showToast,
     variantLabel,
     variants,
     visualOptionIds,

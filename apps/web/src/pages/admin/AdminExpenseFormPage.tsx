@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Grid, MenuItem, Stack, TextField } from "@mui/material";
 import { expenseCategoryLabels, expenseCategoryValues, expensePaymentMethodLabels, expensePaymentMethodValues, type AdminExpenseInput } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -73,6 +74,7 @@ function toInput(draft: DraftExpense): AdminExpenseInput {
 export function AdminExpenseFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const isEdit = Boolean(id);
   const [draft, setDraft] = useState<DraftExpense>(toDraft(emptyExpense));
   const [loading, setLoading] = useState(Boolean(id));
@@ -118,8 +120,24 @@ export function AdminExpenseFormPage() {
     try {
       setSaving(true);
       setFormError(emptyFormErrorState);
-      await api.saveAdminExpense({ id, ...toInput(draft) });
-      navigate("/admin/gastos", { replace: true });
+      const saved = await api.saveAdminExpense({ id, ...toInput(draft) });
+      if (isEdit) {
+        setDraft(toDraft({
+          category: saved.category,
+          amount: saved.amount,
+          expenseDate: saved.expenseDate.slice(0, 10),
+          description: saved.description,
+          paymentMethod: saved.paymentMethod ?? null,
+          reference: saved.reference ?? null,
+          notes: saved.notes ?? null,
+        }));
+        showToast({ message: "Gasto guardado", severity: "success" });
+        return;
+      }
+      navigate("/admin/gastos", {
+        replace: true,
+        state: toastNavigationState({ message: "Gasto guardado", severity: "success" }),
+      });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo guardar el gasto",

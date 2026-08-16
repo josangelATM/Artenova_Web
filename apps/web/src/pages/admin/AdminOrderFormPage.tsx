@@ -3,6 +3,7 @@ import { Box, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typog
 import { Plus, Trash2 } from "lucide-react";
 import { orderContactMethodLabels, orderContactMethodValues, type Order, type Product } from "@artenova/shared";
 import { useNavigate } from "react-router-dom";
+import { toastNavigationState } from "../../components/ToastProvider";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
@@ -128,7 +129,10 @@ export function AdminOrderFormPage() {
         items: buildDraftItemsPayload(draft.items),
         payments: buildDraftPaymentsPayload(payments),
       });
-      navigate(`/admin/pedidos/${order.id}`, { replace: true });
+      navigate(`/admin/pedidos/${order.id}`, {
+        replace: true,
+        state: toastNavigationState({ message: "Pedido guardado", severity: "success" }),
+      });
     } catch (err) {
       setFormError(createFormErrorState(err, {
         fallbackMessage: "No se pudo crear el pedido",

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { ToastProvider } from "./components/ToastProvider";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminCategoryDetailPage } from "./pages/admin/AdminCategoryDetailPage";
 import { AdminCategoryFormPage } from "./pages/admin/AdminCategoryFormPage";
@@ -30,9 +31,17 @@ import { HomePage } from "./pages/HomePage";
 import { ProductPage } from "./pages/ProductPage";
 import { QRCodePage } from "./pages/QRCodePage";
 
+function AppShell() {
+  return (
+    <ToastProvider>
+      <Layout />
+    </ToastProvider>
+  );
+}
+
 const router = createBrowserRouter([
   {
-    element: <Layout />,
+    element: <AppShell />,
     children: [
       { path: "/", element: <HomePage /> },
       { path: "/catalogo", element: <CatalogPage /> },

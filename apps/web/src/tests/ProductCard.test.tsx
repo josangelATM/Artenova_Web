@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { BrowserRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProductCard } from "../components/ProductCard";
 import { theme } from "../theme/theme";
 import type { CatalogProductCard } from "@artenova/shared";
@@ -127,5 +127,23 @@ describe("ProductCard", () => {
     fireEvent.load(image!);
 
     expect(screen.queryByTestId("product-card-image-placeholder")).toBeNull();
+  });
+
+  it("does not keep the placeholder when the image is already cached", () => {
+    const completeSpy = vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
+    const naturalWidthSpy = vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(1200);
+
+    render(
+      <ThemeProvider theme={theme}>
+        <BrowserRouter>
+          <ProductCard product={product} />
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+
+    expect(screen.queryByTestId("product-card-image-placeholder")).toBeNull();
+
+    completeSpy.mockRestore();
+    naturalWidthSpy.mockRestore();
   });
 });

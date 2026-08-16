@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { GridColDef } from "@mui/x-data-grid";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,7 @@ const updateAdminOrderMock = vi.fn();
 const adminOrdersMock = vi.fn();
 const updateAdminOrderStatusMock = vi.fn();
 const createOrderPaymentMock = vi.fn();
+const showToastMock = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -28,6 +29,11 @@ vi.mock("../lib/api", () => ({
     updateAdminOrderStatus: (...args: unknown[]) => updateAdminOrderStatusMock(...args),
     createOrderPayment: (...args: unknown[]) => createOrderPaymentMock(...args),
   },
+}));
+
+vi.mock("../components/ToastProvider", () => ({
+  useToast: () => ({ showToast: showToastMock }),
+  toastNavigationState: (toast: unknown) => ({ toast }),
 }));
 
 vi.mock("../pages/admin/adminUi", () => ({
@@ -155,6 +161,12 @@ function renderWithRouter(initialEntry: string, element: React.ReactNode) {
   );
 }
 
+function DestinationProbe() {
+  const location = useLocation();
+  const toast = (location.state as { toast?: { message?: string } } | null)?.toast;
+  return <div>{toast?.message ?? "sin-toast"}</div>;
+}
+
 describe("admin orders contact method", () => {
   beforeEach(() => {
     adminProductsMock.mockReset();
@@ -164,6 +176,7 @@ describe("admin orders contact method", () => {
     adminOrdersMock.mockReset();
     updateAdminOrderStatusMock.mockReset();
     createOrderPaymentMock.mockReset();
+    showToastMock.mockReset();
     adminProductsMock.mockResolvedValue([] satisfies Product[]);
   });
 
@@ -174,7 +187,16 @@ describe("admin orders contact method", () => {
   it("creates admin orders with contactMethod and relabeled account field", async () => {
     createAdminOrderMock.mockResolvedValue(buildOrder());
 
-    renderWithRouter("/admin/pedidos/nuevo", <AdminOrderFormPage />);
+    render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter initialEntries={["/admin/pedidos/nuevo"]}>
+          <Routes>
+            <Route path="/admin/pedidos/nuevo" element={<AdminOrderFormPage />} />
+            <Route path="/admin/pedidos/:id" element={<DestinationProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
 
     await waitFor(() => {
       expect(adminProductsMock).toHaveBeenCalledTimes(1);
@@ -195,6 +217,8 @@ describe("admin orders contact method", () => {
         customerWhatsapp: "laura.fb",
       }));
     });
+
+    expect(await screen.findByText("Pedido guardado")).toBeInTheDocument();
   });
 
   it("loads and updates contactMethod in order detail", async () => {
@@ -220,6 +244,8 @@ describe("admin orders contact method", () => {
         customerWhatsapp: "@cliente.tiktok",
       }));
     });
+
+    expect(showToastMock).toHaveBeenCalledWith({ message: "Pedido guardado", severity: "success" });
   });
 
   it("shows method and account in the orders list", async () => {

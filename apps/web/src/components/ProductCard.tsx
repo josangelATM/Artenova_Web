@@ -76,11 +76,22 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
   const shouldRenderInlineVideo = previewMode === "video" && Boolean(previewMedia?.type === "video");
   const cardVideo = useCardVideoVisibility(shouldRenderInlineVideo);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const renderStaticImage = previewMode === "image" && image && !imageFailed;
+  const renderVideoFallback = shouldRenderInlineVideo && (previewMode === "video" || (previewMedia?.type === "video" && imageFailed));
 
   useEffect(() => {
     setImageFailed(false);
     setImageLoaded(false);
   }, [image, product.id]);
+
+  useEffect(() => {
+    const imageElement = imageRef.current;
+    if (!renderStaticImage || !imageElement) return;
+    if (imageElement.complete && imageElement.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [renderStaticImage, image]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -93,9 +104,6 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
   }, [cardVideo.inView, previewMedia?.url, shouldRenderInlineVideo]);
 
   useEffect(() => () => pauseVideoElement(videoRef.current), []);
-
-  const renderStaticImage = previewMode === "image" && image && !imageFailed;
-  const renderVideoFallback = shouldRenderInlineVideo && (previewMode === "video" || (previewMedia?.type === "video" && imageFailed));
 
   return (
     <Card
@@ -142,6 +150,7 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
             <Box
               className="product-card-image"
               component="img"
+              ref={imageRef}
               src={image}
               alt={previewMedia?.alt || product.name}
               loading="lazy"
