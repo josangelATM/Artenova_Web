@@ -1,4 +1,4 @@
-import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminFinanceOverview, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
+import type { AdminCategoryInput, AdminExpense, AdminExpenseInput, AdminExpenseListResponse, AdminFinanceOverview, AdminOrderPaymentInput, AdminProductReviewInput, AdminQRCodeInput, CatalogProductListResponse, Category, CreateAdminOrderInput, CreateOrderInput, CreateProductReviewInput, CustomField, Order, PriceTier, Product, ProductExtra, ProductMedia, ProductOption, ProductOptionValue, ProductReview, ProductVariant, QRCode, QRCodePreviewInput, QRCodePreviewResponse, QRCodeResolveResponse, SiteSettings, UpdateAdminOrderInput, UpdateAdminOrderStatusInput, UpdateQRCodeStatusInput } from "@artenova/shared";
 
 export type ApiValidationIssue = {
   path: Array<string | number>;
@@ -144,7 +144,7 @@ function assetUrl(path: string) {
 export const api = {
   settings: () => request<SiteSettings>("/api/catalog/settings"),
   categories: () => request<Category[]>("/api/catalog/categories"),
-  products: (params: URLSearchParams) => request<Product[]>(`/api/catalog/products?${params.toString()}`),
+  products: (params: URLSearchParams) => request<CatalogProductListResponse>(`/api/catalog/products?${params.toString()}`),
   product: (slug: string) => request<Product>(`/api/catalog/products/${slug}`),
   createProductReview: (slug: string, input: CreateProductReviewInput) =>
     request<ProductReview>(`/api/catalog/products/${slug}/reviews`, { method: "POST", body: JSON.stringify(input) }),

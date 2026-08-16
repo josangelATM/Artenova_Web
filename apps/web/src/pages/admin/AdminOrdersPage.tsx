@@ -4,7 +4,7 @@ import { Button, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Paper, 
 import type { GridColDef } from "@mui/x-data-grid";
 import { useTheme } from "@mui/material/styles";
 import { FilterX, Plus } from "lucide-react";
-import { formatCurrency, type AdminOrderPaymentInput, type Order } from "@artenova/shared";
+import { formatCurrency, orderContactMethodLabels, type AdminOrderPaymentInput, type Order } from "@artenova/shared";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip, adminSurfaceSx } from "./adminUi";
@@ -171,7 +171,8 @@ export function AdminOrdersPage() {
       renderCell: ({ row }) => (
         <Stack spacing={0.25} minWidth={0}>
           <Typography component="span" fontWeight={900} noWrap>{row.customerName}</Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>{row.customerWhatsapp}</Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>{orderContactMethodLabels[row.contactMethod]}</Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>{row.customerWhatsapp || "Sin cuenta"}</Typography>
         </Stack>
       ),
     },
@@ -260,7 +261,7 @@ export function AdminOrdersPage() {
       <AdminListToolbar
         search={query}
         onSearchChange={setQuery}
-        searchLabel="Buscar por cliente, WhatsApp o código"
+        searchLabel="Buscar por cliente, cuenta o código"
         secondaryAction={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
             <TextField select size="small" label="Estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} sx={{ minWidth: 160 }}>
@@ -309,7 +310,8 @@ export function AdminOrdersPage() {
                   <StatusChip status={order.status} />
                 </Stack>
                 <Typography fontWeight={800}>{order.customerName}</Typography>
-                <Typography variant="body2" color="text.secondary">{order.customerWhatsapp}</Typography>
+                <Typography variant="body2" color="text.secondary">{orderContactMethodLabels[order.contactMethod]}</Typography>
+                <Typography variant="body2" color="text.secondary">{order.customerWhatsapp || "Sin cuenta"}</Typography>
                 <Stack spacing={0.35}>
                   {summary.visibleItems.map((item) => (
                     <Typography key={item.id} variant="caption" color="text.secondary" noWrap>

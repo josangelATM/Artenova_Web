@@ -1,38 +1,28 @@
 import { describe, expect, it } from "vitest";
-import type { Product } from "@artenova/shared";
+import type { CatalogProductCard } from "@artenova/shared";
 import { selectFeaturedProducts } from "../lib/featuredProducts";
 
-function makeProduct(input: Partial<Product> & Pick<Product, "id" | "name" | "slug">): Product {
+function makeProduct(input: Partial<CatalogProductCard> & Pick<CatalogProductCard, "id" | "name" | "slug">): CatalogProductCard {
   return {
     id: input.id,
     name: input.name,
     slug: input.slug,
+    sku: input.sku ?? null,
     currencySymbol: input.currencySymbol ?? "$",
     description: input.description ?? "Detalle personalizado",
-    categoryId: input.categoryId ?? "c1",
-    basePrice: input.basePrice ?? 10,
-    isPublished: input.isPublished ?? true,
     isFeatured: input.isFeatured ?? false,
-    isHero: input.isHero ?? false,
-    heroSlot: input.heroSlot ?? null,
     media: input.media ?? [],
-    priceTiers: input.priceTiers ?? [],
-    extras: input.extras ?? [],
-    customFields: input.customFields ?? [],
-    productOptions: input.productOptions ?? [],
-    variants: input.variants ?? [],
-    reviews: input.reviews ?? [],
+    defaultVariant: input.defaultVariant ?? null,
     reviewSummary: input.reviewSummary ?? { averageRating: 0, reviewCount: 0 },
-    discountType: input.discountType ?? null,
-    discountValue: input.discountValue ?? null,
     pricingSummary:
-      (input as Product).pricingSummary ?? {
-        originalPrice: input.basePrice ?? 10,
-        finalPrice: input.basePrice ?? 10,
+      input.pricingSummary ?? {
+        originalPrice: 10,
+        finalPrice: 10,
         hasDiscount: false,
         discountType: null,
         discountValue: null,
       },
+    extraMediaCount: input.extraMediaCount ?? 0,
   };
 }
 

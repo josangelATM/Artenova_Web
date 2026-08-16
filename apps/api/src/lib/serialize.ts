@@ -1,4 +1,4 @@
-import { resolvePricingSummary, resolveVariantPricing } from "@artenova/shared";
+import { buildProductMediaInventory, resolvePricingSummary, resolveVariantPricing } from "@artenova/shared";
 import { buildQrResolvedTarget, getQrPublicUrl, normalizeQrDesign } from "./qrCodes";
 
 type DecimalLike = { toString(): string };
@@ -7,6 +7,10 @@ const toNumber = (value: DecimalLike | number | null | undefined) =>
   value == null ? value : Number(value.toString());
 
 const defaultCurrencySymbol = "B/.";
+
+function normalizeCustomFieldType(type: unknown): "text" | "boolean" {
+  return type === "boolean" ? "boolean" : "text";
+}
 
 function normalizeVariant(variant: any) {
   const normalizedVariant = {
@@ -49,6 +53,91 @@ function normalizeVariant(variant: any) {
   };
 }
 
+function buildReviewSummary(reviews: Array<{ rating: number }> = []) {
+  const reviewCount = reviews.length;
+  const averageRating = reviewCount > 0
+    ? Number((reviews.reduce((total, review) => total + review.rating, 0) / reviewCount).toFixed(1))
+    : 0;
+
+  return { averageRating, reviewCount };
+}
+
+function normalizeCatalogVariant(variant: any) {
+  return {
+    id: variant.id,
+    sku: variant.sku ?? null,
+    media: (variant.images ?? []).map((item: any) => ({
+      ...item,
+      type: item.type ?? "image",
+      posterUrl: item.posterUrl ?? null,
+    })),
+    pricingSummary: variant.pricingSummary ?? resolveVariantPricing({
+      ...variant,
+      basePrice: toNumber(variant.basePrice) ?? 0,
+      discountType: variant.discountType ?? null,
+      discountValue: toNumber(variant.discountValue) ?? null,
+      media: [],
+      attributes: [],
+      selections: [],
+      priceTiers: (variant.priceTiers ?? []).map((tier: any) => ({
+        ...tier,
+        unitPrice: toNumber(tier.unitPrice),
+        totalPrice: toNumber(tier.totalPrice),
+      })),
+    } as any, {
+      discountType: null,
+      discountValue: null,
+      priceTiers: [],
+    }).pricingSummary,
+  };
+}
+
+export function catalogProductCardPayload(product: any) {
+  const variants = (product.variants ?? []).map(normalizeCatalogVariant);
+  const defaultVariant =
+    variants.find((variant: any) => variant.id === product.defaultVariantId)
+    ?? variants[0]
+    ?? null;
+
+  const reviewSummary = buildReviewSummary(product.reviews ?? []);
+  const pricingSummary = defaultVariant?.pricingSummary ?? resolvePricingSummary({
+    basePrice: toNumber(product.basePrice) ?? 0,
+    discountType: null,
+    discountValue: null,
+  });
+
+  const productMedia = (product.images ?? []).map((item: any) => ({
+    ...item,
+    type: item.type ?? "image",
+    posterUrl: item.posterUrl ?? null,
+  }));
+
+  const extraMediaCount = buildProductMediaInventory({
+    media: productMedia,
+    variants: variants.map((variant: any) => ({
+      id: variant.id,
+      visualGroupKey: variant.id,
+      isActive: true,
+      media: variant.media,
+    })),
+  } as any).extraMediaCount;
+
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    sku: defaultVariant?.sku ?? product.sku ?? null,
+    currencySymbol: product.category?.currencySymbol ?? defaultCurrencySymbol,
+    description: product.description,
+    isFeatured: Boolean(product.isFeatured),
+    media: productMedia,
+    defaultVariant,
+    pricingSummary,
+    reviewSummary,
+    extraMediaCount,
+  };
+}
+
 export function productPayload(product: any) {
   const variants = (product.variants ?? []).map(normalizeVariant);
   const activeVariants = variants.filter((variant: any) => variant.isActive);
@@ -68,8 +157,7 @@ export function productPayload(product: any) {
   }));
 
   const reviews = product.reviews?.map(reviewPayload) ?? [];
-  const reviewCount = reviews.length;
-  const averageRating = reviewCount > 0 ? Number((reviews.reduce((total: number, review: any) => total + review.rating, 0) / reviewCount).toFixed(1)) : 0;
+  const reviewSummary = buildReviewSummary(reviews);
 
   const defaultPricing = defaultVariant?.pricingSummary ?? resolvePricingSummary({
     basePrice: toNumber(product.basePrice) ?? 0,
@@ -107,6 +195,7 @@ export function productPayload(product: any) {
     customFields: product.customFields?.map((field: any) => ({
       id: field.id,
       label: field.label,
+      type: normalizeCustomFieldType(field.type),
       position: field.position ?? 0,
     })) ?? [],
     productOptions: productOptions.map((option: any) => ({
@@ -117,7 +206,7 @@ export function productPayload(product: any) {
     defaultVariant,
     pricingSummary,
     reviews,
-    reviewSummary: { averageRating, reviewCount },
+    reviewSummary,
   };
 }
 
@@ -175,6 +264,7 @@ export function orderPayload(order: any) {
     estimatedTotal: toNumber(order.estimatedTotal),
     finalPrice: explicitFinalPrice ?? null,
     source: order.source ?? "storefront",
+    contactMethod: order.contactMethod ?? "whatsapp",
     adminNote: order.adminNote ?? null,
     internalNote: order.internalNote ?? null,
     createdAt: order.createdAt?.toISOString?.() ?? order.createdAt,

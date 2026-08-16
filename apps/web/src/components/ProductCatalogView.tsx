@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Grid,
   IconButton,
@@ -15,21 +16,29 @@ import {
 } from "@mui/material";
 import { FilterX, Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { resolveMediaStillUrl, type Category, type Product, type SiteSettings } from "@artenova/shared";
+import { resolveMediaStillUrl, type CatalogProductCard, type Category, type SiteSettings } from "@artenova/shared";
 import { api } from "../lib/api";
 import { applySeo } from "../lib/seo";
 import { ProductCard } from "./ProductCard";
 import { CatalogGridSkeleton } from "./SkeletonStates";
+
+const catalogPageSize = 24;
 
 export function ProductCatalogView() {
   const navigate = useNavigate();
   const { categorySlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<CatalogProductCard[]>([]);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isAppending, setIsAppending] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [requestKey, setRequestKey] = useState("");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const activeRequestKeyRef = useRef("");
+  const isAppendingRef = useRef(false);
 
   const queryCategory = searchParams.get("category") ?? "";
   const category = categorySlug ?? queryCategory;
@@ -37,11 +46,8 @@ export function ProductCatalogView() {
   const [searchDraft, setSearchDraft] = useState(q);
   const hasFilters = Boolean(q || category);
   const activeCategory = categories.find((item) => item.slug === category);
-  const displayedProducts = hasFilters ? products : catalogProducts.length > 0 ? catalogProducts : products;
-  const catalogHeroProduct = catalogProducts[0] as (Product & { images?: Product["media"] }) | undefined;
-  const catalogHeroVariant = catalogHeroProduct?.defaultVariant as (Product["defaultVariant"] & { images?: Product["media"] }) | undefined;
-  const catalogHeroMedia = (catalogHeroVariant?.media ?? catalogHeroVariant?.images ?? [])[0]
-    ?? (catalogHeroProduct?.media ?? catalogHeroProduct?.images ?? [])[0];
+  const catalogHeroProduct = products[0];
+  const catalogHeroMedia = catalogHeroProduct?.defaultVariant?.media[0] ?? catalogHeroProduct?.media[0];
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
@@ -73,11 +79,9 @@ export function ProductCatalogView() {
   }
 
   useEffect(() => {
-    const allParams = new URLSearchParams();
-    void Promise.all([api.categories(), api.settings(), api.products(allParams)]).then(([nextCategories, nextSettings, nextProducts]) => {
+    void Promise.all([api.categories(), api.settings()]).then(([nextCategories, nextSettings]) => {
       setCategories(nextCategories);
       setSettings(nextSettings);
-      setCatalogProducts(nextProducts);
     });
   }, []);
 
@@ -103,6 +107,34 @@ export function ProductCatalogView() {
   }, [q, searchDraft, searchParams, setSearchParams]);
 
   useEffect(() => {
+    const nextRequestKey = JSON.stringify({ category, q });
+    activeRequestKeyRef.current = nextRequestKey;
+    setRequestKey(nextRequestKey);
+    setProducts([]);
+    setNextCursor(null);
+    setHasMore(false);
+    setIsAppending(false);
+    isAppendingRef.current = false;
+    setIsInitialLoading(true);
+
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("limit", String(catalogPageSize));
+
+    void api.products(nextParams)
+      .then((response) => {
+        if (activeRequestKeyRef.current !== nextRequestKey) return;
+        setProducts(response.items);
+        setNextCursor(response.nextCursor);
+        setHasMore(response.hasMore);
+      })
+      .finally(() => {
+        if (activeRequestKeyRef.current === nextRequestKey) {
+          setIsInitialLoading(false);
+        }
+      });
+  }, [category, params, q]);
+
+  useEffect(() => {
     const canonicalPath = categorySlug && category ? `/catalogo/${category}` : "/catalogo";
     const title = activeCategory ? `${activeCategory.name} personalizados` : "Catálogo de regalos personalizados";
     const description = activeCategory?.description
@@ -117,17 +149,45 @@ export function ProductCatalogView() {
       robots: q ? "noindex,follow" : "index,follow",
       type: "website",
     });
-  }, [activeCategory, catalogHeroMedia, catalogProducts, category, categorySlug, q, settings]);
+  }, [activeCategory, catalogHeroMedia, category, categorySlug, products, q, settings]);
 
   useEffect(() => {
-    setLoading(true);
-    void api.products(params)
-      .then((nextProducts) => {
-        setProducts(nextProducts);
-        if (!hasFilters) setCatalogProducts(nextProducts);
-      })
-      .finally(() => setLoading(false));
-  }, [hasFilters, params]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || isInitialLoading || isAppending || !nextCursor) return;
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        if (activeRequestKeyRef.current !== requestKey) return;
+        if (isAppendingRef.current) return;
+
+        isAppendingRef.current = true;
+        setIsAppending(true);
+        const nextParams = new URLSearchParams(params);
+        nextParams.set("limit", String(catalogPageSize));
+        nextParams.set("cursor", nextCursor);
+
+        void api.products(nextParams)
+          .then((response) => {
+            if (activeRequestKeyRef.current !== requestKey) return;
+            setProducts((current) => [...current, ...response.items]);
+            setNextCursor(response.nextCursor);
+            setHasMore(response.hasMore);
+          })
+          .finally(() => {
+            if (activeRequestKeyRef.current === requestKey) {
+              isAppendingRef.current = false;
+              setIsAppending(false);
+            }
+          });
+      },
+      { rootMargin: "320px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isAppending, isInitialLoading, nextCursor, params, requestKey]);
 
   return (
     <Box className="catalog-shell">
@@ -215,9 +275,9 @@ export function ProductCatalogView() {
           <Box id="catalog-products">
             <Stack spacing={2}>
               <SectionHeading eyebrow="Catálogo" title={activeCategory ? activeCategory.name : hasFilters ? "Resultados" : "Todos los modelos"} />
-              {loading ? (
+              {isInitialLoading ? (
                 <CatalogGridSkeleton />
-              ) : displayedProducts.length === 0 ? (
+              ) : products.length === 0 ? (
                 <Box className="catalog-empty-state">
                   <Stack spacing={2} alignItems="center">
                     <Typography variant="h5" fontWeight={900}>
@@ -229,13 +289,25 @@ export function ProductCatalogView() {
                   </Stack>
                 </Box>
               ) : (
-                <Grid container spacing={{ xs: 2, md: 3 }}>
-                  {displayedProducts.map((product, index) => (
-                    <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                      <ProductCard product={product} index={index} />
-                    </Grid>
-                  ))}
-                </Grid>
+                <Stack spacing={2.5}>
+                  <Grid container spacing={{ xs: 2, md: 3 }}>
+                    {products.map((product, index) => (
+                      <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                        <ProductCard product={product} index={index} />
+                      </Grid>
+                    ))}
+                  </Grid>
+
+                  {hasMore ? (
+                    <Box
+                      ref={sentinelRef}
+                      data-testid="catalog-load-more-sentinel"
+                      sx={{ display: "flex", justifyContent: "center", py: 1.5, minHeight: 36 }}
+                    >
+                      {isAppending ? <CircularProgress size={24} aria-label="Cargando más productos" /> : null}
+                    </Box>
+                  ) : null}
+                </Stack>
               )}
             </Stack>
           </Box>

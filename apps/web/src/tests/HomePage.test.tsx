@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Product, SiteSettings } from "@artenova/shared";
+import type { CatalogProductCard, CatalogProductListResponse, SiteSettings } from "@artenova/shared";
 import { HomePage } from "../pages/HomePage";
 import { theme } from "../theme/theme";
 
@@ -20,31 +20,25 @@ vi.mock("../lib/seo", () => ({
   applySeo: vi.fn(),
 }));
 
-function makeProduct(id: string, name: string, isFeatured = false): Product {
+function makeProduct(id: string, name: string, isFeatured = false): CatalogProductCard {
   return {
     id,
     name,
     slug: id,
+    sku: null,
     currencySymbol: "$",
     description: `Descripcion de ${name}`,
-    categoryId: "c1",
-    basePrice: 20,
-    isPublished: true,
     isFeatured,
-    isHero: false,
-    heroSlot: null,
     media: [{ id: `img-${id}`, type: "image", url: `/seed/${id}.jpg`, alt: name, position: 0, posterUrl: null }],
-    priceTiers: [],
-    extras: [],
-    customFields: [],
-    productOptions: [],
-    variants: [],
-    reviews: [],
+    defaultVariant: null,
     reviewSummary: { averageRating: 0, reviewCount: 0 },
-    discountType: null,
-    discountValue: null,
     pricingSummary: { originalPrice: 20, finalPrice: 20, hasDiscount: false, discountType: null, discountValue: null },
+    extraMediaCount: 0,
   };
+}
+
+function makeResponse(items: CatalogProductCard[]): CatalogProductListResponse {
+  return { items, nextCursor: null, hasMore: false };
 }
 
 const settings: SiteSettings = {
@@ -68,13 +62,13 @@ describe("HomePage", () => {
 
   it("renders a compact home hero with four featured slots and no catalog filters", async () => {
     settingsMock.mockResolvedValue(settings);
-    productsMock.mockResolvedValue([
+    productsMock.mockResolvedValue(makeResponse([
       makeProduct("p1", "Producto 1", true),
       makeProduct("p2", "Producto 2", false),
       makeProduct("p3", "Producto 3", true),
       makeProduct("p4", "Producto 4", false),
       makeProduct("p5", "Producto 5", false),
-    ]);
+    ]));
 
     render(
       <ThemeProvider theme={theme}>
@@ -84,12 +78,11 @@ describe("HomePage", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getAllByRole("link", { name: /ver cat.+logo completo/i })[0]).toHaveAttribute("href", "/catalogo");
-    expect(screen.getByRole("link", { name: /ver cédulas personalizadas para mascotas/i })).toHaveAttribute(
-      "href",
+    expect(screen.getAllByRole("link", { name: /ver cat.+logo completo/i })[0]?.getAttribute("href")).toBe("/catalogo");
+    expect(screen.getByRole("link", { name: /ver cédulas personalizadas para mascotas/i }).getAttribute("href")).toBe(
       "https://artenovapty.com/producto/cedulas-personalizadas-mascotas",
     );
-    expect(screen.queryByText(/c.+mo trabajamos/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/c.+mo trabajamos/i)).toBeNull();
 
     await waitFor(() => {
       const productLinks = screen
@@ -98,7 +91,7 @@ describe("HomePage", () => {
       expect(productLinks).toHaveLength(4);
     });
 
-    expect(screen.queryByPlaceholderText(/buscar por producto o referencia/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/categor.+as/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/buscar por producto o referencia/i)).toBeNull();
+    expect(screen.queryByText(/categor.+as/i)).toBeNull();
   });
 });

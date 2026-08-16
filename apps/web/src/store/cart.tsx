@@ -7,7 +7,7 @@ export type CartItem = {
   product: Product;
   quantity: number;
   selectedExtraIds: string[];
-  personalization: Record<string, string | string[]>;
+  personalization: Record<string, string | string[] | boolean>;
 };
 
 type CartContextValue = {

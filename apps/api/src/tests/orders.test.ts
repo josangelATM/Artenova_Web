@@ -10,6 +10,7 @@ describe("order serialization", () => {
       status: "pendiente_fabricacion",
       customerName: "Gabriel",
       customerWhatsapp: "6217-2806",
+      contactMethod: "instagram",
       customerNote: "Pendiente entrega",
       internalNote: "Tomado el 2026-08-06",
       estimatedTotal: 24,
@@ -52,6 +53,7 @@ describe("order serialization", () => {
     expect(payload.items[0]?.skuSnapshot).toBe("PLA-ROJ-01");
     expect(payload.items[0]?.variantNameSnapshot).toBe("Rojo");
     expect(payload.items[0]?.units[1]?.label).toBe("Nala");
+    expect(payload.contactMethod).toBe("instagram");
   });
 
   it("keeps completedAt for delivered orders with zero balance", () => {
@@ -62,6 +64,7 @@ describe("order serialization", () => {
       status: "entregado",
       customerName: "Mackan",
       customerWhatsapp: "6962-5607",
+      contactMethod: "whatsapp",
       estimatedTotal: 35,
       finalPrice: 35,
       completedAt: new Date("2026-08-06T18:00:00Z"),
@@ -86,6 +89,7 @@ describe("order serialization", () => {
       status: "listo_entrega",
       customerName: "Damaris",
       customerWhatsapp: "6888-5511",
+      contactMethod: "facebook",
       estimatedTotal: 18,
       finalPrice: 18,
       completedAt: null,
@@ -99,6 +103,7 @@ describe("order serialization", () => {
 
     expect(payload.isPaid).toBe(true);
     expect(payload.completedAt).toBeNull();
+    expect(payload.contactMethod).toBe("facebook");
   });
 
   it("keeps free items without catalog product id", () => {
@@ -109,6 +114,7 @@ describe("order serialization", () => {
       status: "nuevo",
       customerName: "Laura",
       customerWhatsapp: "6555-0192",
+      contactMethod: "otro",
       estimatedTotal: 10,
       finalPrice: null,
       createdAt: new Date("2026-08-06T09:00:00Z"),

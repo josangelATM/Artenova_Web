@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Checkbox, Divider, FormControlLabel, Grid, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
-import { formatCurrency, type Order, type Product } from "@artenova/shared";
+import { formatCurrency, orderContactMethodLabels, orderContactMethodValues, type Order, type Product } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
@@ -16,7 +16,8 @@ function resolveOrderField(issue: ApiValidationIssue) {
 
 function getOrderFieldLabel(field: string) {
   if (field === "customerName") return "Nombre del cliente";
-  if (field === "customerWhatsapp") return "WhatsApp";
+  if (field === "customerWhatsapp") return "WhatsApp o cuenta";
+  if (field === "contactMethod") return "Método de contacto";
   if (field === "status") return "Estado";
   if (field === "note") return "Nota";
   if (field === "amount") return "Monto";
@@ -44,7 +45,7 @@ function getOrderFieldLabel(field: string) {
 }
 
 function summarizeOperationalFields(
-  personalization: Record<string, string>,
+  personalization: Record<string, string | string[] | boolean>,
   product?: Product | null,
 ) {
   const fieldLabelByKey = new Map(
@@ -54,7 +55,11 @@ function summarizeOperationalFields(
   return Object.entries(personalization)
     .map(([key, value]) => [
       (fieldLabelByKey.get(key) ?? (key === "detalle" ? "Detalle" : key)).trim(),
-      value.trim(),
+      typeof value === "boolean"
+        ? value ? "Sí" : "No"
+        : Array.isArray(value)
+          ? value.join(", ").trim()
+          : value.trim(),
     ] as const)
     .filter(([label, value]) => label && value);
 }
@@ -108,6 +113,7 @@ export function AdminOrderDetailPage() {
       const updated = await api.updateAdminOrder(id, {
         customerName: draft.customerName,
         customerWhatsapp: draft.customerWhatsapp,
+        contactMethod: draft.contactMethod,
         customerNote: draft.note,
         internalNote: null,
         status: draft.status,
@@ -168,13 +174,20 @@ export function AdminOrderDetailPage() {
 
       <AdminSection title="Cliente">
         <Grid container spacing={1.5}>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => { setDraft({ ...draft, customerName: event.target.value }); clearField("customerName"); }} error={Boolean(getFieldError(formError, "customerName"))} helperText={getFieldError(formError, "customerName")} />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => { setDraft({ ...draft, customerWhatsapp: event.target.value }); clearField("customerWhatsapp"); }} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
+            <TextField fullWidth select label="Método de contacto" value={draft.contactMethod} onChange={(event) => { setDraft({ ...draft, contactMethod: event.target.value as typeof draft.contactMethod }); clearField("contactMethod"); }} error={Boolean(getFieldError(formError, "contactMethod"))} helperText={getFieldError(formError, "contactMethod")}>
+              {orderContactMethodValues.map((method) => (
+                <MenuItem key={method} value={method}>{orderContactMethodLabels[method]}</MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="WhatsApp o cuenta" value={draft.customerWhatsapp} onChange={(event) => { setDraft({ ...draft, customerWhatsapp: event.target.value }); clearField("customerWhatsapp"); }} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
             <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => { setDraft({ ...draft, status: event.target.value as Order["status"] }); clearField("status"); }} error={Boolean(getFieldError(formError, "status"))} helperText={getFieldError(formError, "status")}>
               <MenuItem value="nuevo">Nuevo</MenuItem>
               <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>

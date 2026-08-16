@@ -49,7 +49,7 @@ type SeedExtra = {
 
 type SeedCustomField = {
   label: string;
-  type: "text" | "date" | "select" | "image" | "note";
+  type: "text" | "boolean" | "date" | "select" | "image" | "note";
   required: boolean;
   options: string[];
   helpText?: string | null;

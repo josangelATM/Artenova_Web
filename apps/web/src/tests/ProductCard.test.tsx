@@ -1,35 +1,29 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { BrowserRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { ProductCard } from "../components/ProductCard";
 import { theme } from "../theme/theme";
-import type { Product } from "@artenova/shared";
+import type { CatalogProductCard } from "@artenova/shared";
 
-const product: Product = {
+const product: CatalogProductCard = {
   id: "p1",
   name: "Retrato grabado",
   slug: "retrato-grabado",
+  sku: null,
   currencySymbol: "$",
   description: "Detalle personalizado",
-  categoryId: "c1",
-  basePrice: 16,
-  discountType: null,
-  discountValue: null,
-  isPublished: true,
   isFeatured: true,
-  isHero: false,
-  heroSlot: null,
   media: [{ id: "i1", type: "image", url: "/seed/mascotas/mascotas-2.jpg", alt: "Retrato", position: 0, posterUrl: null }],
-  priceTiers: [],
-  extras: [],
-  customFields: [],
-  productOptions: [],
-  variants: [],
+  defaultVariant: null,
   pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
-  reviews: [],
   reviewSummary: { averageRating: 4.8, reviewCount: 12 },
+  extraMediaCount: 0,
 };
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("ProductCard", () => {
   it("shows product name, base price, and review summary", () => {
@@ -41,12 +35,12 @@ describe("ProductCard", () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText("Retrato grabado")).toBeInTheDocument();
-    expect(screen.getByText("$16.00")).toBeInTheDocument();
-    expect(screen.getByText("4.8 (12)")).toBeInTheDocument();
-    expect(screen.queryByText("Destacado")).not.toBeInTheDocument();
-    expect(screen.queryByText("Consultar")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Retrato grabado/i })).toHaveAttribute("href", "/producto/retrato-grabado");
+    expect(screen.getByText("Retrato grabado")).toBeTruthy();
+    expect(screen.getByText("$16.00")).toBeTruthy();
+    expect(screen.getByText("4.8 (12)")).toBeTruthy();
+    expect(screen.queryByText("Destacado")).toBeNull();
+    expect(screen.queryByText("Consultar")).toBeNull();
+    expect(screen.getByRole("link", { name: /Retrato grabado/i }).getAttribute("href")).toBe("/producto/retrato-grabado");
   });
 
   it("renders an inline video preview when the product only has video media", () => {
@@ -73,50 +67,14 @@ describe("ProductCard", () => {
           <ProductCard
             product={{
               ...product,
+              extraMediaCount: 2,
               media: [{ id: "base-1", type: "image", url: "/seed/base-1.jpg", alt: "Base uno", position: 0, posterUrl: null }],
-              variants: [
-                {
-                  id: "v1",
-                  productId: "p1",
-                  name: "Variante uno",
-                  sku: "V1",
-                  selectionKey: "v1",
-                  visualGroupKey: "grupo-1",
-                  basePrice: 16,
-                  discountType: null,
-                  discountValue: null,
-                  isActive: true,
-                  position: 0,
-                  media: [
-                    { id: "variant-1", type: "image", url: "/seed/variant-1.jpg", alt: "Variante uno", position: 0, posterUrl: null },
-                    { id: "base-1", type: "image", url: "/seed/base-1.jpg", alt: "Duplicada", position: 1, posterUrl: null },
-                  ],
-                  attributes: [],
-                  selections: [],
-                  priceTiers: [],
-                  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
-                },
-                {
-                  id: "v2",
-                  productId: "p1",
-                  name: "Variante dos",
-                  sku: "V2",
-                  selectionKey: "v2",
-                  visualGroupKey: "grupo-2",
-                  basePrice: 16,
-                  discountType: null,
-                  discountValue: null,
-                  isActive: true,
-                  position: 1,
-                  media: [
-                    { id: "variant-2", type: "image", url: "/seed/variant-2.jpg", alt: "Variante dos", position: 0, posterUrl: null },
-                  ],
-                  attributes: [],
-                  selections: [],
-                  priceTiers: [],
-                  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
-                },
-              ],
+              defaultVariant: {
+                id: "v1",
+                sku: "V1",
+                media: [{ id: "variant-1", type: "image", url: "/seed/variant-1.jpg", alt: "Variante uno", position: 0, posterUrl: null }],
+                pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
+              },
             }}
           />
         </BrowserRouter>
@@ -134,49 +92,16 @@ describe("ProductCard", () => {
             product={{
               ...product,
               media: [],
-              variants: [
-                {
-                  id: "v1",
-                  productId: "p1",
-                  name: "Variante uno",
-                  sku: "V1",
-                  selectionKey: "v1",
-                  visualGroupKey: "grupo-1",
-                  basePrice: 16,
-                  discountType: null,
-                  discountValue: null,
-                  isActive: true,
-                  position: 0,
-                  media: [
-                    { id: "variant-1", type: "image", url: "/seed/variant-1.jpg", alt: "Variante uno", position: 0, posterUrl: null },
-                    { id: "variant-2", type: "image", url: "/seed/variant-2.jpg", alt: "Variante dos", position: 1, posterUrl: null },
-                  ],
-                  attributes: [],
-                  selections: [],
-                  priceTiers: [],
-                  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
-                },
-                {
-                  id: "v2",
-                  productId: "p1",
-                  name: "Variante dos",
-                  sku: "V2",
-                  selectionKey: "v2",
-                  visualGroupKey: "grupo-2",
-                  basePrice: 16,
-                  discountType: null,
-                  discountValue: null,
-                  isActive: true,
-                  position: 1,
-                  media: [
-                    { id: "variant-3", type: "image", url: "/seed/variant-3.jpg", alt: "Variante tres", position: 0, posterUrl: null },
-                  ],
-                  attributes: [],
-                  selections: [],
-                  priceTiers: [],
-                  pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
-                },
-              ],
+              extraMediaCount: 2,
+              defaultVariant: {
+                id: "v1",
+                sku: "V1",
+                media: [
+                  { id: "variant-1", type: "image", url: "/seed/variant-1.jpg", alt: "Variante uno", position: 0, posterUrl: null },
+                  { id: "variant-2", type: "image", url: "/seed/variant-2.jpg", alt: "Variante dos", position: 1, posterUrl: null },
+                ],
+                pricingSummary: { originalPrice: 16, finalPrice: 16, hasDiscount: false, discountType: null, discountValue: null },
+              },
             }}
           />
         </BrowserRouter>
@@ -184,5 +109,23 @@ describe("ProductCard", () => {
     );
 
     expect(screen.getAllByText("+2").length).toBeGreaterThan(0);
+  });
+
+  it("shows a placeholder until the image finishes loading", () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <BrowserRouter>
+          <ProductCard product={product} />
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+
+    const image = document.querySelector('img[alt="Retrato"]') as HTMLImageElement | null;
+    expect(image).toBeTruthy();
+    expect(screen.getByTestId("product-card-image-placeholder")).toBeTruthy();
+
+    fireEvent.load(image!);
+
+    expect(screen.queryByTestId("product-card-image-placeholder")).toBeNull();
   });
 });

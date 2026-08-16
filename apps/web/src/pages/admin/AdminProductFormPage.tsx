@@ -85,6 +85,7 @@ type ProductOptionInput = Omit<ProductOption, "productId"> & {
   values: ProductOptionValueInput[];
 };
 type CustomFieldInput = Required<Pick<CustomField, "id" | "label">> & {
+  type: CustomField["type"];
   position: number;
 };
 
@@ -185,8 +186,13 @@ function createCustomField(position: number): CustomFieldInput {
   return {
     id: createId(),
     label: "",
+    type: "text",
     position,
   };
+}
+
+function normalizeCustomFieldType(type: unknown): CustomField["type"] {
+  return type === "boolean" ? "boolean" : "text";
 }
 
 function normalizeImages(items: ProductImageInput[]) {
@@ -1702,7 +1708,28 @@ function OperationalFieldsEditor({
                 helperText="Ejemplo: Nombre, Telefono, Fecha, Mensaje"
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                label="Tipo"
+                value={field.type}
+                onChange={(event) =>
+                  syncFields(
+                    localFields.map((item) =>
+                      item.id === field.id
+                        ? { ...item, type: normalizeCustomFieldType(event.target.value) }
+                        : item,
+                    ),
+                  )
+                }
+              >
+                <MenuItem value="text">Texto</MenuItem>
+                <MenuItem value="boolean">Booleano</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 1 }}>
               <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                 <IconButton
                   aria-label="Subir campo"
@@ -1748,6 +1775,7 @@ function OperationalFieldsEditor({
 }
 
 const MemoOperationalFieldsEditor = memo(OperationalFieldsEditor);
+export { MemoOperationalFieldsEditor };
 
 function PriceTierEditor({
   tier,
@@ -1986,6 +2014,7 @@ export function AdminProductFormPage() {
             selected.customFields.map((field, position) => ({
               id: field.id ?? createId(),
               label: field.label,
+              type: normalizeCustomFieldType(field.type),
               position,
             })),
           );
@@ -2226,6 +2255,7 @@ export function AdminProductFormPage() {
         .map((field, position) => ({
           id: field.id,
           label: field.label.trim(),
+          type: normalizeCustomFieldType(field.type),
           position,
         }))
         .filter((field) => field.label);

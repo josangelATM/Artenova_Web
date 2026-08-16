@@ -216,7 +216,7 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
     media: ProductMediaInput[];
     priceTiers: Array<{ minQuantity: number; unitPrice: number; totalPrice?: number | null; label?: string | null }>;
     extras: Array<{ name: string; type: string; priceDelta: number }>;
-    customFields: Array<{ id?: string; label: string; position?: number }>;
+    customFields: Array<{ id?: string; label: string; type?: "text" | "boolean"; position?: number }>;
   }, options?: { persistProductMedia?: boolean }) {
   const persistProductMedia = options?.persistProductMedia ?? true;
 
@@ -243,7 +243,7 @@ async function replaceProductCollections(tx: any, productId: string, payload: {
         label: field.label,
         productId,
         position,
-        type: "text",
+        type: field.type === "boolean" ? "boolean" : "text",
         required: false,
         options: [],
         helpText: null,
@@ -887,7 +887,8 @@ adminRouter.get("/orders", async (req, res) => {
       OR: q ? [
         { code: { contains: q, mode: "insensitive" } },
         { customerName: { contains: q, mode: "insensitive" } },
-        { customerWhatsapp: { contains: q, mode: "insensitive" } }
+        { customerWhatsapp: { contains: q, mode: "insensitive" } },
+        { contactMethod: { equals: q.toLowerCase() as any } }
       ] : undefined,
       status: status === "all" ? undefined : status as any,
       createdAt: dateFrom || dateTo ? {
@@ -915,6 +916,7 @@ adminRouter.post("/orders", async (req, res) => {
             status: input.status as any,
             customerName: input.customerName,
             customerWhatsapp: input.customerWhatsapp,
+            contactMethod: input.contactMethod as any,
             customerNote: input.customerNote,
             internalNote: input.internalNote ?? null,
             estimatedTotal: 0,
@@ -964,6 +966,7 @@ adminRouter.put("/orders/:id", async (req, res) => {
       data: {
         customerName: input.customerName,
         customerWhatsapp: input.customerWhatsapp,
+        contactMethod: input.contactMethod as any,
         customerNote: input.customerNote,
         internalNote: input.internalNote ?? null,
         status: input.status as any,

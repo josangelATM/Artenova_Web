@@ -16,7 +16,7 @@ import {
   Truck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { resolveMediaStillUrl, type Product, type SiteSettings } from "@artenova/shared";
+import { resolveMediaStillUrl, type CatalogProductCard, type SiteSettings } from "@artenova/shared";
 import { ProductCard } from "../components/ProductCard";
 import { CatalogGridSkeleton } from "../components/SkeletonStates";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -34,21 +34,22 @@ const trustItems = [
 
 export function HomePage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<CatalogProductCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   const featuredProducts = useMemo(() => selectFeaturedProducts(products, 4), [products]);
   const quoteUrl = whatsappHref(settings?.whatsapp, "Hola, quiero cotizar una pieza personalizada con Artenova.");
-  const featuredProduct = featuredProducts[0] as (Product & { images?: Product["media"] }) | undefined;
-  const featuredVariant = featuredProduct?.defaultVariant as (Product["defaultVariant"] & { images?: Product["media"] }) | undefined;
-  const heroMedia = (featuredVariant?.media ?? featuredVariant?.images ?? [])[0]
-    ?? (featuredProduct?.media ?? featuredProduct?.images ?? [])[0];
+  const featuredProduct = featuredProducts[0];
+  const heroMedia = featuredProduct?.defaultVariant?.media[0] ?? featuredProduct?.media[0];
 
   useEffect(() => {
-    void Promise.all([api.settings(), api.products(new URLSearchParams())])
+    const params = new URLSearchParams();
+    params.set("limit", "24");
+
+    void Promise.all([api.settings(), api.products(params)])
       .then(([nextSettings, nextProducts]) => {
         setSettings(nextSettings);
-        setProducts(nextProducts);
+        setProducts(nextProducts.items);
       })
       .finally(() => setLoading(false));
   }, []);

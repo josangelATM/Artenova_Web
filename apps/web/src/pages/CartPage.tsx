@@ -33,6 +33,7 @@ export function CartPage() {
       const order = await api.createOrder({
         customerName,
         customerWhatsapp,
+        contactMethod: "whatsapp",
         customerNote,
         items: cart.items.map((item) => ({
           productId: item.product.id,

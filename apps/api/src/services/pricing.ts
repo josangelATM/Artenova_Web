@@ -2,7 +2,7 @@ import { calculateLineTotal } from "@artenova/shared";
 import { productPayload } from "../lib/serialize";
 import { prisma } from "../lib/prisma";
 
-export async function priceOrderItems(items: Array<{ productId: string; quantity: number; selectedExtraIds: string[]; personalization: Record<string, string | string[]> }>) {
+export async function priceOrderItems(items: Array<{ productId: string; quantity: number; selectedExtraIds: string[]; personalization: Record<string, string | string[] | boolean> }>) {
   const productIds = items.map((item) => item.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isPublished: true },

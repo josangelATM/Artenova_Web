@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, Grid, IconButton, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
-import { type Order, type Product } from "@artenova/shared";
+import { orderContactMethodLabels, orderContactMethodValues, type Order, type Product } from "@artenova/shared";
 import { useNavigate } from "react-router-dom";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
 import { AdminFormErrorAlert } from "./adminFormErrors";
-import { buildDraftItemsPayload, buildDraftPaymentsPayload, defaultItem, emptyPaymentDraft, getBalance, getItemsTotal, getPaidTotal, moneyInputAdornment, OrderItemsEditor, OrderSummaryStrip, type DraftOrder, type DraftPayment } from "./adminOrderUi";
+import { buildDraftItemsPayload, buildDraftPaymentsPayload, defaultItem, emptyPaymentDraft, getBalance, getItemsTotal, getPaidTotal, moneyInputAdornment, OrderItemsEditor, OrderSummaryStrip, type DraftItem, type DraftOrder, type DraftPayment } from "./adminOrderUi";
 import { AdminPageHeader, AdminSection } from "./adminUi";
 
 const emptyDraft: DraftOrder = {
   customerName: "",
   customerWhatsapp: "",
+  contactMethod: "whatsapp",
   note: "",
   status: "nuevo",
   items: [],
@@ -25,7 +26,8 @@ function resolveOrderField(issue: ApiValidationIssue) {
 
 function getOrderFieldLabel(field: string) {
   if (field === "customerName") return "Nombre del cliente";
-  if (field === "customerWhatsapp") return "WhatsApp";
+  if (field === "customerWhatsapp") return "WhatsApp o cuenta";
+  if (field === "contactMethod") return "Método de contacto";
   if (field === "status") return "Estado";
   if (field === "note") return "Nota";
 
@@ -82,14 +84,18 @@ export function AdminOrderFormPage() {
   const paidTotal = useMemo(() => getPaidTotal(payments), [payments]);
   const balance = useMemo(() => getBalance(itemsTotal, paidTotal), [itemsTotal, paidTotal]);
 
-  function updateDraftField<K extends keyof DraftOrder>(field: K, value: DraftOrder[K]) {
+  const updateDraftField = useCallback(<K extends keyof DraftOrder>(field: K, value: DraftOrder[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
     setFormError((current) => clearFormErrorField(current, String(field)));
-  }
+  }, []);
 
-  function clearField(field: string) {
+  const clearField = useCallback((field: string) => {
     setFormError((current) => clearFormErrorField(current, field));
-  }
+  }, []);
+
+  const updateItems = useCallback((items: DraftItem[]) => {
+    setDraft((current) => ({ ...current, items }));
+  }, []);
 
   function addPayment() {
     setPayments((current) => [...current, { ...emptyPaymentDraft }]);
@@ -114,6 +120,7 @@ export function AdminOrderFormPage() {
       const order = await api.createAdminOrder({
         customerName: draft.customerName,
         customerWhatsapp: draft.customerWhatsapp,
+        contactMethod: draft.contactMethod,
         customerNote: draft.note,
         internalNote: null,
         status: draft.status,
@@ -142,13 +149,20 @@ export function AdminOrderFormPage() {
         <Stack spacing={1.5}>
           <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
           <Grid container spacing={1.5}>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField fullWidth label="Nombre del cliente" value={draft.customerName} onChange={(event) => updateDraftField("customerName", event.target.value)} error={Boolean(getFieldError(formError, "customerName"))} helperText={getFieldError(formError, "customerName")} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField fullWidth label="WhatsApp" value={draft.customerWhatsapp} onChange={(event) => updateDraftField("customerWhatsapp", event.target.value)} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
+              <TextField fullWidth select label="Método de contacto" value={draft.contactMethod} onChange={(event) => updateDraftField("contactMethod", event.target.value as DraftOrder["contactMethod"])} error={Boolean(getFieldError(formError, "contactMethod"))} helperText={getFieldError(formError, "contactMethod")}>
+                {orderContactMethodValues.map((method) => (
+                  <MenuItem key={method} value={method}>{orderContactMethodLabels[method]}</MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
+              <TextField fullWidth label="WhatsApp o cuenta" value={draft.customerWhatsapp} onChange={(event) => updateDraftField("customerWhatsapp", event.target.value)} error={Boolean(getFieldError(formError, "customerWhatsapp"))} helperText={getFieldError(formError, "customerWhatsapp")} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField fullWidth select label="Estado" value={draft.status} onChange={(event) => updateDraftField("status", event.target.value as Order["status"])} error={Boolean(getFieldError(formError, "status"))} helperText={getFieldError(formError, "status")}>
                 <MenuItem value="nuevo">Nuevo</MenuItem>
                 <MenuItem value="pendiente_diseno">Pendiente por diseño</MenuItem>
@@ -167,7 +181,7 @@ export function AdminOrderFormPage() {
         <OrderItemsEditor
           items={draft.items}
           products={products}
-          onChange={(items) => setDraft((current) => ({ ...current, items }))}
+          onChange={updateItems}
           getFieldError={(field) => getFieldError(formError, field)}
           onClearFieldError={clearField}
         />

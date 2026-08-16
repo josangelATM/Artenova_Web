@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { describe, expect, it, vi } from "vitest";
 import {
+  MemoOperationalFieldsEditor,
   MemoVariantCard,
   type VariantInput,
   VariantsSection,
@@ -130,6 +131,28 @@ function renderWithTheme(node: ReactNode) {
 }
 
 describe("AdminProductFormPage render isolation", () => {
+  it("updates operational field types between text and boolean", () => {
+    function Harness() {
+      const [fields, setFields] = useState([
+        { id: "cf-1", label: "QR", type: "text" as const, position: 0 },
+      ]);
+
+      return (
+        <MemoOperationalFieldsEditor
+          fields={fields}
+          onChange={setFields}
+        />
+      );
+    }
+
+    renderWithTheme(<Harness />);
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Tipo" }));
+    fireEvent.click(screen.getByRole("option", { name: "Booleano" }));
+
+    expect(screen.getByRole("combobox", { name: "Tipo" }).textContent).toContain("Booleano");
+  });
+
   it("does not rerender the variants section when unrelated state changes", () => {
     const renderCounts = { variantsSection: 0 };
 
@@ -225,7 +248,7 @@ describe("AdminProductFormPage render isolation", () => {
       target: { value: "Rojo premium" },
     });
 
-    expect(screen.getAllByLabelText("Nombre visible").at(0)).toHaveValue(
+    expect((screen.getAllByLabelText("Nombre visible").at(0) as HTMLInputElement).value).toBe(
       "Rojo premium",
     );
     expect(renderCounts.first).toBeGreaterThanOrEqual(initialFirstRenders);

@@ -10,6 +10,7 @@ export const orderStatusValues = [
   "entregado",
 ] as const;
 export const orderSourceValues = ["storefront", "admin_manual"] as const;
+export const orderContactMethodValues = ["whatsapp", "instagram", "facebook", "tiktok", "otro"] as const;
 export const orderPaymentMethodValues = ["efectivo", "yappy", "transferencia", "otro"] as const;
 export const expenseCategoryValues = ["materia_prima", "servicios", "publicidad", "salario", "viaticos", "otros"] as const;
 export const expensePaymentMethodValues = ["efectivo", "yappy", "transferencia", "tarjeta_credito", "otro"] as const;
@@ -19,6 +20,7 @@ export const heroSlotValues = ["primary", "secondary"] as const;
 export const productReviewSourceValues = ["customer", "admin"] as const;
 export const discountTypeValues = ["percentage", "fixed"] as const;
 export const productMediaTypeValues = ["image", "video"] as const;
+export const customFieldTypeValues = ["text", "boolean"] as const;
 
 export type OrderStatus = (typeof orderStatusValues)[number];
 export const orderStatusLabels: Record<OrderStatus, string> = {
@@ -31,6 +33,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   entregado: "Entregado",
 };
 export type OrderSource = (typeof orderSourceValues)[number];
+export type OrderContactMethod = (typeof orderContactMethodValues)[number];
 export type OrderPaymentMethod = (typeof orderPaymentMethodValues)[number];
 export type ExpenseCategory = (typeof expenseCategoryValues)[number];
 export type ExpensePaymentMethod = (typeof expensePaymentMethodValues)[number];
@@ -40,6 +43,7 @@ export type HeroSlot = (typeof heroSlotValues)[number];
 export type ProductReviewSource = (typeof productReviewSourceValues)[number];
 export type DiscountType = (typeof discountTypeValues)[number];
 export type ProductMediaType = (typeof productMediaTypeValues)[number];
+export type CustomFieldType = (typeof customFieldTypeValues)[number];
 
 export const moneySchema = z.coerce.number().nonnegative().finite();
 
@@ -140,6 +144,13 @@ export const productVariantSchema = z.object({
   pricingSummary: pricingSummarySchema,
 });
 
+export const catalogProductVariantSchema = z.object({
+  id: z.string(),
+  sku: z.string().nullable().optional(),
+  media: z.array(productMediaSchema).default([]),
+  pricingSummary: pricingSummarySchema,
+});
+
 export const productReviewSchema = z.object({
   id: z.string(),
   productId: z.string(),
@@ -179,8 +190,15 @@ export const productExtraSchema = z.object({
 export const customFieldSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(2),
+  type: z.enum(customFieldTypeValues).default("text"),
   position: z.number().int().nonnegative().optional(),
 });
+
+export const personalizationValueSchema = z.union([
+  z.string(),
+  z.array(z.string()),
+  z.boolean(),
+]);
 
 export const productSchema = z.object({
   id: z.string(),
@@ -213,12 +231,36 @@ export const productSchema = z.object({
   }).default({ averageRating: 0, reviewCount: 0 }),
 });
 
+export const catalogProductCardSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  sku: z.string().nullable().optional(),
+  currencySymbol: z.string().default("B/."),
+  description: z.string(),
+  isFeatured: z.boolean(),
+  media: z.array(productMediaSchema).default([]),
+  defaultVariant: catalogProductVariantSchema.nullable().optional(),
+  pricingSummary: pricingSummarySchema,
+  reviewSummary: z.object({
+    averageRating: z.number(),
+    reviewCount: z.number().int().nonnegative(),
+  }).default({ averageRating: 0, reviewCount: 0 }),
+  extraMediaCount: z.number().int().nonnegative().default(0),
+});
+
+export const catalogProductListResponseSchema = z.object({
+  items: z.array(catalogProductCardSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+
 export const orderItemInputSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().int().positive(),
   selectedExtraIds: z.array(z.string()).default([]),
   personalization: z
-    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .record(z.string(), personalizationValueSchema)
     .default({}),
 });
 
@@ -227,7 +269,7 @@ export const orderItemUnitSchema = z.object({
   position: z.number().int().nonnegative().optional(),
   label: z.string().max(120).optional().nullable(),
   personalization: z
-    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .record(z.string(), personalizationValueSchema)
     .default({}),
 });
 
@@ -251,7 +293,7 @@ export const adminOrderItemSchema = z.object({
   selectedExtraIds: z.array(z.string()).default([]),
   appliedAdjustments: z.array(adminOrderItemAdjustmentSchema).default([]),
   personalization: z
-    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .record(z.string(), personalizationValueSchema)
     .default({}),
   isDone: z.boolean().default(false),
   units: z.array(orderItemUnitSchema).default([]),
@@ -513,6 +555,7 @@ export const adminExpenseListResponseSchema = z.object({
 export const createOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerWhatsapp: z.string().trim().max(40).default(""),
+  contactMethod: z.enum(orderContactMethodValues).default("whatsapp"),
   customerNote: z.string().max(1200).optional().default(""),
   items: z.array(orderItemInputSchema).min(1),
 });
@@ -526,6 +569,7 @@ export const updateOrderSchema = z.object({
 export const createAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerWhatsapp: z.string().trim().max(40).default(""),
+  contactMethod: z.enum(orderContactMethodValues).default("whatsapp"),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),
@@ -537,6 +581,7 @@ export const createAdminOrderSchema = z.object({
 export const updateAdminOrderSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerWhatsapp: z.string().trim().max(40).default(""),
+  contactMethod: z.enum(orderContactMethodValues).default("whatsapp"),
   customerNote: z.string().max(1200).optional().default(""),
   internalNote: z.string().max(4000).optional().nullable(),
   status: z.enum(orderStatusValues).default("nuevo"),
@@ -604,6 +649,8 @@ export const siteSettingsSchema = z.object({
 export type Category = z.infer<typeof categorySchema>;
 export type AdminCategoryInput = z.infer<typeof adminCategoryInputSchema>;
 export type Product = z.infer<typeof productSchema>;
+export type CatalogProductCard = z.infer<typeof catalogProductCardSchema>;
+export type CatalogProductListResponse = z.infer<typeof catalogProductListResponseSchema>;
 export type PricingSummary = z.infer<typeof pricingSummarySchema>;
 export type ProductReview = z.infer<typeof productReviewSchema>;
 export type CreateProductReviewInput = z.infer<typeof createProductReviewSchema>;
@@ -612,6 +659,7 @@ export type ProductMedia = z.infer<typeof productMediaSchema>;
 export type ProductImage = ProductMedia;
 export type PriceTier = z.infer<typeof priceTierSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
+export type CatalogProductVariant = z.infer<typeof catalogProductVariantSchema>;
 export type ProductVariantAttribute = z.infer<typeof productVariantAttributeSchema>;
 export type ProductOption = z.infer<typeof productOptionSchema>;
 export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
@@ -664,11 +712,19 @@ export const expensePaymentMethodLabels: Record<ExpensePaymentMethod, string> = 
   otro: "Otro",
 };
 
+export const orderContactMethodLabels: Record<OrderContactMethod, string> = {
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  tiktok: "Tiktok",
+  otro: "Otro",
+};
+
 export type OrderItemUnit = {
   id: string;
   position: number;
   label?: string | null;
-  personalization: Record<string, string | string[]>;
+  personalization: Record<string, string | string[] | boolean>;
 };
 
 export type OrderItem = {
@@ -684,7 +740,7 @@ export type OrderItem = {
   unitLabel?: string | null;
   selectedExtraIds?: string[];
   appliedAdjustments?: AdminOrderItemAdjustment[];
-  personalization: Record<string, string | string[]>;
+  personalization: Record<string, string | string[] | boolean>;
   isDone: boolean;
   units: OrderItemUnit[];
 };
@@ -705,6 +761,7 @@ export type Order = {
   status: OrderStatus;
   customerName: string;
   customerWhatsapp: string;
+  contactMethod: OrderContactMethod;
   customerNote?: string | null;
   estimatedTotal: number;
   finalPrice?: number | null;

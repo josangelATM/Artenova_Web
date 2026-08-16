@@ -1,7 +1,10 @@
-import type { Product } from "@artenova/shared";
+type FeaturedProductLike = {
+  id: string;
+  isFeatured: boolean;
+};
 
-export function selectFeaturedProducts(products: Product[], limit = 4) {
-  const selected: Product[] = [];
+export function selectFeaturedProducts<T extends FeaturedProductLike>(products: T[], limit = 4) {
+  const selected: T[] = [];
   const seen = new Set<string>();
 
   for (const product of products) {

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { adminOrderPaymentInputSchema, createAdminOrderSchema, updateAdminOrderSchema } from "./index";
+import { adminOrderPaymentInputSchema, createAdminOrderSchema, customFieldSchema, updateAdminOrderSchema } from "./index";
 
 describe("admin order schemas", () => {
   it("accepts quick admin order creation without items", () => {
     expect(createAdminOrderSchema.parse({
       customerName: "Mackan",
       customerWhatsapp: "6962-5607",
+      contactMethod: "whatsapp",
       customerNote: "Separado por WhatsApp"
     })).toMatchObject({
       status: "nuevo",
@@ -18,6 +19,7 @@ describe("admin order schemas", () => {
     const payload = updateAdminOrderSchema.parse({
       customerName: "Gabriel",
       customerWhatsapp: "6217-2806",
+      contactMethod: "whatsapp",
       customerNote: "",
       internalNote: "Pedido de jueves 6 de agosto de 2026",
       status: "pendiente_fabricacion",
@@ -52,6 +54,7 @@ describe("admin order schemas", () => {
     const payload = createAdminOrderSchema.parse({
       customerName: "Paola",
       customerWhatsapp: "6000-1122",
+      contactMethod: "whatsapp",
       items: [
         {
           productId: null,
@@ -72,10 +75,40 @@ describe("admin order schemas", () => {
     expect(payload.payments[0]?.amount).toBe(4);
   });
 
+  it("accepts boolean personalization values and boolean custom fields", () => {
+    const field = customFieldSchema.parse({
+      id: "qr",
+      label: "QR",
+      type: "boolean",
+      position: 0,
+    });
+
+    const payload = createAdminOrderSchema.parse({
+      customerName: "Paola",
+      customerWhatsapp: "6000-1122",
+      contactMethod: "whatsapp",
+      items: [
+        {
+          productId: "prod-1",
+          productName: "Llavero",
+          quantity: 1,
+          unitPrice: 8,
+          extrasTotal: 0,
+          personalization: { qr: true, detalle: "Texto libre" },
+        },
+      ],
+      payments: [],
+    });
+
+    expect(field.type).toBe("boolean");
+    expect(payload.items[0]?.personalization).toEqual({ qr: true, detalle: "Texto libre" });
+  });
+
   it("accepts manual applied adjustments with the item quantity", () => {
     const payload = createAdminOrderSchema.parse({
       customerName: "Rosa",
       customerWhatsapp: "6111-2233",
+      contactMethod: "whatsapp",
       items: [
         {
           productId: "prod-2",
@@ -103,6 +136,7 @@ describe("admin order schemas", () => {
     expect(() => updateAdminOrderSchema.parse({
       customerName: "Legacy",
       customerWhatsapp: "6000-0000",
+      contactMethod: "whatsapp",
       customerNote: "",
       internalNote: null,
       status: "completado",
@@ -114,6 +148,7 @@ describe("admin order schemas", () => {
     expect(() => createAdminOrderSchema.parse({
       customerName: "Legacy",
       customerWhatsapp: "6000-0000",
+      contactMethod: "whatsapp",
       items: [
         {
           productId: "prod-1",
@@ -151,21 +186,35 @@ describe("admin order schemas", () => {
     const payload = createAdminOrderSchema.parse({
       customerName: "Fernando",
       customerWhatsapp: "IG",
+      contactMethod: "instagram",
       items: [],
       payments: [],
     });
 
     expect(payload.customerWhatsapp).toBe("IG");
+    expect(payload.contactMethod).toBe("instagram");
   });
 
   it("accepts empty whatsapp for admin orders", () => {
     const payload = createAdminOrderSchema.parse({
       customerName: "Fernando",
       customerWhatsapp: "",
+      contactMethod: "otro",
       items: [],
       payments: [],
     });
 
     expect(payload.customerWhatsapp).toBe("");
+    expect(payload.contactMethod).toBe("otro");
+  });
+
+  it("rejects invalid contact methods", () => {
+    expect(() => createAdminOrderSchema.parse({
+      customerName: "Fernando",
+      customerWhatsapp: "@fer",
+      contactMethod: "telegram",
+      items: [],
+      payments: [],
+    })).toThrow();
   });
 });

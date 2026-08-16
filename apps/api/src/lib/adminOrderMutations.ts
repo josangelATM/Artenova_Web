@@ -30,9 +30,9 @@ export type AdminOrderItemWriteInput = {
     quantity: number;
     totalAmount: number;
   }>;
-  personalization: Record<string, string | string[]>;
+  personalization: Record<string, string | string[] | boolean>;
   isDone?: boolean;
-  units: Array<{ position?: number; label?: string | null; personalization: Record<string, string | string[]> }>;
+  units: Array<{ position?: number; label?: string | null; personalization: Record<string, string | string[] | boolean> }>;
 };
 
 export type AdminOrderPaymentWriteInput = {

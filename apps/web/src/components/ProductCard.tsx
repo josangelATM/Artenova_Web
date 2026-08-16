@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/material";
 import { ImageIcon, Images, PlayCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { buildProductMediaInventory, formatCurrency, resolvePreviewMode, resolveMediaStillUrl, type Product } from "@artenova/shared";
+import { formatCurrency, resolvePreviewMode, resolveMediaStillUrl, type CatalogProductCard } from "@artenova/shared";
 
 function playVideoElement(video: HTMLVideoElement | null) {
   if (!video) return;
@@ -64,22 +64,22 @@ function ProductCardPlaceholder({ name }: { name: string }) {
   );
 }
 
-export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
-  const defaultVariant = product.defaultVariant ?? product.variants[0] ?? null;
-  const defaultVariantMedia = (defaultVariant?.media ?? (defaultVariant as { images?: Product["media"] | undefined } | null)?.images) ?? [];
-  const productMedia = (product.media ?? (product as Product & { images?: Product["media"] }).images) ?? [];
-  const firstVariantMedia = ((product.variants[0]?.media ?? (product.variants[0] as { images?: Product["media"] | undefined } | undefined)?.images) ?? []);
-  const previewMedia = defaultVariantMedia[0] ?? productMedia[0] ?? firstVariantMedia[0];
+export function ProductCard({ product, index = 0 }: { product: CatalogProductCard; index?: number }) {
+  const defaultVariant = product.defaultVariant ?? null;
+  const sku = defaultVariant?.sku ?? product.sku ?? null;
+  const previewMedia = defaultVariant?.media[0] ?? product.media[0];
   const previewMode = resolvePreviewMode(previewMedia, "card");
   const image = resolveMediaStillUrl(previewMedia);
   const [imageFailed, setImageFailed] = useState(false);
-  const extraImages = buildProductMediaInventory(product).extraMediaCount;
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const extraImages = product.extraMediaCount ?? 0;
   const shouldRenderInlineVideo = previewMode === "video" && Boolean(previewMedia?.type === "video");
   const cardVideo = useCardVideoVisibility(shouldRenderInlineVideo);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     setImageFailed(false);
+    setImageLoaded(false);
   }, [image, product.id]);
 
   useEffect(() => {
@@ -113,6 +113,11 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         color: "inherit",
         textDecoration: "none",
         cursor: "pointer",
+        "@keyframes productCardPlaceholderPulse": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
       }}
     >
       <Box
@@ -120,15 +125,37 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         sx={{ position: "relative", aspectRatio: "4 / 5", bgcolor: "rgba(255,247,239,.92)", overflow: "hidden" }}
       >
         {renderStaticImage ? (
-          <Box
-            className="product-card-image"
-            component="img"
-            src={image}
-            alt={previewMedia?.alt || product.name}
-            loading="lazy"
-            onError={() => setImageFailed(true)}
-            sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <>
+            {!imageLoaded && (
+              <Box
+                data-testid="product-card-image-placeholder"
+                aria-hidden="true"
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(135deg, rgba(245,229,217,.95), rgba(255,247,239,.72), rgba(235,214,199,.92))",
+                  backgroundSize: "200% 200%",
+                  animation: "productCardPlaceholderPulse 1.8s ease-in-out infinite",
+                }}
+              />
+            )}
+            <Box
+              className="product-card-image"
+              component="img"
+              src={image}
+              alt={previewMedia?.alt || product.name}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageFailed(true)}
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: imageLoaded ? 1 : 0,
+                transition: "opacity 220ms ease",
+              }}
+            />
+          </>
         ) : renderVideoFallback && previewMedia ? (
           <>
             <Box
@@ -181,9 +208,9 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
       </Box>
       <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1.25, flex: 1, width: "100%", p: { xs: 2, md: 2.25 } }}>
         <Stack spacing={0.7} sx={{ flex: 1 }}>
-          {(defaultVariant?.sku ?? product.sku ?? product.variants[0]?.sku) && (
+          {sku && (
             <Typography variant="caption" color="text.secondary" fontWeight={900} letterSpacing={0.4}>
-              REF {defaultVariant?.sku ?? product.sku ?? product.variants[0]?.sku}
+              REF {sku}
             </Typography>
           )}
           <Typography variant="h6" fontWeight={900} lineHeight={1.08} sx={{ overflowWrap: "anywhere", fontSize: { xs: 19, md: 20 } }}>

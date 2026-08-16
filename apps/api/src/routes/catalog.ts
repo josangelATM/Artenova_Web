@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { createProductReviewSchema } from "@artenova/shared";
-import { productPayload } from "../lib/serialize";
+import { catalogProductCardPayload, productPayload } from "../lib/serialize";
 import { env } from "../env";
 import { prisma } from "../lib/prisma";
 
 export const catalogRouter = Router();
 const db = prisma as any;
+const defaultCatalogPageSize = 24;
+const maxCatalogPageSize = 48;
 
 const productInclude = {
   category: true,
@@ -38,6 +40,136 @@ const productInclude = {
   reviews: { where: { isApproved: true }, orderBy: { createdAt: "desc" as const } }
 };
 
+const catalogListSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  sku: true,
+  description: true,
+  basePrice: true,
+  discountType: true,
+  discountValue: true,
+  isFeatured: true,
+  defaultVariantId: true,
+  createdAt: true,
+  category: {
+    select: {
+      currencySymbol: true,
+      isActive: true,
+      slug: true,
+    },
+  },
+  images: {
+    orderBy: { position: "asc" as const },
+    select: {
+      id: true,
+      url: true,
+      type: true,
+      alt: true,
+      position: true,
+      posterUrl: true,
+    },
+  },
+  variants: {
+    where: { isActive: true },
+    orderBy: { position: "asc" as const },
+    select: {
+      id: true,
+      sku: true,
+      basePrice: true,
+      discountType: true,
+      discountValue: true,
+      images: {
+        orderBy: { position: "asc" as const },
+        select: {
+          id: true,
+          url: true,
+          type: true,
+          alt: true,
+          position: true,
+          posterUrl: true,
+        },
+      },
+      priceTiers: {
+        orderBy: { minQuantity: "asc" as const },
+        select: {
+          id: true,
+          minQuantity: true,
+          unitPrice: true,
+          totalPrice: true,
+          label: true,
+        },
+      },
+    },
+  },
+  reviews: {
+    where: { isApproved: true },
+    select: { rating: true },
+  },
+};
+
+type CatalogCursor = {
+  isFeatured: boolean;
+  createdAt: string;
+  id: string;
+};
+
+function catalogWhere(category?: string, q = "") {
+  return {
+    isPublished: true,
+    category: category ? { slug: category, isActive: true } : { isActive: true },
+    OR: q
+      ? [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { sku: { contains: q, mode: "insensitive" as const } },
+          { variants: { some: { sku: { contains: q, mode: "insensitive" as const }, isActive: true } } },
+          { description: { contains: q, mode: "insensitive" as const } }
+        ]
+      : undefined
+  };
+}
+
+function encodeCatalogCursor(input: CatalogCursor) {
+  return Buffer.from(JSON.stringify(input), "utf8").toString("base64url");
+}
+
+function decodeCatalogCursor(input?: string): CatalogCursor | null {
+  if (!input) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(input, "base64url").toString("utf8")) as CatalogCursor;
+    if (
+      typeof parsed?.id === "string"
+      && typeof parsed?.createdAt === "string"
+      && typeof parsed?.isFeatured === "boolean"
+      && !Number.isNaN(Date.parse(parsed.createdAt))
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function catalogCursorFilter(cursor: CatalogCursor | null) {
+  if (!cursor) return undefined;
+
+  const createdAt = new Date(cursor.createdAt);
+
+  if (cursor.isFeatured) {
+    return [
+      { isFeatured: false },
+      { isFeatured: true, createdAt: { lt: createdAt } },
+      { isFeatured: true, createdAt, id: { lt: cursor.id } },
+    ];
+  }
+
+  return [
+    { isFeatured: false, createdAt: { lt: createdAt } },
+    { isFeatured: false, createdAt, id: { lt: cursor.id } },
+  ];
+}
+
 catalogRouter.get("/settings", async (_req, res) => {
   res.json({
     brandName: env.SITE_BRAND_NAME,
@@ -64,23 +196,42 @@ catalogRouter.get("/categories", async (_req, res) => {
 catalogRouter.get("/products", async (req, res) => {
   const category = typeof req.query.category === "string" ? req.query.category : undefined;
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(1, Math.trunc(rawLimit)), maxCatalogPageSize)
+    : defaultCatalogPageSize;
+  const cursor = decodeCatalogCursor(typeof req.query.cursor === "string" ? req.query.cursor : undefined);
+  const afterCursor = catalogCursorFilter(cursor);
+  const where = catalogWhere(category, q) as Record<string, unknown>;
+
+  if (afterCursor) {
+    where.OR = afterCursor.map((clause) => ({
+      AND: [catalogWhere(category, q), clause],
+    }));
+  }
+
   const products = await prisma.product.findMany({
-    where: {
-      isPublished: true,
-      category: category ? { slug: category, isActive: true } : { isActive: true },
-      OR: q
-        ? [
-            { name: { contains: q, mode: "insensitive" } },
-            { sku: { contains: q, mode: "insensitive" } },
-            { variants: { some: { sku: { contains: q, mode: "insensitive" }, isActive: true } } },
-            { description: { contains: q, mode: "insensitive" } }
-          ]
-        : undefined
-    },
-    include: productInclude,
-    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }]
+    where,
+    select: catalogListSelect,
+    take: limit + 1,
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "desc" }],
   });
-  res.json(products.map(productPayload));
+
+  const hasMore = products.length > limit;
+  const pageItems = hasMore ? products.slice(0, limit) : products;
+  const lastItem = pageItems.at(-1);
+
+  res.json({
+    items: pageItems.map(catalogProductCardPayload),
+    nextCursor: hasMore && lastItem
+      ? encodeCatalogCursor({
+          isFeatured: Boolean(lastItem.isFeatured),
+          createdAt: lastItem.createdAt.toISOString(),
+          id: lastItem.id,
+        })
+      : null,
+    hasMore,
+  });
 });
 
 catalogRouter.get("/products/:slug", async (req, res) => {

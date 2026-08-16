@@ -100,6 +100,10 @@ function isInstagramLikePhone(phoneKey: string) {
   return /^(ig|instagram)$/.test(phoneKey);
 }
 
+function resolveImportedContactMethod(phoneKey: string): CreateAdminOrderInput["contactMethod"] {
+  return isInstagramLikePhone(phoneKey) ? "instagram" : "whatsapp";
+}
+
 function formatDateKey(value: Date) {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");
@@ -261,6 +265,7 @@ function buildRegularOrderPlan(rows: RegularImportRow[], mode: "single" | "group
     input: {
       customerName: firstRow.customerName,
       customerWhatsapp: firstRow.customerWhatsapp,
+      contactMethod: resolveImportedContactMethod(firstRow.customerWhatsappKey),
       customerNote: "",
       internalNote: `Importado desde Excel | Hoja: Pedidos regulares | Filas: ${rows.map((row) => row.rowNumber).join(", ")}`,
       status: "nuevo",
@@ -323,6 +328,7 @@ function buildSinglePetOrderPlan(row: PetTagImportRow): WorkbookImportOrderPlan 
     input: {
       customerName: row.customerName,
       customerWhatsapp: row.customerWhatsapp,
+      contactMethod: resolveImportedContactMethod(row.customerWhatsappKey),
       customerNote: "",
       internalNote: `Importado desde Excel | Hoja: Cédulas de mascota | Fila: ${row.rowNumber}`,
       status: "nuevo",
@@ -372,6 +378,7 @@ function buildGroupedPetOrderPlan(rows: PetTagImportRow[]): WorkbookImportOrderP
     input: {
       customerName: firstRow.customerName,
       customerWhatsapp: firstRow.customerWhatsapp,
+      contactMethod: resolveImportedContactMethod(firstRow.customerWhatsappKey),
       customerNote: "",
       internalNote: `Importado desde Excel | Hoja: Cédulas de mascota | Filas: ${rows.map((row) => row.rowNumber).join(", ")}`,
       status: "nuevo",

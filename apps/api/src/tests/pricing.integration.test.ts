@@ -11,7 +11,7 @@ vi.mock("../lib/prisma", () => ({
           basePrice: 16,
           priceTiers: [],
           extras: [{ id: "e1", name: "Dorado", type: "material", priceDelta: 2 }],
-          customFields: [{ id: "name", label: "Nombre", position: 0 }],
+          customFields: [{ id: "name", label: "Nombre", type: "text", position: 0 }],
           images: [],
           options: [],
           variants: [

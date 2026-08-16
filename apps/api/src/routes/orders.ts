@@ -33,6 +33,7 @@ ordersRouter.post("/", async (req, res) => {
             source: "storefront" as any,
             customerName: input.customerName,
             customerWhatsapp: input.customerWhatsapp,
+            contactMethod: input.contactMethod as any,
             customerNote: input.customerNote,
             estimatedTotal,
             finalPrice: estimatedTotal,

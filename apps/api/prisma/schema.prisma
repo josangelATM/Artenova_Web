@@ -21,6 +21,14 @@ enum OrderSource {
   admin_manual
 }
 
+enum OrderContactMethod {
+  whatsapp
+  instagram
+  facebook
+  tiktok
+  otro
+}
+
 enum OrderPaymentMethod {
   efectivo
   yappy
@@ -58,6 +66,7 @@ enum QRCodeStatus {
 
 enum CustomFieldType {
   text
+  boolean
   date
   select
   image
@@ -286,6 +295,7 @@ model Order {
   status           OrderStatus   @default(nuevo)
   customerName     String
   customerWhatsapp String
+  contactMethod    OrderContactMethod @default(whatsapp)
   customerNote     String?
   estimatedTotal   Decimal       @db.Decimal(10, 2)
   finalPrice       Decimal?      @db.Decimal(10, 2)

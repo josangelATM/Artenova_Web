@@ -39,4 +39,26 @@ describe("product reviews", () => {
     expect(payload.reviewSummary).toEqual({ averageRating: 4.5, reviewCount: 2 });
     expect(payload.reviews[0]?.createdAt).toBe("2026-08-01T10:00:00.000Z");
   });
+
+  it("serializes custom field types and normalizes unsupported legacy values to text", () => {
+    const payload = productPayload({
+      id: "p1",
+      name: "Retrato",
+      basePrice: 20,
+      priceTiers: [],
+      extras: [],
+      reviews: [],
+      customFields: [
+        { id: "cf-text", label: "Nombre", type: "text", position: 0 },
+        { id: "cf-boolean", label: "QR", type: "boolean", position: 1 },
+        { id: "cf-legacy", label: "Fecha", type: "date", position: 2 },
+      ],
+    });
+
+    expect(payload.customFields).toEqual([
+      { id: "cf-text", label: "Nombre", type: "text", position: 0 },
+      { id: "cf-boolean", label: "QR", type: "boolean", position: 1 },
+      { id: "cf-legacy", label: "Fecha", type: "text", position: 2 },
+    ]);
+  });
 });
