@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Product } from "@artenova/shared";
 import { OrderItemsEditor, buildDraftItemsPayload, defaultItem, type DraftItem } from "../pages/admin/adminOrderUi";
 
@@ -142,6 +142,33 @@ function renderEditor(products: Product[], initialItems: DraftItem[]) {
   };
 }
 
+function renderEditorWithDelayedState(products: Product[], initialItems: DraftItem[]) {
+  let latestItems = initialItems;
+  function Harness() {
+    const [items, setItems] = useState(initialItems);
+    latestItems = items;
+    return (
+      <OrderItemsEditor
+        items={items}
+        products={products}
+        onChange={(nextItems) => {
+          setTimeout(() => {
+            latestItems = nextItems;
+            setItems(nextItems);
+          }, 0);
+        }}
+      />
+    );
+  }
+
+  const view = render(<Harness />);
+
+  return {
+    ...view,
+    getItems: () => latestItems,
+  };
+}
+
 describe("OrderItemsEditor", () => {
   it("shows active variants and updates snapshots and price when variant changes", () => {
     const product = buildProduct();
@@ -191,6 +218,131 @@ describe("OrderItemsEditor", () => {
       unitPrice: "12.75",
       appliedAdjustments: [{ unitAmount: "1.25", totalAmount: 2.5 }],
     });
+  });
+
+  it("duplicates the manually edited unit price instead of resetting to the product original price", () => {
+    const product = buildProduct();
+    const { getItems } = renderEditor([product], [defaultItem(product)]);
+
+    fireEvent.change(screen.getByLabelText("Costo individual"), { target: { value: "18.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Copiar línea" }));
+
+    const unitPrices = screen.getAllByLabelText("Costo individual");
+    expect(unitPrices).toHaveLength(2);
+    expect(unitPrices[0]).toHaveValue("18.5");
+    expect(unitPrices[1]).toHaveValue("18.5");
+
+    expect(getItems()[1]).toMatchObject({
+      productId: "prod-1",
+      variantNameSnapshot: "Rojo",
+      skuSnapshot: "ROJ-01",
+      unitPrice: "18.5",
+    });
+  });
+
+  it("duplicates the latest edited variant and price even when parent state sync is delayed", async () => {
+    vi.useFakeTimers();
+    try {
+      const product = buildProduct({
+        variants: [
+          {
+            id: "var-default",
+            productId: "prod-1",
+            name: "Pequena / Rojo",
+            sku: "PEQ-ROJ",
+            selectionKey: null,
+            visualGroupKey: null,
+            basePrice: 10,
+            discountType: null,
+            discountValue: null,
+            isActive: true,
+            position: 0,
+            media: [],
+            attributes: [],
+            selections: [],
+            priceTiers: [],
+            pricingSummary: {
+              originalPrice: 10,
+              finalPrice: 10,
+              hasDiscount: false,
+              discountType: null,
+              discountValue: null,
+            },
+          },
+          {
+            id: "var-2",
+            productId: "prod-1",
+            name: "Grande / Rojo",
+            sku: "GRA-ROJ",
+            selectionKey: null,
+            visualGroupKey: null,
+            basePrice: 6.8,
+            discountType: null,
+            discountValue: null,
+            isActive: true,
+            position: 1,
+            media: [],
+            attributes: [],
+            selections: [],
+            priceTiers: [],
+            pricingSummary: {
+              originalPrice: 6.8,
+              finalPrice: 6.8,
+              hasDiscount: false,
+              discountType: null,
+              discountValue: null,
+            },
+          },
+        ],
+        defaultVariant: {
+          id: "var-default",
+          productId: "prod-1",
+          name: "Pequena / Rojo",
+          sku: "PEQ-ROJ",
+          selectionKey: null,
+          visualGroupKey: null,
+          basePrice: 10,
+          discountType: null,
+          discountValue: null,
+          isActive: true,
+          position: 0,
+          media: [],
+          attributes: [],
+          selections: [],
+          priceTiers: [],
+          pricingSummary: {
+            originalPrice: 10,
+            finalPrice: 10,
+            hasDiscount: false,
+            discountType: null,
+            discountValue: null,
+          },
+        },
+      });
+
+      renderEditorWithDelayedState([product], [defaultItem(product)]);
+
+      const variantSelect = screen.getByRole("combobox", { name: "Variante" });
+      fireEvent.mouseDown(variantSelect);
+      fireEvent.click(screen.getByRole("option", { name: "Grande / Rojo" }));
+      fireEvent.change(screen.getByLabelText("Costo individual"), { target: { value: "6.80" } });
+      fireEvent.click(screen.getByRole("button", { name: "Copiar línea" }));
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      const variantSelects = screen.getAllByRole("combobox", { name: "Variante" });
+      expect(variantSelects).toHaveLength(2);
+      expect(variantSelects[0]).toHaveTextContent("Grande / Rojo");
+      expect(variantSelects[1]).toHaveTextContent("Grande / Rojo");
+
+      const unitPrices = screen.getAllByLabelText("Costo individual");
+      expect(unitPrices[0]).toHaveValue("6.80");
+      expect(unitPrices[1]).toHaveValue("6.80");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not show the variant select for products without active variants", () => {

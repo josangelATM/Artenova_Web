@@ -367,7 +367,9 @@ export function OrderItemsEditor({
   );
 
   const applyItems = useCallback((updater: (current: DraftItem[]) => DraftItem[]) => {
-    onChange(updater(itemsRef.current));
+    const nextItems = updater(itemsRef.current);
+    itemsRef.current = nextItems;
+    onChange(nextItems);
   }, [onChange]);
 
   const updateItem = useCallback((index: number, updater: (item: DraftItem) => DraftItem) => {
