@@ -8,6 +8,13 @@ export type ApiValidationIssue = {
   code: string;
 };
 
+type PrismaConstraintError = {
+  code?: unknown;
+  meta?: {
+    target?: unknown;
+  };
+};
+
 function formatIssueMessage(issue: ZodError["issues"][number]) {
   const details = issue as unknown as Record<string, unknown>;
 
@@ -115,11 +122,68 @@ function buildValidationMessage(issues: ApiValidationIssue[]) {
   return `Se encontraron ${issues.length} errores de validación.`;
 }
 
+function isPrismaUniqueConstraintError(error: unknown): error is PrismaConstraintError {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && (error as { code?: unknown }).code === "P2002";
+}
+
+function getUniqueFieldMessage(field: string) {
+  const messages: Record<string, string> = {
+    slug: "Ese enlace corto ya está en uso.",
+    sku: "Esa referencia ya está en uso.",
+    email: "Ese correo ya está registrado.",
+    code: "Ese código ya está en uso.",
+    token: "Ese código QR ya existe.",
+    defaultVariantId: "La variante predeterminada seleccionada no es válida.",
+  };
+
+  return messages[field] ?? "Este valor ya está en uso.";
+}
+
+function normalizeConstraintTargets(target: unknown) {
+  if (!Array.isArray(target)) return [];
+  return target.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function buildUniqueConstraintIssues(error: PrismaConstraintError): ApiValidationIssue[] {
+  const targets = normalizeConstraintTargets(error.meta?.target);
+
+  if (targets.length === 0) {
+    return [{
+      path: [],
+      key: "",
+      message: "Ya existe un registro con uno de los valores ingresados.",
+      code: "unique",
+    }];
+  }
+
+  return targets.map((field) => ({
+    path: [field],
+    key: field,
+    message: getUniqueFieldMessage(field),
+    code: "unique",
+  }));
+}
+
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ZodError) {
     const issues = normalizeZodIssues(err);
     res.status(400).json({
       message: buildValidationMessage(issues),
+      issues,
+      fieldErrors: buildFieldErrors(issues),
+    });
+    return;
+  }
+
+  if (isPrismaUniqueConstraintError(err)) {
+    const issues = buildUniqueConstraintIssues(err);
+    res.status(400).json({
+      message: issues.length === 1
+        ? issues[0]!.message
+        : "Hay valores duplicados. Revisa los campos marcados.",
       issues,
       fieldErrors: buildFieldErrors(issues),
     });

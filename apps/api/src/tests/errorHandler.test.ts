@@ -62,6 +62,31 @@ describe("errorHandler", () => {
     }));
   });
 
+  it("returns field-specific messages for unique constraint conflicts", () => {
+    const response = createResponse();
+
+    errorHandler({
+      code: "P2002",
+      meta: { target: ["slug"] },
+    }, {} as never, response as never, vi.fn());
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith({
+      message: "Ese enlace corto ya está en uso.",
+      issues: [
+        {
+          path: ["slug"],
+          key: "slug",
+          message: "Ese enlace corto ya está en uso.",
+          code: "unique",
+        },
+      ],
+      fieldErrors: {
+        slug: "Ese enlace corto ya está en uso.",
+      },
+    });
+  });
+
   it("returns a stable payload for unexpected errors", () => {
     const response = createResponse();
 
