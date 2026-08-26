@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Box, Breadcrumbs, Button, IconButton, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, type GridColDef, type GridPaginationModel, type GridRowsProp } from "@mui/x-data-grid";
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeft, CheckCheck, Eye, HandCoins, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCheck, Eye, Factory, HandCoins, Pencil } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { AdminEmptyState, adminSurfaceSx } from "./adminUi";
 
@@ -188,5 +188,6 @@ export const adminGridActionIcons = {
   view: Eye,
   edit: Pencil,
   markPaid: HandCoins,
-  markDelivered: CheckCheck
+  markDelivered: CheckCheck,
+  markPendingFabrication: Factory
 } as const;

@@ -90,6 +90,16 @@ export function AdminOrdersPage() {
     }
   }
 
+  async function markPendingFabrication(id: string) {
+    setUpdatingId(id);
+    try {
+      const updated = await api.updateAdminOrderStatus(id, { status: "pendiente_fabricacion" });
+      setOrders((current) => current.map((order) => order.id === id ? updated : order));
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
   function openPaymentMenu(event: MouseEvent<HTMLElement>, id: string) {
     setPaymentMenuAnchor(event.currentTarget);
     setPaymentOrderId(id);
@@ -126,12 +136,11 @@ export function AdminOrdersPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      minWidth: 196,
+      minWidth: 180,
       sortable: false,
       filterable: false,
       renderCell: ({ row }) => (
         <Stack direction="row" spacing={0.5}>
-          <AdminGridAction label="Ver" icon={adminGridActionIcons.view} to={`/admin/pedidos/${row.id}`} />
           <AdminGridAction label="Editar" icon={adminGridActionIcons.edit} to={`/admin/pedidos/${row.id}/editar`} />
           {row.balance > 0 && (
             <AdminGridAction
@@ -147,6 +156,14 @@ export function AdminOrdersPage() {
               icon={adminGridActionIcons.markDelivered}
               disabled={updatingId === row.id}
               onClick={() => void markDelivered(row.id)}
+            />
+          )}
+          {row.status !== "pendiente_fabricacion" && (
+            <AdminGridAction
+              label="Marcar pendiente por fabricación"
+              icon={adminGridActionIcons.markPendingFabrication}
+              disabled={updatingId === row.id}
+              onClick={() => void markPendingFabrication(row.id)}
             />
           )}
         </Stack>
@@ -166,7 +183,7 @@ export function AdminOrdersPage() {
     {
       field: "customerName",
       headerName: "Cliente",
-      minWidth: 230,
+      minWidth: 200,
       flex: 1,
       renderCell: ({ row }) => (
         <Stack spacing={0.25} minWidth={0}>
@@ -233,7 +250,7 @@ export function AdminOrdersPage() {
     {
       field: "status",
       headerName: "Estado",
-      minWidth: 128,
+      minWidth: 220,
       renderCell: ({ row }) => <StatusChip status={row.status} />,
     },
   ], [updatingId]);
@@ -331,9 +348,6 @@ export function AdminOrdersPage() {
                   <Typography variant="body2">Saldo: <strong>{formatCurrency(order.balance)}</strong></Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
-                  <Button fullWidth component={RouterLink} to={`/admin/pedidos/${order.id}`} variant="outlined">
-                    Ver
-                  </Button>
                   <Button fullWidth component={RouterLink} to={`/admin/pedidos/${order.id}/editar`} variant="outlined">
                     Editar
                   </Button>
@@ -347,6 +361,11 @@ export function AdminOrdersPage() {
                   {order.status !== "entregado" && (
                     <Button variant="text" disabled={updatingId === order.id} onClick={() => void markDelivered(order.id)}>
                       Marcar entregado
+                    </Button>
+                  )}
+                  {order.status !== "pendiente_fabricacion" && (
+                    <Button variant="text" disabled={updatingId === order.id} onClick={() => void markPendingFabrication(order.id)}>
+                      Pendiente por fabricación
                     </Button>
                   )}
                 </Stack>

@@ -108,11 +108,15 @@ vi.mock("../pages/admin/adminCrudUi", () => ({
   adminGridActionIcons: {},
   AdminDataGrid: ({ rows, columns }: { rows: Order[]; columns: GridColDef<Order>[] }) => {
     const customerColumn = columns.find((column) => column.field === "customerName");
+    const actionsColumn = columns.find((column) => column.field === "actions");
+    const statusColumn = columns.find((column) => column.field === "status");
     return (
       <div>
         {rows.map((row) => (
           <div key={row.id}>
+            {actionsColumn?.renderCell ? actionsColumn.renderCell({ row } as never) : null}
             {customerColumn?.renderCell ? customerColumn.renderCell({ row } as never) : row.customerName}
+            {statusColumn?.renderCell ? statusColumn.renderCell({ row } as never) : null}
           </div>
         ))}
       </div>
@@ -261,5 +265,25 @@ describe("admin orders contact method", () => {
 
     expect(screen.getByText("Instagram")).toBeInTheDocument();
     expect(screen.getByText("@artenova_cliente")).toBeInTheDocument();
+  });
+
+  it("replaces view with edit and can mark an order pending fabrication", async () => {
+    const order = buildOrder();
+    const updatedOrder = buildOrder({ status: "pendiente_fabricacion" });
+    adminOrdersMock.mockResolvedValue([order]);
+    updateAdminOrderStatusMock.mockResolvedValue(updatedOrder);
+
+    renderWithRouter("/admin/pedidos", <AdminOrdersPage />);
+
+    expect(await screen.findByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Marcar pendiente por fabricación" }));
+
+    await waitFor(() => {
+      expect(updateAdminOrderStatusMock).toHaveBeenCalledWith("order-1", { status: "pendiente_fabricacion" });
+    });
+    expect(await screen.findByText("pendiente_fabricacion")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Marcar pendiente por fabricación" })).not.toBeInTheDocument();
   });
 });
