@@ -1,10 +1,10 @@
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Menu, MenuItem, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useTheme } from "@mui/material/styles";
 import { FilterX, Plus } from "lucide-react";
-import { formatCurrency, orderContactMethodLabels, type AdminOrderPaymentInput, type Order } from "@artenova/shared";
+import { formatCurrency, orderContactMethodLabels, orderStatusLabels, orderStatusValues, type AdminOrderPaymentInput, type Order, type OrderStatus } from "@artenova/shared";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { AdminPageHeader, StatusChip, adminSurfaceSx } from "./adminUi";
@@ -32,6 +32,7 @@ export function AdminOrdersPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [orders, setOrders] = useState<Order[]>([]);
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") ?? "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
   const [balanceOnly, setBalanceOnly] = useState(searchParams.get("hasBalance") === "true");
   const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
@@ -40,6 +41,8 @@ export function AdminOrdersPage() {
   const [updatingId, setUpdatingId] = useState("");
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentOrderId, setPaymentOrderId] = useState("");
+  const [statusOrder, setStatusOrder] = useState<Order | null>(null);
+  const [statusDraft, setStatusDraft] = useState<OrderStatus | "">("");
 
   const paymentMethods: Array<{ value: AdminOrderPaymentInput["method"]; label: string }> = [
     { value: "efectivo", label: "Efectivo" },
@@ -49,19 +52,24 @@ export function AdminOrdersPage() {
   ];
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [query]);
+
+  useEffect(() => {
     const nextParams = new URLSearchParams();
-    if (query.trim()) nextParams.set("q", query.trim());
+    if (debouncedQuery) nextParams.set("q", debouncedQuery);
     if (statusFilter !== "all") nextParams.set("status", statusFilter);
     if (balanceOnly) nextParams.set("hasBalance", "true");
     if (dateFrom) nextParams.set("dateFrom", dateFrom);
     if (dateTo) nextParams.set("dateTo", dateTo);
     setSearchParams(nextParams, { replace: true });
-  }, [balanceOnly, dateFrom, dateTo, query, setSearchParams, statusFilter]);
+  }, [balanceOnly, dateFrom, dateTo, debouncedQuery, setSearchParams, statusFilter]);
 
   useEffect(() => {
     let active = true;
     const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
+    if (debouncedQuery) params.set("q", debouncedQuery);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (balanceOnly) params.set("hasBalance", "true");
     if (dateFrom) params.set("dateFrom", dateFrom);
@@ -78,27 +86,7 @@ export function AdminOrdersPage() {
     return () => {
       active = false;
     };
-  }, [balanceOnly, dateFrom, dateTo, query, statusFilter]);
-
-  async function markDelivered(id: string) {
-    setUpdatingId(id);
-    try {
-      const updated = await api.updateAdminOrderStatus(id, { status: "entregado" });
-      setOrders((current) => current.map((order) => order.id === id ? updated : order));
-    } finally {
-      setUpdatingId("");
-    }
-  }
-
-  async function markPendingFabrication(id: string) {
-    setUpdatingId(id);
-    try {
-      const updated = await api.updateAdminOrderStatus(id, { status: "pendiente_fabricacion" });
-      setOrders((current) => current.map((order) => order.id === id ? updated : order));
-    } finally {
-      setUpdatingId("");
-    }
-  }
+  }, [balanceOnly, dateFrom, dateTo, debouncedQuery, statusFilter]);
 
   function openPaymentMenu(event: MouseEvent<HTMLElement>, id: string) {
     setPaymentMenuAnchor(event.currentTarget);
@@ -108,6 +96,31 @@ export function AdminOrdersPage() {
   function closePaymentMenu() {
     setPaymentMenuAnchor(null);
     setPaymentOrderId("");
+  }
+
+  function openStatusDialog(order: Order) {
+    setStatusOrder(order);
+    setStatusDraft(order.status);
+  }
+
+  function closeStatusDialog() {
+    if (updatingId) return;
+    setStatusOrder(null);
+    setStatusDraft("");
+  }
+
+  async function saveStatusChange() {
+    if (!statusOrder || !statusDraft || statusDraft === statusOrder.status) return;
+
+    setUpdatingId(statusOrder.id);
+    try {
+      const updated = await api.updateAdminOrderStatus(statusOrder.id, { status: statusDraft });
+      setOrders((current) => current.map((order) => order.id === statusOrder.id ? updated : order));
+      setStatusOrder(null);
+      setStatusDraft("");
+    } finally {
+      setUpdatingId("");
+    }
   }
 
   async function markPaid(method: AdminOrderPaymentInput["method"]) {
@@ -132,6 +145,19 @@ export function AdminOrdersPage() {
     }
   }
 
+  const visibleOrders = useMemo(() => {
+    const normalizedQuery = debouncedQuery.toLocaleLowerCase("es");
+    if (!normalizedQuery) return orders;
+
+    return orders.filter((order) => [
+      order.code,
+      order.customerName,
+      order.customerWhatsapp ?? "",
+      order.contactMethod,
+      orderContactMethodLabels[order.contactMethod],
+    ].some((value) => value.toLocaleLowerCase("es").includes(normalizedQuery)));
+  }, [debouncedQuery, orders]);
+
   const columns = useMemo<GridColDef<Order>[]>(() => [
     {
       field: "actions",
@@ -150,22 +176,12 @@ export function AdminOrdersPage() {
               onClick={(event) => openPaymentMenu(event, row.id)}
             />
           )}
-          {row.status !== "entregado" && (
-            <AdminGridAction
-              label="Marcar entregado"
-              icon={adminGridActionIcons.markDelivered}
-              disabled={updatingId === row.id}
-              onClick={() => void markDelivered(row.id)}
-            />
-          )}
-          {row.status !== "pendiente_fabricacion" && (
-            <AdminGridAction
-              label="Marcar pendiente por fabricación"
-              icon={adminGridActionIcons.markPendingFabrication}
-              disabled={updatingId === row.id}
-              onClick={() => void markPendingFabrication(row.id)}
-            />
-          )}
+          <AdminGridAction
+            label="Cambiar estado"
+            icon={adminGridActionIcons.changeStatus}
+            disabled={updatingId === row.id}
+            onClick={() => openStatusDialog(row)}
+          />
         </Stack>
       ),
     },
@@ -313,7 +329,7 @@ export function AdminOrdersPage() {
               <Typography color="text.secondary">Crea el primer pedido manual para empezar a operar desde Admin.</Typography>
             </Paper>
           )}
-          {orders.map((order) => {
+          {visibleOrders.map((order) => {
             const summary = summarizeOrderItems(order, 3);
 
             return (
@@ -358,16 +374,9 @@ export function AdminOrdersPage() {
                       Pagado
                     </Button>
                   )}
-                  {order.status !== "entregado" && (
-                    <Button variant="text" disabled={updatingId === order.id} onClick={() => void markDelivered(order.id)}>
-                      Marcar entregado
-                    </Button>
-                  )}
-                  {order.status !== "pendiente_fabricacion" && (
-                    <Button variant="text" disabled={updatingId === order.id} onClick={() => void markPendingFabrication(order.id)}>
-                      Pendiente por fabricación
-                    </Button>
-                  )}
+                  <Button variant="text" disabled={updatingId === order.id} onClick={() => openStatusDialog(order)}>
+                    Cambiar estado
+                  </Button>
                 </Stack>
                 </Stack>
               </Paper>
@@ -375,7 +384,7 @@ export function AdminOrdersPage() {
           })}
         </Stack>
       ) : (
-        <AdminDataGrid rows={orders} columns={columns} loading={loading} emptyTitle="Sin pedidos" emptyDescription="Crea el primer pedido manual para empezar a operar desde Admin." />
+        <AdminDataGrid rows={visibleOrders} columns={columns} loading={loading} emptyTitle="Sin pedidos" emptyDescription="Crea el primer pedido manual para empezar a operar desde Admin." />
       )}
       <Menu anchorEl={paymentMenuAnchor} open={Boolean(paymentMenuAnchor)} onClose={closePaymentMenu}>
         {paymentMethods.map((method) => (
@@ -384,6 +393,32 @@ export function AdminOrdersPage() {
           </MenuItem>
         ))}
       </Menu>
+      <Dialog open={Boolean(statusOrder)} onClose={closeStatusDialog} fullWidth maxWidth="xs">
+        <DialogTitle>Cambiar estado</DialogTitle>
+        <DialogContent>
+          <TextField
+            select
+            fullWidth
+            autoFocus
+            margin="dense"
+            label="Estado del pedido"
+            value={statusDraft}
+            onChange={(event) => setStatusDraft(event.target.value as OrderStatus)}
+          >
+            {orderStatusValues.map((status) => (
+              <MenuItem key={status} value={status}>
+                {orderStatusLabels[status]}
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeStatusDialog} disabled={Boolean(updatingId)}>Cancelar</Button>
+          <Button onClick={() => void saveStatusChange()} variant="contained" disabled={!statusOrder || !statusDraft || statusDraft === statusOrder.status || Boolean(updatingId)}>
+            Guardar cambio
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

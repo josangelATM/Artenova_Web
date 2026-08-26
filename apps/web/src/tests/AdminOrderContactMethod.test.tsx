@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { GridColDef } from "@mui/x-data-grid";
@@ -267,7 +267,7 @@ describe("admin orders contact method", () => {
     expect(screen.getByText("@artenova_cliente")).toBeInTheDocument();
   });
 
-  it("replaces view with edit and can mark an order pending fabrication", async () => {
+  it("uses one status action and updates an order from the status dialog", async () => {
     const order = buildOrder();
     const updatedOrder = buildOrder({ status: "pendiente_fabricacion" });
     adminOrdersMock.mockResolvedValue([order]);
@@ -277,13 +277,58 @@ describe("admin orders contact method", () => {
 
     expect(await screen.findByRole("button", { name: "Editar" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ver" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar estado" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Marcar entregado" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Marcar pendiente por fabricación" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Marcar pendiente por fabricación" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar estado" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const statusSelect = within(screen.getByRole("dialog")).getByRole("combobox");
+    expect(statusSelect).toHaveTextContent("Nuevo");
+    fireEvent.mouseDown(statusSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "Pendiente por fabricación" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambio" }));
 
     await waitFor(() => {
       expect(updateAdminOrderStatusMock).toHaveBeenCalledWith("order-1", { status: "pendiente_fabricacion" });
     });
     expect(await screen.findByText("pendiente_fabricacion")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Marcar pendiente por fabricación" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("debounces order searches and sends the stabilized query", async () => {
+    vi.useFakeTimers();
+    try {
+      const orders = [
+        buildOrder({ customerName: "Fernando" }),
+        buildOrder({ id: "order-2", code: "A-002", customerName: "Laura" }),
+      ];
+      adminOrdersMock.mockImplementation((params?: URLSearchParams) => Promise.resolve(params?.get("q") === "fer" ? [orders[0]] : orders));
+      renderWithRouter("/admin/pedidos", <AdminOrdersPage />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(adminOrdersMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Fernando")).toBeInTheDocument();
+      expect(screen.getByText("Laura")).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText("Buscar por cliente, cuenta o código"), { target: { value: "fer" } });
+
+      expect(adminOrdersMock).toHaveBeenCalledTimes(1);
+      act(() => vi.advanceTimersByTime(299));
+      expect(adminOrdersMock).toHaveBeenCalledTimes(1);
+      act(() => vi.advanceTimersByTime(1));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(adminOrdersMock).toHaveBeenCalledTimes(2);
+      const params = adminOrdersMock.mock.calls[1]?.[0] as URLSearchParams;
+      expect(params.get("q")).toBe("fer");
+      expect(screen.getByText("Fernando")).toBeInTheDocument();
+      expect(screen.queryByText("Laura")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
