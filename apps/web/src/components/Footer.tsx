@@ -86,6 +86,16 @@ export function Footer() {
         <Typography variant="caption" sx={{ opacity: 0.74 }}>
           © {new Date().getFullYear()} {settings?.brandName ?? "Artenova"}. Todos los derechos reservados.
         </Typography>
+        <Typography
+          component="a"
+          href="https://www.linkedin.com/in/jos%C3%A9angel-s%C3%A1nchez-b7b4332a6"
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="caption"
+          sx={{ display: "block", width: "fit-content", color: "inherit", opacity: 0.74, textDecoration: "underline", textUnderlineOffset: 2, mt: 0.5, "&:hover": { opacity: 1 } }}
+        >
+          Desarrollado por José Angel Sánchez
+        </Typography>
       </Container>
     </Box>
   );
