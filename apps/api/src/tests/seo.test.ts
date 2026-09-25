@@ -18,7 +18,7 @@ vi.mock("../lib/prisma", () => ({
 }));
 
 process.env.DATABASE_URL = "postgresql://artenova:artenova@localhost:5432/artenova";
-process.env.APP_BASE_URL = "https://artenova.example";
+process.env.APP_BASE_URL = "https://artenovapty.com";
 process.env.WEB_INTERNAL_BASE_URL = "http://web";
 process.env.SITE_HERO_SUBTITLE = "Taller creativo de corte y grabado láser en Panamá.";
 
@@ -40,7 +40,7 @@ function makeProduct(slug = "placa-mascota") {
     createdAt: new Date("2026-08-01T10:00:00Z"),
     updatedAt: new Date("2026-08-02T10:00:00Z"),
     category: { id: "c1", name: "Mascotas", slug: "mascotas", description: "Detalles para mascotas.", accentColor: null, currencySymbol: "$", isActive: true },
-    images: [{ id: "i1", productId: "p1", url: "/seed/mascotas/mascotas-1.jpg", alt: "Placa para mascota", position: 0, createdAt: new Date() }],
+    images: [{ id: "i1", productId: "p1", url: "/seed/mascotas/mascotas-1.jpg", type: "image", posterUrl: null, alt: "Placa para mascota", position: 0, createdAt: new Date() }],
     priceTiers: [],
     options: [],
     variants: [],
@@ -95,7 +95,7 @@ describe("seo routes", () => {
     expect(text).toContain("Disallow: /admin");
     expect(text).toContain("Disallow: /carrito");
     expect(text).toContain("Disallow: /pedido");
-    expect(text).toContain("Sitemap: https://artenova.example/sitemap.xml");
+    expect(text).toContain("Sitemap: https://artenovapty.com/sitemap.xml");
   });
 
   it("serves sitemap with clean category URLs and no query catalog URLs", async () => {
@@ -105,8 +105,8 @@ describe("seo routes", () => {
     const response = await request("/sitemap.xml");
     const xml = response.text;
 
-    expect(xml).toContain("https://artenova.example/catalogo/mascotas");
-    expect(xml).toContain("https://artenova.example/producto/placa-mascota");
+    expect(xml).toContain("https://artenovapty.com/catalogo/mascotas");
+    expect(xml).toContain("https://artenovapty.com/producto/placa-mascota");
     expect(xml).not.toContain("?category=");
     expect(xml).not.toContain("/carrito");
     expect(xml).not.toContain("/pedido/");
@@ -119,7 +119,9 @@ describe("seo routes", () => {
     const html = response.text;
 
     expect(html).toContain("<title>Placa para mascota | Artenova</title>");
-    expect(html).toContain('<link rel="canonical" href="https://artenova.example/producto/placa-mascota" />');
+    expect(html).toContain('<link rel="canonical" href="https://artenovapty.com/producto/placa-mascota" />');
+    expect(html).toContain('<meta property="og:url" content="https://artenovapty.com/producto/placa-mascota" />');
+    expect(html).toContain('<meta property="og:image" content="https://artenovapty.com/seed/mascotas/mascotas-1.jpg" />');
     expect(html).toContain('<meta property="og:type" content="product" />');
     expect(html).toContain('"@type":"Product"');
     expect(html).toContain('"priceCurrency":"USD"');
@@ -134,8 +136,39 @@ describe("seo routes", () => {
     const html = response.text;
 
     expect(html).toContain("<title>Mascotas personalizados | Artenova</title>");
-    expect(html).toContain('<link rel="canonical" href="https://artenova.example/catalogo/mascotas" />');
+    expect(html).toContain('<link rel="canonical" href="https://artenovapty.com/catalogo/mascotas" />');
+    expect(html).toContain('<meta property="og:url" content="https://artenovapty.com/catalogo/mascotas" />');
+    expect(html).toContain('<meta property="og:image" content="https://artenovapty.com/seed/mascotas/mascotas-1.jpg" />');
     expect(html).toContain('"@type":"ItemList"');
-    expect(html).toContain("https://artenova.example/producto/placa-mascota");
+    expect(html).toContain("https://artenovapty.com/producto/placa-mascota");
+  });
+
+  it("uses the saved poster for category Open Graph when the original image URL ends in mp4", async () => {
+    prismaMock.category.findFirst.mockResolvedValue({ name: "Mascotas", slug: "mascotas", description: "Detalles para mascotas.", updatedAt: new Date() });
+    const product = makeProduct();
+    Object.assign(product.images[0]!, {
+      url: "https://cdn.example.test/mascotas.mp4",
+      posterUrl: "https://cdn.example.test/mascotas-thumb.webp",
+    });
+    prismaMock.product.findMany.mockResolvedValue([product]);
+
+    const response = await request("/catalogo/mascotas");
+
+    expect(response.text).toContain('<meta property="og:image" content="https://cdn.example.test/mascotas-thumb.webp" />');
+    expect(response.text).not.toContain("mascotas.mp4");
+  });
+
+  it("uses the saved poster for product Open Graph when the original image URL ends in mp4", async () => {
+    const product = makeProduct();
+    Object.assign(product.images[0]!, {
+      url: "https://cdn.example.test/placa.mp4",
+      posterUrl: "https://cdn.example.test/placa-thumb.webp",
+    });
+    prismaMock.product.findFirst.mockResolvedValue(product);
+
+    const response = await request("/producto/placa-mascota");
+
+    expect(response.text).toContain('<meta property="og:image" content="https://cdn.example.test/placa-thumb.webp" />');
+    expect(response.text).not.toContain("placa.mp4");
   });
 });

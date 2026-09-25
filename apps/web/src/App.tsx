@@ -29,6 +29,7 @@ import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { ContactPage } from "./pages/ContactPage";
 import { HomePage } from "./pages/HomePage";
 import { ProductPage } from "./pages/ProductPage";
+import { PoliciesPage } from "./pages/PoliciesPage";
 import { QRCodePage } from "./pages/QRCodePage";
 
 function AppShell() {
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
       { path: "/carrito", element: <CartPage /> },
       { path: "/pedido/:code", element: <ConfirmationPage /> },
       { path: "/contacto", element: <ContactPage /> },
+      { path: "/politicas", element: <PoliciesPage /> },
       { path: "/admin/login", element: <AdminLoginPage /> },
       {
         path: "/admin",

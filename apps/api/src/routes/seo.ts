@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { formatCurrency, resolveMediaStillUrl } from "@artenova/shared";
+import { formatCurrency, resolveMediaStillUrl, type ProductMediaRenderable } from "@artenova/shared";
 import { env } from "../env";
 import { productPayload } from "../lib/serialize";
 import { prisma } from "../lib/prisma";
@@ -106,6 +106,10 @@ function currencyCodeFromSymbol(symbol?: string | null) {
 
 function settingsDescription() {
   return env.SITE_HERO_SUBTITLE || defaultDescription;
+}
+
+function seoImage(media?: ProductMediaRenderable | null) {
+  return media?.posterUrl || resolveMediaStillUrl(media);
 }
 
 function seoTags(input: SeoTagsInput) {
@@ -239,15 +243,15 @@ function itemListJsonLd(products: Array<{ name: string; slug: string; media: Arr
       position: index + 1,
       url: absoluteUrl(`/producto/${product.slug}`),
       name: product.name,
-      image: resolveMediaStillUrl(product.media[0]) ? absoluteUrl(resolveMediaStillUrl(product.media[0])!) : undefined
+      image: seoImage(product.media[0]) ? absoluteUrl(seoImage(product.media[0])!) : undefined
     }))
   };
 }
 
 function productJsonLd(product: ReturnType<typeof productPayload>) {
   const images = [
-    ...product.media.map((item: { type: "image" | "video"; url: string; posterUrl?: string | null }) => resolveMediaStillUrl(item)),
-    ...product.variants.flatMap((variant: { media: Array<{ type: "image" | "video"; url: string; posterUrl?: string | null }> }) => variant.media.map((item) => resolveMediaStillUrl(item))),
+    ...product.media.map((item: ProductMediaRenderable) => seoImage(item)),
+    ...product.variants.flatMap((variant: { media: ProductMediaRenderable[] }) => variant.media.map((item) => seoImage(item))),
   ].filter(Boolean).map((value) => absoluteUrl(value!));
 
   return compact({
@@ -403,7 +407,7 @@ seoRouter.get("/catalogo/:categorySlug", async (req, res, next) => {
     title: `${category.name} personalizados`,
     description: category.description || `Modelos personalizados de ${category.name.toLowerCase()} con corte y grabado láser hechos por Artenova en Panamá.`,
     canonical: absoluteUrl(`/catalogo/${category.slug}`),
-    image: resolveMediaStillUrl(products[0]?.defaultVariant?.media[0] ?? products[0]?.media[0]),
+    image: seoImage(products[0]?.defaultVariant?.media[0] ?? products[0]?.media[0]),
     type: "website",
     jsonLd: [itemListJsonLd(products, `/catalogo/${category.slug}`), websiteJsonLd()],
     fallbackLabel: `Ver ${category.name} en Artenova`,
@@ -434,7 +438,7 @@ seoRouter.get("/producto/:slug", async (req, res, next) => {
   }
 
   const payload = productPayload(product);
-  const image = resolveMediaStillUrl(payload.defaultVariant?.media[0] ?? payload.media[0] ?? payload.variants[0]?.media[0]) ?? defaultImage;
+  const image = seoImage(payload.defaultVariant?.media[0] ?? payload.media[0] ?? payload.variants[0]?.media[0]) ?? defaultImage;
 
   await sendSeoHtml(res, {
     title: `${payload.name} | ${siteName}`,

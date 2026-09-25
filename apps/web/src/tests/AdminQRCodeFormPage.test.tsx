@@ -132,4 +132,42 @@ describe("AdminQRCodeFormPage", () => {
       }),
     }));
   });
+
+  it("saves from the header and keeps the lower save button available", async () => {
+    saveAdminQRCodeMock.mockResolvedValue({ id: "qr-1" });
+
+    renderPage();
+
+    const saveButtons = screen.getAllByRole("button", { name: "Crear QR" });
+    expect(saveButtons).toHaveLength(2);
+    fireEvent.click(saveButtons[0]!);
+
+    await waitFor(() => {
+      expect(saveAdminQRCodeMock).toHaveBeenCalledTimes(1);
+    });
+    const remainingSaveButtons = screen.getAllByRole("button", { name: "Crear QR" });
+    expect(remainingSaveButtons).toHaveLength(2);
+    fireEvent.click(remainingSaveButtons[1]!);
+    await waitFor(() => {
+      expect(saveAdminQRCodeMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("disables both save buttons while a save is in progress", async () => {
+    let resolveSave: ((value: { id: string }) => void) | undefined;
+    saveAdminQRCodeMock.mockReturnValue(new Promise((resolve) => {
+      resolveSave = resolve;
+    }));
+
+    renderPage();
+    const buttons = screen.getAllByRole("button", { name: "Crear QR" });
+    fireEvent.click(buttons[0]!);
+
+    await waitFor(() => {
+      expect(saveAdminQRCodeMock).toHaveBeenCalledTimes(1);
+      expect(buttons[0]).toBeDisabled();
+      expect(buttons[1]).toBeDisabled();
+    });
+    resolveSave?.({ id: "qr-1" });
+  });
 });

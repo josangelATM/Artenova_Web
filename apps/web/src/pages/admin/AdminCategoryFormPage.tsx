@@ -98,7 +98,14 @@ export function AdminCategoryFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar categoría" : "Nueva categoría"}
         subtitle="Usa una ficha dedicada para editar sin mezclar listado y formulario."
-        action={<AdminBackButton to={id ? `/admin/categorias/${id}` : "/admin/categorias"} />}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={loading || saving}>
+              {saving ? "Guardando..." : "Guardar categoría"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/categorias/${id}` : "/admin/categorias"} />
+          </Stack>
+        )}
       />
       <AdminSection title="Datos generales" description="Define cómo se agrupan los productos en el catálogo.">
         <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />

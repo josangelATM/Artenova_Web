@@ -172,7 +172,17 @@ export function AdminOrderDetailPage() {
   return (
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Pedidos", to: "/admin/pedidos" }, { label: order.code }]} />
-      <AdminPageHeader title={order.code} action={<AdminBackButton to="/admin/pedidos" />} />
+      <AdminPageHeader
+        title={order.code}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={saving || loading}>
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </Button>
+            <AdminBackButton to="/admin/pedidos" />
+          </Stack>
+        )}
+      />
       <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
 
       <AdminSection title="Cliente">

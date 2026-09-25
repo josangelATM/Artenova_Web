@@ -60,6 +60,7 @@ export function Footer() {
               <FooterLink to="/">Inicio</FooterLink>
               <FooterLink to="/catalogo">Catálogo</FooterLink>
               <FooterLink to="/contacto">Contacto</FooterLink>
+              <FooterLink to="/politicas">Políticas</FooterLink>
             </Stack>
           </Grid>
 

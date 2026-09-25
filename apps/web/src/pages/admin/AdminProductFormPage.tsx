@@ -2393,7 +2393,14 @@ export function AdminProductFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar producto" : "Nuevo producto"}
         subtitle="Configura el producto y, si aplica, sus variantes visibles."
-        action={<AdminBackButton to={id ? `/admin/productos/${id}` : "/admin/productos"} />}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={loading || saving}>
+              {saving ? "Guardando..." : "Guardar producto"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/productos/${id}` : "/admin/productos"} />
+          </Stack>
+        )}
       />
       <AdminFormErrorAlert
         error={formError}

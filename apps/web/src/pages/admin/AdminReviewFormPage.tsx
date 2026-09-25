@@ -105,7 +105,14 @@ export function AdminReviewFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar reseña" : "Nueva reseña"}
         subtitle="Crea o ajusta opiniones visibles del catálogo con contexto del producto."
-        action={<AdminBackButton to={id ? `/admin/resenas/${id}` : "/admin/resenas"} />}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" disabled={loading || saving} onClick={() => void save()}>
+              {saving ? "Guardando..." : "Guardar reseña"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/resenas/${id}` : "/admin/resenas"} />
+          </Stack>
+        )}
       />
       <AdminSection title="Contenido" description="Asocia la reseña al producto correcto y revisa su estado de publicación.">
         <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />

@@ -308,7 +308,14 @@ export function AdminQRCodeFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar QR" : "Nuevo QR"}
         subtitle="Define el destino, el estado y el diseño básico antes de publicarlo."
-        action={<AdminBackButton to={id ? `/admin/qrs/${id}` : "/admin/qrs"} />}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={saving || loading}>
+              {isEdit ? "Guardar cambios" : "Crear QR"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/qrs/${id}` : "/admin/qrs"} />
+          </Stack>
+        )}
       />
       <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />
 

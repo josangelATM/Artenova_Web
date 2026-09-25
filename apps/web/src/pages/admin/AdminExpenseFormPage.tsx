@@ -154,7 +154,14 @@ export function AdminExpenseFormPage() {
       <AdminPageHeader
         title={isEdit ? "Editar gasto" : "Nuevo gasto"}
         subtitle="Captura el gasto con una ficha simple y enfocada en operación."
-        action={<AdminBackButton to={id ? `/admin/gastos/${id}` : "/admin/gastos"} />}
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={loading || saving}>
+              {saving ? "Guardando..." : "Guardar gasto"}
+            </Button>
+            <AdminBackButton to={id ? `/admin/gastos/${id}` : "/admin/gastos"} />
+          </Stack>
+        )}
       />
       <AdminSection title="Datos del gasto" description="Registra categoría, fecha, monto y contexto mínimo del movimiento.">
         <AdminFormErrorAlert error={formError} onClose={() => setFormError(emptyFormErrorState)} />

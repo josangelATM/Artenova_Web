@@ -65,6 +65,9 @@ export function Layout() {
               <Button component={Link} to="/contacto">
                 Contacto
               </Button>
+              <Button component={Link} to="/politicas" sx={{ px: { xs: 0.75, sm: 1.5 }, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
+                Políticas
+              </Button>
             </Stack>
           </Toolbar>
         </Container>

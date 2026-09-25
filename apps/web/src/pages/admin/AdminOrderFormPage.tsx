@@ -147,7 +147,17 @@ export function AdminOrderFormPage() {
   return (
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>
       <AdminBreadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Pedidos", to: "/admin/pedidos" }, { label: "Nuevo" }]} />
-      <AdminPageHeader title="Nuevo pedido" action={<AdminBackButton to="/admin/pedidos" />} />
+      <AdminPageHeader
+        title="Nuevo pedido"
+        action={(
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={() => void save()} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar pedido"}
+            </Button>
+            <AdminBackButton to="/admin/pedidos" />
+          </Stack>
+        )}
+      />
 
       <AdminSection title="Cliente">
         <Stack spacing={1.5}>
