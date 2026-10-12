@@ -10,6 +10,7 @@ import type {
   QRCodeWhatsappDestination,
 } from "@artenova/shared";
 import { useNavigate, useParams } from "react-router-dom";
+import { qrCodePlateSchema } from "@artenova/shared";
 import { toastNavigationState, useToast } from "../../components/ToastProvider";
 import { type ApiValidationIssue, api } from "../../lib/api";
 import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFieldError } from "../../lib/formErrors";
@@ -42,7 +43,7 @@ type Draft = {
 function createDraft(): Draft {
   return {
     plateEnabled: false,
-    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contacts: [{ name: "", phone: "" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" },
+    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contactText: "", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" },
     name: "",
     type: "url",
     status: "active",
@@ -72,7 +73,7 @@ function draftFromQRCode(qrCode: QRCode): Draft {
   draft.transparentBackground = qrCode.designConfig.transparentBackground ?? false;
   draft.margin = qrCode.designConfig.margin;
   draft.plateEnabled = Boolean(qrCode.designConfig.plateConfig);
-  draft.plateConfig = qrCode.designConfig.plateConfig ?? draft.plateConfig;
+  draft.plateConfig = qrCode.designConfig.plateConfig ? qrCodePlateSchema.parse(qrCode.designConfig.plateConfig) : draft.plateConfig;
 
   if (qrCode.type === "url") {
     const destination = qrCode.destinationConfig as QRCodeUrlDestination;
@@ -193,7 +194,7 @@ function resolveQrField(issue: ApiValidationIssue) {
 function getQrFieldLabel(field: string) {
   if (field.startsWith("plate.")) {
     if (field === "plate.message") return "Mensaje de la placa";
-    if (field.includes("contacts")) return `Contacto de la placa (${field.endsWith("phone") ? "teléfono" : "nombre"})`;
+    if (field === "plate.contactText") return "Datos de contacto";
     return "Color de la placa";
   }
   const labels: Record<string, string> = {

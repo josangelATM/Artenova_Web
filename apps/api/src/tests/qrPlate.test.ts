@@ -5,7 +5,7 @@ import { qrCodePlateSchema, adminQRCodeInputSchema, qrCodeDesignSchema } from "@
 
 const plate = {
   message: "Si estoy perdido por favor escanear el código o llamar a:",
-  contacts: [{ name: "Fuba Chong", phone: "6612-7721" }, { name: "Huga Gómez", phone: "6820-5059" }],
+  contactText: "Fuba Chong\n6612-7721\n\nHuga Gómez\n6820-5059",
   backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF",
 };
 
@@ -14,9 +14,9 @@ describe("QR plate", () => {
     ["Fuba Chong"], ["Fuba\nChong"], ["Ana\nMaría\nGómez"],
     ["Fuba\nChong", "Huga Gómez"], ["Ana\n\nGómez", "Ó".repeat(60)],
   ])("uses exactly one font scale for every name line and phone (%j)", (...names) => {
-    const input = { ...plate, contacts: names.map((name) => ({ name, phone: "6612-7721" })) };
+    const input = { ...plate, contactText: names.map((name) => `${name}\n6612-7721`).join("\n\n") };
     const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", input);
-    const column = svg.split('<g data-part="contacts">')[1]!.split('<g data-part="paw"')[0]!;
+    const column = svg.split('<g data-part="contacts"')[1]!;
     const scales = [...column.matchAll(/scale\(([\d.e+-]+) -[\d.e+-]+\)/g)].map((match) => Number(match[1]));
     expect(scales.length).toBe(names.reduce((sum, name) => sum + name.split("\n").filter((line) => line.trim()).length + 1, 0));
     expect(new Set(scales).size).toBe(1);
@@ -24,15 +24,15 @@ describe("QR plate", () => {
   });
   it("preserves multiline names and blank lines while rejecting whitespace-only names", () => {
     const name = "\nAna\n\nGómez\n";
-    const input = { ...plate, contacts: [{ name, phone: "6000-0000" }] };
-    expect(qrCodePlateSchema.parse(input).contacts[0]!.name).toBe(name);
+    const input = { ...plate, contactText: name };
+    expect(qrCodePlateSchema.parse(input).contactText).toBe(name);
     const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", input);
-    expect(svg).toContain('data-part="contact-name"');
+    expect(svg).toContain('data-part="contacts"');
     expect(svg).toContain('aria-label="Ana"');
     expect(svg).toContain('aria-label="Gómez"');
     expect(svg).not.toContain("NaN");
     expect(svg).not.toContain("Infinity");
-    expect(qrCodePlateSchema.safeParse({ ...input, contacts: [{ name: "\n \n", phone: "6000-0000" }] }).success).toBe(false);
+    expect(qrCodePlateSchema.safeParse({ ...input, contactText: "\n \n" }).success).toBe(false);
   });
   it("keeps the plate for all destination types and accepts legacy design", () => {
     for (const [type, destinationConfig] of [
@@ -45,14 +45,13 @@ describe("QR plate", () => {
 
   it("rejects empty contacts, incomplete contacts and excessive lengths", () => {
     for (const override of [
-      { contacts: [] }, { contacts: [{ name: "Ana", phone: " " }] }, { contacts: [...plate.contacts, plate.contacts[0]] },
-      { message: "a".repeat(121) }, { contacts: [{ name: "a".repeat(61), phone: "1" }] },
-      { contacts: [{ name: "Ana", phone: "1".repeat(33) }] }, { foregroundColor: 'red"/>' },
+      { contactText: "" }, { contactText: "\n " }, { contactText: "a".repeat(201) },
+      { message: "a".repeat(121) }, { foregroundColor: 'red"/>' },
     ]) expect(qrCodePlateSchema.safeParse({ ...plate, ...override }).success).toBe(false);
   });
 
   it("renders vector content, escapes text and preserves accents", () => {
-    const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, contacts: [{ name: 'Gómez & <Ana> "A"', phone: "6000-0000" }] });
+    const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, contactText: 'Gómez & <Ana> "A"\n6000-0000' });
     expect(svg).toContain("Gómez &amp; &lt;Ana&gt; &quot;A&quot;");
     expect(svg).toContain('viewBox="0 0 39.6566 22.836');
     expect(svg).not.toContain("<text");
@@ -65,10 +64,21 @@ describe("QR plate", () => {
   });
 
   it("exports PNG at the requested resolution for one/two contacts and maximum text", async () => {
-    for (const input of [plate, { ...plate, message: "á".repeat(120), contacts: [{ name: "Ó".repeat(60), phone: "1".repeat(32) }] }]) {
+    for (const input of [plate, { ...plate, message: "á".repeat(120), contactText: "Ó".repeat(200) }]) {
       const png = await renderQrPlatePng("https://artenovapty.com/q/demo", input);
       expect(await sharp(png).metadata()).toMatchObject({ width: 1800, height: qrPlatePngHeight, format: "png" });
     }
+  });
+
+  it("converts old contacts without persisting them and gives explicit text precedence", () => {
+    const { contactText: _text, ...design } = plate;
+    const legacy = { ...design, contacts: [{ name: "Fuba\nChong", phone: "6612-7721" }, { name: "Huga Gómez", phone: "6820-5059" }] };
+    const normalized = qrCodePlateSchema.parse(legacy);
+    expect(normalized.contactText).toBe("Fuba\nChong\n6612-7721\n\nHuga Gómez\n6820-5059");
+    expect(normalized).not.toHaveProperty("contacts");
+    expect(qrCodePlateSchema.parse({ ...legacy, contactText: "Texto libre" }).contactText).toBe("Texto libre");
+    expect(qrCodePlateSchema.safeParse({ ...legacy, contactText: "" }).success).toBe(false);
+    expect(renderQrPlateSvg("https://artenovapty.com/q/demo", legacy)).toBe(renderQrPlateSvg("https://artenovapty.com/q/demo", normalized));
   });
 
   it("keeps the original message lines and uses the plate colors for QR and background", () => {

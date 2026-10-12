@@ -12,7 +12,7 @@ import { adminQrRouter } from "../routes/qrs";
 import { signAdminToken } from "../middleware/auth";
 import { errorHandler } from "../middleware/errors";
 
-const plate = { message: "Si estoy perdido", contacts: [{ name: "Ana\n\nGómez", phone: "6000-0000" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" };
+const plate = { message: "Si estoy perdido", contactText: "Ana\n\nGómez\n6000-0000", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" };
 const cookie = `admin_session=${signAdminToken({ sub: "admin", email: "admin@example.com" })}`;
 let server: Server;
 let base: string;
@@ -39,6 +39,18 @@ function request(path: string, method = "GET", body?: unknown, authenticated = t
 }
 
 describe("QR plate admin routes", () => {
+  it("reads old JSON without writing and stores only contactText on explicit save", async () => {
+    const legacyPlate = { message: plate.message, contacts: [{ name: "Ana\nGómez", phone: "6000-0000" }, { name: "José", phone: "6111-1111" }], backgroundColor: plate.backgroundColor, foregroundColor: plate.foregroundColor };
+    row = { id: "qr1", token: "oldtoken", name: "Anterior", type: "url", status: "active", destinationConfig: { url: "https://example.com" }, designConfig: { plateConfig: legacyPlate }, createdAt: new Date(), updatedAt: new Date() };
+    const read = await (await request("/qr1")).json();
+    expect(read.designConfig.plateConfig.contactText).toBe("Ana\nGómez\n6000-0000\n\nJosé\n6111-1111");
+    expect(row.designConfig.plateConfig).toEqual(legacyPlate);
+    expect(db.qRCode.update).not.toHaveBeenCalled();
+    const saved = await (await request("/qr1", "PUT", { name: read.name, type: read.type, status: read.status, destinationConfig: read.destinationConfig, designConfig: read.designConfig })).json();
+    expect(saved.designConfig.plateConfig).not.toHaveProperty("contacts");
+    expect(row.designConfig.plateConfig.contactText).toBe(read.designConfig.plateConfig.contactText);
+    expect(saved.token).toBe("oldtoken");
+  });
   it("roundtrips plate JSON, keeps the token when editing and exports both formats", async () => {
     const created = await request("/", "POST", { name: "Placa", type: "url", destinationConfig: { url: "https://example.com" }, designConfig: { plateConfig: plate } });
     expect(created.status).toBe(201);
@@ -62,7 +74,7 @@ describe("QR plate admin routes", () => {
 
   it("handles auth, validation, new preview and missing QR without touching stored data", async () => {
     expect((await request("/new/plate/preview", "POST", { plateConfig: plate }, false)).status).toBe(401);
-    expect((await request("/new/plate/preview", "POST", { plateConfig: { ...plate, contacts: [] } })).status).toBe(400);
+    expect((await request("/new/plate/preview", "POST", { plateConfig: { ...plate, contactText: "" } })).status).toBe(400);
     expect((await (await request("/new/plate/preview", "POST", { plateConfig: plate })).json()).previewUrl).toBe("https://artenovapty.com/q/preview");
     expect((await request("/missing/plate/preview", "POST", { plateConfig: plate })).status).toBe(404);
     expect((await request("/missing/plate.png")).status).toBe(404);

@@ -429,15 +429,19 @@ export const adminFinanceOverviewSchema = z.object({
   recentExpenses: z.array(adminFinanceRecentExpenseSchema),
 });
 
-export const qrCodePlateSchema = z.object({
+export const qrCodePlateSchema = z.preprocess((value) => {
+  if (typeof value !== "object" || value === null) return value;
+  const plate = value as Record<string, unknown>;
+  if (plate.contactText !== undefined || !Array.isArray(plate.contacts)) return value;
+  if (!plate.contacts.every((contact) => typeof contact === "object" && contact !== null
+    && typeof contact.name === "string" && typeof contact.phone === "string")) return value;
+  return { ...plate, contactText: plate.contacts.map((contact) => `${contact.name}\n${contact.phone}`).join("\n\n") };
+}, z.object({
   message: z.string().trim().min(1).max(120),
-  contacts: z.array(z.object({
-    name: z.string().max(60).refine((value) => value.trim().length > 0, { message: "Este campo es obligatorio." }),
-    phone: z.string().trim().min(1).max(32),
-  })).min(1).max(2),
+  contactText: z.string().max(200).refine((value) => value.trim().length > 0, { message: "Este campo es obligatorio." }),
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-});
+}));
 export type QRCodePlate = z.infer<typeof qrCodePlateSchema>;
 
 export const qrCodePlatePreviewSchema = z.object({ plateConfig: qrCodePlateSchema });

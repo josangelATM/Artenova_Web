@@ -46,17 +46,10 @@ export function QRPlateEditor({ id, enabled, value, onToggle, onChange, fieldErr
       {enabled && <>
         <TextField fullWidth multiline label="Mensaje de la placa" value={value.message} onChange={(event) => onChange({ ...value, message: event.target.value })}
           slotProps={{ htmlInput: { maxLength: 120 } }} error={Boolean(fieldError("message"))} helperText={fieldError("message") ?? `${value.message.length}/120 caracteres`} />
-        {value.contacts.map((contact, index) => <Grid container spacing={2} key={index}>
-          <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth multiline minRows={2} label={`Nombre del contacto ${index + 1}`} value={contact.name}
-            slotProps={{ htmlInput: { maxLength: 60 } }} error={Boolean(fieldError(`contacts.${index}.name`))} helperText={fieldError(`contacts.${index}.name`)}
-            onChange={(event) => onChange({ ...value, contacts: value.contacts.map((item, i) => i === index ? { ...item, name: event.target.value } : item) })} /></Grid>
-          <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth label={`Teléfono del contacto ${index + 1}`} value={contact.phone}
-            slotProps={{ htmlInput: { maxLength: 32 } }} error={Boolean(fieldError(`contacts.${index}.phone`))} helperText={fieldError(`contacts.${index}.phone`)}
-            onChange={(event) => onChange({ ...value, contacts: value.contacts.map((item, i) => i === index ? { ...item, phone: event.target.value } : item) })} /></Grid>
-        </Grid>)}
-        <Button sx={{ alignSelf: "flex-start" }} onClick={() => onChange({ ...value, contacts: value.contacts.length === 1 ? [...value.contacts, { name: "", phone: "" }] : value.contacts.slice(0, 1) })}>
-          {value.contacts.length === 1 ? "Agregar segundo contacto" : "Quitar segundo contacto"}
-        </Button>
+        <TextField fullWidth multiline minRows={5} label="Datos de contacto" value={value.contactText}
+          slotProps={{ htmlInput: { maxLength: 200 } }} error={Boolean(fieldError("contactText"))}
+          helperText={fieldError("contactText") ?? `${value.contactText.length}/200 caracteres`}
+          onChange={(event) => onChange({ ...value, contactText: event.target.value })} />
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="color" label="Fondo de la placa" value={value.backgroundColor} error={Boolean(fieldError("backgroundColor"))} helperText={fieldError("backgroundColor")}
             onChange={(event) => onChange({ ...value, backgroundColor: event.target.value })} /></Grid>
@@ -67,7 +60,7 @@ export function QRPlateEditor({ id, enabled, value, onToggle, onChange, fieldErr
         <Button variant="outlined" sx={{ alignSelf: "flex-start" }} disabled={loading || !qrCodePlateSchema.safeParse(value).success} onClick={() => void generate()}>
           {loading ? "Generando placa…" : generated ? "Actualizar vista previa de la placa" : "Generar vista previa de la placa"}
         </Button>
-        {!qrCodePlateSchema.safeParse(value).success && <Typography color="text.secondary">Completa el mensaje y todos los contactos de la placa.</Typography>}
+        {!qrCodePlateSchema.safeParse(value).success && <Typography color="text.secondary">Completa el mensaje y los datos de contacto de la placa.</Typography>}
         {generated && !preview && <Typography color="text.secondary">La vista previa de la placa quedó desactualizada. Vuelve a generarla para revisar los cambios.</Typography>}
         {error && <Alert severity="error">{error}</Alert>}
         {preview && <Box component="img" alt="Vista previa de la placa" src={`data:image/svg+xml;utf8,${encodeURIComponent(preview)}`} sx={{ width: "100%", maxWidth: 700, borderRadius: 1 }} />}

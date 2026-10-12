@@ -10,7 +10,7 @@ vi.mock("../pages/admin/adminUi", () => ({ AdminSection: ({ children }: { childr
 
 function Editor() {
   const [enabled, toggle] = useState(false);
-  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contacts: [{ name: "", phone: "" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" });
+  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contactText: "", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" });
   return <QRPlateEditor enabled={enabled} value={value} onToggle={toggle} onChange={change} fieldError={() => undefined} />;
 }
 afterEach(() => { cleanup(); preview.mockReset(); });
@@ -20,21 +20,23 @@ describe("QRPlateEditor", () => {
     render(<Editor />);
     fireEvent.click(screen.getByLabelText("Habilitar placa con QR"));
     expect(screen.getByRole("button", { name: "Generar vista previa de la placa" })).toBeDisabled();
-    const nameField = screen.getByLabelText("Nombre del contacto 1");
+    const nameField = screen.getByLabelText("Datos de contacto");
     expect(nameField.tagName).toBe("TEXTAREA");
-    fireEvent.change(nameField, { target: { value: "Ana\n\nGómez" } });
-    fireEvent.change(screen.getByLabelText("Teléfono del contacto 1"), { target: { value: "6000-0000" } });
+    fireEvent.change(nameField, { target: { value: "Ana\n\nGómez\n6000-0000" } });
+    expect(screen.queryByLabelText("Nombre del contacto 1")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Teléfono del contacto 1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Agregar segundo contacto" })).not.toBeInTheDocument();
     expect(preview).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Generar vista previa de la placa" }));
     await screen.findByAltText("Vista previa de la placa");
-    expect(preview).toHaveBeenCalledWith(undefined, expect.objectContaining({ contacts: [{ name: "Ana\n\nGómez", phone: "6000-0000" }] }));
+    expect(preview).toHaveBeenCalledWith(undefined, expect.objectContaining({ contactText: "Ana\n\nGómez\n6000-0000" }));
     fireEvent.change(screen.getByLabelText("Mensaje de la placa"), { target: { value: "Por favor llamar" } });
     expect(screen.queryByAltText("Vista previa de la placa")).not.toBeInTheDocument();
     expect(screen.getByText(/quedó desactualizada/)).toBeInTheDocument();
     expect(preview).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "Agregar segundo contacto" }));
+    fireEvent.change(nameField, { target: { value: "\n " } });
     expect(screen.getByRole("button", { name: "Actualizar vista previa de la placa" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Quitar segundo contacto" }));
+    fireEvent.change(nameField, { target: { value: "Ana\n6000-0000\n\nJosé\n6111-1111" } });
     fireEvent.click(screen.getByRole("button", { name: "Actualizar vista previa de la placa" }));
     await waitFor(() => expect(preview).toHaveBeenCalledTimes(2));
   });
