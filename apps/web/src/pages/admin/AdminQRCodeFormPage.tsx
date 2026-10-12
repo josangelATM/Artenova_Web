@@ -3,6 +3,7 @@ import { Box, Button, Checkbox, FormControlLabel, Grid, MenuItem, Stack, TextFie
 import type {
   AdminQRCodeInput,
   QRCode,
+  QRCodePlate,
   QRCodePreviewInput,
   QRCodeUrlDestination,
   QRCodeVCardDestination,
@@ -15,8 +16,11 @@ import { clearFormErrorField, createFormErrorState, emptyFormErrorState, getFiel
 import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
 import { AdminFormErrorAlert } from "./adminFormErrors";
 import { AdminPageHeader, AdminSection } from "./adminUi";
+import { QRPlateEditor } from "./QRPlateEditor";
 
 type Draft = {
+  plateEnabled: boolean;
+  plateConfig: QRCodePlate;
   name: string;
   type: "url" | "whatsapp" | "vcard";
   status: "active" | "inactive";
@@ -37,6 +41,8 @@ type Draft = {
 
 function createDraft(): Draft {
   return {
+    plateEnabled: false,
+    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contacts: [{ name: "", phone: "" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" },
     name: "",
     type: "url",
     status: "active",
@@ -65,6 +71,8 @@ function draftFromQRCode(qrCode: QRCode): Draft {
   draft.backgroundColor = qrCode.designConfig.backgroundColor;
   draft.transparentBackground = qrCode.designConfig.transparentBackground ?? false;
   draft.margin = qrCode.designConfig.margin;
+  draft.plateEnabled = Boolean(qrCode.designConfig.plateConfig);
+  draft.plateConfig = qrCode.designConfig.plateConfig ?? draft.plateConfig;
 
   if (qrCode.type === "url") {
     const destination = qrCode.destinationConfig as QRCodeUrlDestination;
@@ -89,6 +97,7 @@ function draftFromQRCode(qrCode: QRCode): Draft {
 
 function draftToInput(draft: Draft): AdminQRCodeInput {
   const designConfig = {
+    ...(draft.plateEnabled ? { plateConfig: draft.plateConfig } : {}),
     foregroundColor: draft.foregroundColor,
     backgroundColor: draft.backgroundColor,
     transparentBackground: draft.transparentBackground,
@@ -149,16 +158,19 @@ function canPreview(draft: Draft) {
 
 function buildPreviewInput(draft: Draft): QRCodePreviewInput {
   const input = draftToInput(draft);
+  // The individual QR preview does not require a completed optional plate.
+  const { plateConfig: _plateConfig, ...designConfig } = input.designConfig;
   if (input.type === "url") {
-    return { type: "url", designConfig: input.designConfig, destinationConfig: input.destinationConfig };
+    return { type: "url", designConfig, destinationConfig: input.destinationConfig };
   }
   if (input.type === "whatsapp") {
-    return { type: "whatsapp", designConfig: input.designConfig, destinationConfig: input.destinationConfig };
+    return { type: "whatsapp", designConfig, destinationConfig: input.destinationConfig };
   }
-  return { type: "vcard", designConfig: input.designConfig, destinationConfig: input.destinationConfig };
+  return { type: "vcard", designConfig, destinationConfig: input.destinationConfig };
 }
 
 function resolveQrField(issue: ApiValidationIssue) {
+  if (issue.key.startsWith("designConfig.plateConfig.")) return issue.key.replace("designConfig.plateConfig.", "plate.");
   const mapping: Record<string, string> = {
     "designConfig.foregroundColor": "foregroundColor",
     "designConfig.backgroundColor": "backgroundColor",
@@ -179,6 +191,11 @@ function resolveQrField(issue: ApiValidationIssue) {
 }
 
 function getQrFieldLabel(field: string) {
+  if (field.startsWith("plate.")) {
+    if (field === "plate.message") return "Mensaje de la placa";
+    if (field.includes("contacts")) return `Contacto de la placa (${field.endsWith("phone") ? "teléfono" : "nombre"})`;
+    return "Color de la placa";
+  }
   const labels: Record<string, string> = {
     name: "Nombre",
     type: "Tipo",
@@ -420,6 +437,11 @@ export function AdminQRCodeFormPage() {
           </Grid>
         </Grid>
       </AdminSection>
+
+      <QRPlateEditor id={id} enabled={draft.plateEnabled} value={draft.plateConfig}
+        onToggle={(plateEnabled) => updateDraft({ plateEnabled })}
+        onChange={(plateConfig) => updateDraft({ plateConfig }, Object.keys(formError.fieldErrors ?? {}).filter((key) => key.startsWith("plate.")))}
+        fieldError={(field) => getFieldError(formError, `plate.${field}`)} />
 
       <AdminSection title="Vista previa" description="El QR final siempre codificará la URL pública propia del sistema.">
         <Stack spacing={2}>

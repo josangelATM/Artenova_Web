@@ -1,6 +1,7 @@
 import { Router, type Response } from "express";
 import type { Prisma } from "@prisma/client";
-import { adminQRCodeInputSchema, qrCodePreviewSchema, updateQRCodeStatusSchema } from "@artenova/shared";
+import { adminQRCodeInputSchema, qrCodePreviewSchema, qrCodePlatePreviewSchema, updateQRCodeStatusSchema } from "@artenova/shared";
+import { renderQrPlateSvg, renderQrPlatePng } from "../lib/qrPlate";
 import { prisma } from "../lib/prisma";
 import { buildQrResolvedTarget, buildVCardContent, createQrToken, getQrPublicUrl, renderQrPng, renderQrPreview, renderQrSvg } from "../lib/qrCodes";
 import { qrCodePayload } from "../lib/serialize";
@@ -158,6 +159,30 @@ adminQrRouter.post("/preview", async (req, res) => {
     svg: preview.svg,
   });
 });
+
+adminQrRouter.post("/:id/plate/preview", async (req, res) => {
+  const input = qrCodePlatePreviewSchema.parse(req.body);
+  const qrCode = req.params.id === "new" ? null : await findQrOr404(req.params.id, res);
+  if (req.params.id !== "new" && !qrCode) return;
+  const previewUrl = getQrPublicUrl(qrCode?.token ?? "preview");
+  res.json({ svg: renderQrPlateSvg(previewUrl, input.plateConfig), previewUrl });
+});
+
+for (const format of ["svg", "png"] as const) {
+  adminQrRouter.get(`/:id/plate.${format}`, async (req, res) => {
+    const qrCode = await findQrOr404(req.params.id, res);
+    if (!qrCode) return;
+    const plateConfig = (qrCode.designConfig as { plateConfig?: unknown } | null)?.plateConfig;
+    if (!plateConfig) {
+      res.status(404).json({ message: "Este QR no tiene una placa configurada" });
+      return;
+    }
+    const publicUrl = getQrPublicUrl(qrCode.token);
+    const output = format === "svg" ? renderQrPlateSvg(publicUrl, plateConfig) : await renderQrPlatePng(publicUrl, plateConfig);
+    if (req.query.download === "1") res.setHeader("Content-Disposition", `attachment; filename="placa-${qrCode.token}.${format}"`);
+    res.type(format === "svg" ? "image/svg+xml" : "image/png").send(output);
+  });
+}
 
 adminQrRouter.get("/:id/code.svg", async (req, res) => {
   const qrCode = await findQrOr404(req.params.id, res);

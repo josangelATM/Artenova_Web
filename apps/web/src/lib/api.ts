@@ -224,6 +224,9 @@ export const api = {
   previewQRCode: (input: QRCodePreviewInput) =>
     request<QRCodePreviewResponse>("/api/admin/qrs/preview", { method: "POST", body: JSON.stringify(input) }),
   qrCodeSvgUrl: (id: string, download = false) => assetUrl(`/api/admin/qrs/${id}/code.svg${download ? "?download=1" : ""}`),
+  previewQRPlate: (id: string | undefined, plateConfig: import("@artenova/shared").QRCodePlate) =>
+    request<{ svg: string; previewUrl: string }>(`/api/admin/qrs/${id ?? "new"}/plate/preview`, { method: "POST", body: JSON.stringify({ plateConfig }) }),
+  qrPlateUrl: (id: string, format: "svg" | "png", download = false) => assetUrl(`/api/admin/qrs/${id}/plate.${format}${download ? "?download=1" : ""}`),
   qrCodePngUrl: (id: string, download = false) => assetUrl(`/api/admin/qrs/${id}/code.png${download ? "?download=1" : ""}`),
   resolveQRCode: (token: string) => requestAllowNotOk<QRCodeResolveResponse>(`/api/qrs/${token}/resolve`),
   qrVCardUrl: (token: string) => assetUrl(`/api/qrs/${token}/contact.vcf`)

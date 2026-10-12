@@ -44,12 +44,13 @@ vi.mock("../pages/admin/adminUi", () => ({
   ),
 }));
 
-function renderPage() {
+function renderPage(path = "/admin/qrs/nuevo") {
   return render(
     <ThemeProvider theme={theme}>
-      <MemoryRouter initialEntries={["/admin/qrs/nuevo"]}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/admin/qrs/nuevo" element={<AdminQRCodeFormPage />} />
+          <Route path="/admin/qrs/:id/editar" element={<AdminQRCodeFormPage />} />
         </Routes>
       </MemoryRouter>
     </ThemeProvider>,
@@ -65,6 +66,22 @@ function textboxAt(index: number) {
 }
 
 describe("AdminQRCodeFormPage", () => {
+  it("loads and saves an existing plate, then removes only the plate when disabled", async () => {
+    const plateConfig = { message: "Si estoy perdido", contacts: [{ name: "Ana Gómez", phone: "6000-0000" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" };
+    const stored = { id: "qr-1", name: "Mascota", type: "url", status: "active", destinationConfig: { url: "https://example.com" }, designConfig: { foregroundColor: "#111827", backgroundColor: "#FFFFFF", margin: 2, transparentBackground: false, plateConfig } };
+    adminQRCodeMock.mockResolvedValue(stored);
+    saveAdminQRCodeMock.mockImplementation(async (_id, input) => ({ ...stored, ...input }));
+    renderPage("/admin/qrs/qr-1/editar");
+    expect(await screen.findByDisplayValue("Ana Gómez")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Guardar cambios" })[0]!);
+    await waitFor(() => expect(saveAdminQRCodeMock).toHaveBeenCalledWith("qr-1", expect.objectContaining({ designConfig: expect.objectContaining({ plateConfig }) })));
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Guardar cambios" })[0]).toBeEnabled());
+    fireEvent.click(screen.getByLabelText("Habilitar placa con QR"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Guardar cambios" })[0]!);
+    await waitFor(() => expect(saveAdminQRCodeMock).toHaveBeenCalledTimes(2));
+    expect(saveAdminQRCodeMock.mock.calls[1]![1].designConfig.plateConfig).toBeUndefined();
+    expect(saveAdminQRCodeMock.mock.calls[1]![1].destinationConfig).toEqual(stored.destinationConfig);
+  });
   beforeEach(() => {
     saveAdminQRCodeMock.mockReset();
     previewQRCodeMock.mockReset();

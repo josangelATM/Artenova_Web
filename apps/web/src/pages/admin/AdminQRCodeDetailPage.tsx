@@ -138,6 +138,15 @@ export function AdminQRCodeDetailPage() {
             </Grid>
           </AdminDetailSection>
 
+          {qrCode.designConfig.plateConfig && <AdminSection title="Placa con QR" action={(
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button component="a" href={api.qrPlateUrl(qrCode.id, "svg", true)} variant="outlined">Descargar placa SVG</Button>
+              <Button component="a" href={api.qrPlateUrl(qrCode.id, "png", true)} variant="outlined">Descargar placa PNG</Button>
+            </Stack>
+          )}>
+            <Box component="img" src={`${api.qrPlateUrl(qrCode.id, "svg")}?v=${encodeURIComponent(qrCode.updatedAt)}`} alt={`Placa ${qrCode.name}`} sx={{ width: "100%", maxWidth: 800 }} />
+          </AdminSection>}
+
           <AdminSection
             title="Código"
             action={(

@@ -429,7 +429,21 @@ export const adminFinanceOverviewSchema = z.object({
   recentExpenses: z.array(adminFinanceRecentExpenseSchema),
 });
 
+export const qrCodePlateSchema = z.object({
+  message: z.string().trim().min(1).max(120),
+  contacts: z.array(z.object({
+    name: z.string().max(60).refine((value) => value.trim().length > 0, { message: "Este campo es obligatorio." }),
+    phone: z.string().trim().min(1).max(32),
+  })).min(1).max(2),
+  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+});
+export type QRCodePlate = z.infer<typeof qrCodePlateSchema>;
+
+export const qrCodePlatePreviewSchema = z.object({ plateConfig: qrCodePlateSchema });
+
 export const qrCodeDesignSchema = z.object({
+  plateConfig: qrCodePlateSchema.optional(),
   foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1F2937"),
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#FFFFFF"),
   transparentBackground: z.boolean().default(false),
