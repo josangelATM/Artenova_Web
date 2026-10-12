@@ -439,8 +439,6 @@ export const qrCodePlateSchema = z.preprocess((value) => {
 }, z.object({
   message: z.string().trim().min(1).max(120),
   contactText: z.string().max(200).refine((value) => value.trim().length > 0, { message: "Este campo es obligatorio." }),
-  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 }));
 export type QRCodePlate = z.infer<typeof qrCodePlateSchema>;
 

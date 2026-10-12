@@ -144,7 +144,7 @@ export function AdminQRCodeDetailPage() {
               <Button component="a" href={api.qrPlateUrl(qrCode.id, "png", true)} variant="outlined">Descargar placa PNG</Button>
             </Stack>
           )}>
-            <Box component="img" src={`${api.qrPlateUrl(qrCode.id, "svg")}?v=${encodeURIComponent(qrCode.updatedAt)}`} alt={`Placa ${qrCode.name}`} sx={{ width: "100%", maxWidth: 800 }} />
+            <Box component="img" src={`${api.qrPlateUrl(qrCode.id, "svg")}?v=${encodeURIComponent(qrCode.updatedAt)}`} alt={`Placa ${qrCode.name}`} sx={{ width: "100%", maxWidth: 800, bgcolor: "#263238" }} />
           </AdminSection>}
 
           <AdminSection

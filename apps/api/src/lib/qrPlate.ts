@@ -92,7 +92,7 @@ export function renderQrPlateSvg(publicUrl: string, input: unknown) {
   const qr = `<g data-part="qr" transform="translate(${normalizedX(136.1873)} ${normalizedY(-179.2895)}) scale(${16.1616 / matrix.size})"><path d="${qrPath}"/></g>`;
   const contacts = contactPaths(plate.contactText);
   const paw = `<g data-part="paw" transform="translate(${padding - originX} ${padding - originY})"><path d="${originalPawPath}" fill-rule="evenodd"/></g>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="${qrPlatePngHeight}" viewBox="0 0 ${width} ${height}" role="img"><title>${escapeXml(plate.message)}</title><rect width="${width}" height="${height}" fill="${plate.backgroundColor}"/><g fill="${plate.foregroundColor}">${header}${paw}${qr}${contacts}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="${qrPlatePngHeight}" viewBox="0 0 ${width} ${height}" role="img"><title>${escapeXml(plate.message)}</title><g fill="#FFFFFF">${header}${paw}${qr}${contacts}</g></svg>`;
 }
 
 export async function renderQrPlatePng(publicUrl: string, input: unknown) {

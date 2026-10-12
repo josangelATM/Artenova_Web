@@ -74,7 +74,7 @@ describe("AdminQRCodeFormPage", () => {
     renderPage("/admin/qrs/qr-1/editar");
     await waitFor(() => expect(screen.getByLabelText("Datos de contacto")).toHaveValue("Ana Gómez\n6000-0000"));
     fireEvent.click(screen.getAllByRole("button", { name: "Guardar cambios" })[0]!);
-    await waitFor(() => expect(saveAdminQRCodeMock).toHaveBeenCalledWith("qr-1", expect.objectContaining({ designConfig: expect.objectContaining({ plateConfig: { message: plateConfig.message, contactText: "Ana Gómez\n6000-0000", backgroundColor: plateConfig.backgroundColor, foregroundColor: plateConfig.foregroundColor } }) })));
+    await waitFor(() => expect(saveAdminQRCodeMock).toHaveBeenCalledWith("qr-1", expect.objectContaining({ designConfig: expect.objectContaining({ plateConfig: { message: plateConfig.message, contactText: "Ana Gómez\n6000-0000" } }) })));
     await waitFor(() => expect(screen.getAllByRole("button", { name: "Guardar cambios" })[0]).toBeEnabled());
     fireEvent.click(screen.getByLabelText("Habilitar placa con QR"));
     fireEvent.click(screen.getAllByRole("button", { name: "Guardar cambios" })[0]!);

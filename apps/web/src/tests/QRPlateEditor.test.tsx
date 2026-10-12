@@ -10,7 +10,7 @@ vi.mock("../pages/admin/adminUi", () => ({ AdminSection: ({ children }: { childr
 
 function Editor() {
   const [enabled, toggle] = useState(false);
-  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contactText: "", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" });
+  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contactText: "" });
   return <QRPlateEditor enabled={enabled} value={value} onToggle={toggle} onChange={change} fieldError={() => undefined} />;
 }
 afterEach(() => { cleanup(); preview.mockReset(); });
@@ -19,6 +19,8 @@ describe("QRPlateEditor", () => {
     preview.mockResolvedValue({ svg: "<svg/>", previewUrl: "https://artenovapty.com/q/preview" });
     render(<Editor />);
     fireEvent.click(screen.getByLabelText("Habilitar placa con QR"));
+    expect(screen.queryByLabelText("Fondo de la placa")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Color del contenido de la placa")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generar vista previa de la placa" })).toBeDisabled();
     const nameField = screen.getByLabelText("Datos de contacto");
     expect(nameField.tagName).toBe("TEXTAREA");

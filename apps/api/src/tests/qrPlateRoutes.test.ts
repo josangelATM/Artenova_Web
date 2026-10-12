@@ -12,7 +12,7 @@ import { adminQrRouter } from "../routes/qrs";
 import { signAdminToken } from "../middleware/auth";
 import { errorHandler } from "../middleware/errors";
 
-const plate = { message: "Si estoy perdido", contactText: "Ana\n\nGómez\n6000-0000", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" };
+const plate = { message: "Si estoy perdido", contactText: "Ana\n\nGómez\n6000-0000" };
 const cookie = `admin_session=${signAdminToken({ sub: "admin", email: "admin@example.com" })}`;
 let server: Server;
 let base: string;
@@ -40,7 +40,7 @@ function request(path: string, method = "GET", body?: unknown, authenticated = t
 
 describe("QR plate admin routes", () => {
   it("reads old JSON without writing and stores only contactText on explicit save", async () => {
-    const legacyPlate = { message: plate.message, contacts: [{ name: "Ana\nGómez", phone: "6000-0000" }, { name: "José", phone: "6111-1111" }], backgroundColor: plate.backgroundColor, foregroundColor: plate.foregroundColor };
+    const legacyPlate = { message: plate.message, contacts: [{ name: "Ana\nGómez", phone: "6000-0000" }, { name: "José", phone: "6111-1111" }], backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" };
     row = { id: "qr1", token: "oldtoken", name: "Anterior", type: "url", status: "active", destinationConfig: { url: "https://example.com" }, designConfig: { plateConfig: legacyPlate }, createdAt: new Date(), updatedAt: new Date() };
     const read = await (await request("/qr1")).json();
     expect(read.designConfig.plateConfig.contactText).toBe("Ana\nGómez\n6000-0000\n\nJosé\n6111-1111");
@@ -48,6 +48,8 @@ describe("QR plate admin routes", () => {
     expect(db.qRCode.update).not.toHaveBeenCalled();
     const saved = await (await request("/qr1", "PUT", { name: read.name, type: read.type, status: read.status, destinationConfig: read.destinationConfig, designConfig: read.designConfig })).json();
     expect(saved.designConfig.plateConfig).not.toHaveProperty("contacts");
+    expect(saved.designConfig.plateConfig).not.toHaveProperty("backgroundColor");
+    expect(saved.designConfig.plateConfig).not.toHaveProperty("foregroundColor");
     expect(row.designConfig.plateConfig.contactText).toBe(read.designConfig.plateConfig.contactText);
     expect(saved.token).toBe("oldtoken");
   });
@@ -67,7 +69,7 @@ describe("QR plate admin routes", () => {
     expect(await svg.text()).toBe(preview.svg);
     const png = await request("/qr1/plate.png?download=1");
     expect(png.headers.get("content-type")).toContain("image/png");
-    expect(await sharp(Buffer.from(await png.arrayBuffer())).metadata()).toMatchObject({ width: 1800, height: qrPlatePngHeight });
+    expect(await sharp(Buffer.from(await png.arrayBuffer())).metadata()).toMatchObject({ width: 1800, height: qrPlatePngHeight, hasAlpha: true });
     await request("/qr1", "PUT", { name: "Placa", type: "url", destinationConfig: { url: "https://example.com" }, designConfig: {} });
     expect((await request("/qr1/plate.svg")).status).toBe(404);
   });

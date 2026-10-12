@@ -43,7 +43,7 @@ type Draft = {
 function createDraft(): Draft {
   return {
     plateEnabled: false,
-    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contactText: "", backgroundColor: "#40A3BE", foregroundColor: "#FFFFFF" },
+    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contactText: "" },
     name: "",
     type: "url",
     status: "active",

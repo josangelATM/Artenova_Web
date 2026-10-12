@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Box, Button, Checkbox, FormControlLabel, Grid, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from "@mui/material";
 import { qrCodePlateSchema, type QRCodePlate } from "@artenova/shared";
 import { api } from "../../lib/api";
 import { AdminSection } from "./adminUi";
@@ -50,12 +50,6 @@ export function QRPlateEditor({ id, enabled, value, onToggle, onChange, fieldErr
           slotProps={{ htmlInput: { maxLength: 200 } }} error={Boolean(fieldError("contactText"))}
           helperText={fieldError("contactText") ?? `${value.contactText.length}/200 caracteres`}
           onChange={(event) => onChange({ ...value, contactText: event.target.value })} />
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="color" label="Fondo de la placa" value={value.backgroundColor} error={Boolean(fieldError("backgroundColor"))} helperText={fieldError("backgroundColor")}
-            onChange={(event) => onChange({ ...value, backgroundColor: event.target.value })} /></Grid>
-          <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="color" label="Color del contenido de la placa" value={value.foregroundColor} error={Boolean(fieldError("foregroundColor"))} helperText={fieldError("foregroundColor")}
-            onChange={(event) => onChange({ ...value, foregroundColor: event.target.value })} /></Grid>
-        </Grid>
         <Typography variant="body2" color="text.secondary">Guarda los cambios antes de descargar la placa.</Typography>
         <Button variant="outlined" sx={{ alignSelf: "flex-start" }} disabled={loading || !qrCodePlateSchema.safeParse(value).success} onClick={() => void generate()}>
           {loading ? "Generando placa…" : generated ? "Actualizar vista previa de la placa" : "Generar vista previa de la placa"}
@@ -63,7 +57,7 @@ export function QRPlateEditor({ id, enabled, value, onToggle, onChange, fieldErr
         {!qrCodePlateSchema.safeParse(value).success && <Typography color="text.secondary">Completa el mensaje y los datos de contacto de la placa.</Typography>}
         {generated && !preview && <Typography color="text.secondary">La vista previa de la placa quedó desactualizada. Vuelve a generarla para revisar los cambios.</Typography>}
         {error && <Alert severity="error">{error}</Alert>}
-        {preview && <Box component="img" alt="Vista previa de la placa" src={`data:image/svg+xml;utf8,${encodeURIComponent(preview)}`} sx={{ width: "100%", maxWidth: 700, borderRadius: 1 }} />}
+        {preview && <Box component="img" alt="Vista previa de la placa" src={`data:image/svg+xml;utf8,${encodeURIComponent(preview)}`} sx={{ width: "100%", maxWidth: 700, borderRadius: 1, bgcolor: "#263238" }} />}
       </>}
     </Stack>
   </AdminSection>;
