@@ -429,6 +429,12 @@ export const adminFinanceOverviewSchema = z.object({
   recentExpenses: z.array(adminFinanceRecentExpenseSchema),
 });
 
+export const qrPlateSizeOptions = [
+  { value: "small", label: "Pequeña", widthMm: 38.09854, heightMm: 29.43331 },
+  { value: "medium", label: "Mediana", widthMm: 43.17915, heightMm: 32.64293 },
+  { value: "large", label: "Grande", widthMm: 50.79930, heightMm: 37.46747 },
+] as const;
+
 export const qrCodePlateSchema = z.preprocess((value) => {
   if (typeof value !== "object" || value === null) return value;
   const plate = value as Record<string, unknown>;
@@ -439,6 +445,10 @@ export const qrCodePlateSchema = z.preprocess((value) => {
 }, z.object({
   message: z.string().trim().min(1).max(120),
   contactText: z.string().max(200).refine((value) => value.trim().length > 0, { message: "Este campo es obligatorio." }),
+  size: z.enum(["small", "medium", "large"]).default("medium"),
+  foregroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#FFFFFF"),
+  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#40A3BE"),
+  transparentBackground: z.boolean().default(true),
 }));
 export type QRCodePlate = z.infer<typeof qrCodePlateSchema>;
 

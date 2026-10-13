@@ -12,7 +12,7 @@ import { adminQrRouter } from "../routes/qrs";
 import { signAdminToken } from "../middleware/auth";
 import { errorHandler } from "../middleware/errors";
 
-const plate = { message: "Si estoy perdido", contactText: "Ana\n\nGómez\n6000-0000" };
+const plate = { message: "Si estoy perdido", contactText: "Ana\n\nGómez\n6000-0000", size: "medium", foregroundColor: "#FFFFFF", backgroundColor: "#40A3BE", transparentBackground: false };
 const cookie = `admin_session=${signAdminToken({ sub: "admin", email: "admin@example.com" })}`;
 let server: Server;
 let base: string;
@@ -48,8 +48,7 @@ describe("QR plate admin routes", () => {
     expect(db.qRCode.update).not.toHaveBeenCalled();
     const saved = await (await request("/qr1", "PUT", { name: read.name, type: read.type, status: read.status, destinationConfig: read.destinationConfig, designConfig: read.designConfig })).json();
     expect(saved.designConfig.plateConfig).not.toHaveProperty("contacts");
-    expect(saved.designConfig.plateConfig).not.toHaveProperty("backgroundColor");
-    expect(saved.designConfig.plateConfig).not.toHaveProperty("foregroundColor");
+    expect(saved.designConfig.plateConfig).toMatchObject({ size: "medium", transparentBackground: true, foregroundColor: "#FFFFFF" });
     expect(row.designConfig.plateConfig.contactText).toBe(read.designConfig.plateConfig.contactText);
     expect(saved.token).toBe("oldtoken");
   });

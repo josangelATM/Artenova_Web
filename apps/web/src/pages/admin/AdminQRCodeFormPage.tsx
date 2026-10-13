@@ -43,7 +43,7 @@ type Draft = {
 function createDraft(): Draft {
   return {
     plateEnabled: false,
-    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contactText: "" },
+    plateConfig: { message: "Si estoy perdido por favor escanear el código o llamar a:", contactText: "", size: "medium", foregroundColor: "#FFFFFF", backgroundColor: "#40A3BE", transparentBackground: false },
     name: "",
     type: "url",
     status: "active",
@@ -195,6 +195,7 @@ function getQrFieldLabel(field: string) {
   if (field.startsWith("plate.")) {
     if (field === "plate.message") return "Mensaje de la placa";
     if (field === "plate.contactText") return "Datos de contacto";
+    if (field === "plate.size") return "Tamaño de la plaquita";
     return "Color de la placa";
   }
   const labels: Record<string, string> = {

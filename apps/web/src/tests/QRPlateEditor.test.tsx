@@ -10,7 +10,7 @@ vi.mock("../pages/admin/adminUi", () => ({ AdminSection: ({ children }: { childr
 
 function Editor() {
   const [enabled, toggle] = useState(false);
-  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contactText: "" });
+  const [value, change] = useState<QRCodePlate>({ message: "Si estoy perdido", contactText: "", size: "medium", foregroundColor: "#FFFFFF", backgroundColor: "#40A3BE", transparentBackground: false });
   return <QRPlateEditor enabled={enabled} value={value} onToggle={toggle} onChange={change} fieldError={() => undefined} />;
 }
 afterEach(() => { cleanup(); preview.mockReset(); });
@@ -19,8 +19,13 @@ describe("QRPlateEditor", () => {
     preview.mockResolvedValue({ svg: "<svg/>", previewUrl: "https://artenovapty.com/q/preview" });
     render(<Editor />);
     fireEvent.click(screen.getByLabelText("Habilitar placa con QR"));
-    expect(screen.queryByLabelText("Fondo de la placa")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Color del contenido de la placa")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Tamaño de la plaquita")).toHaveTextContent("Mediana");
+    fireEvent.mouseDown(screen.getByLabelText("Tamaño de la plaquita"));
+    fireEvent.click(screen.getByRole("option", { name: /Pequeña/ }));
+    expect(screen.getByLabelText("Fondo de la plaquita")).toBeEnabled();
+    fireEvent.click(screen.getByLabelText("Fondo transparente de la plaquita"));
+    expect(screen.getByLabelText("Fondo de la plaquita")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Color del texto y QR"), { target: { value: "#FAFAFA" } });
     expect(screen.getByRole("button", { name: "Generar vista previa de la placa" })).toBeDisabled();
     const nameField = screen.getByLabelText("Datos de contacto");
     expect(nameField.tagName).toBe("TEXTAREA");
@@ -32,6 +37,7 @@ describe("QRPlateEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generar vista previa de la placa" }));
     await screen.findByAltText("Vista previa de la placa");
     expect(preview).toHaveBeenCalledWith(undefined, expect.objectContaining({ contactText: "Ana\n\nGómez\n6000-0000" }));
+    expect(preview).toHaveBeenCalledWith(undefined, expect.objectContaining({ size: "small", foregroundColor: "#fafafa", transparentBackground: true }));
     fireEvent.change(screen.getByLabelText("Mensaje de la placa"), { target: { value: "Por favor llamar" } });
     expect(screen.queryByAltText("Vista previa de la placa")).not.toBeInTheDocument();
     expect(screen.getByText(/quedó desactualizada/)).toBeInTheDocument();

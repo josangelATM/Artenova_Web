@@ -1,14 +1,42 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import { renderQrPlateSvg, renderQrPlatePng, qrPlatePngHeight } from "../lib/qrPlate";
+import { renderQrPlateSvg, renderQrPlatePng, qrPlatePngHeight, getQrPlateDimensions } from "../lib/qrPlate";
 import { qrCodePlateSchema, adminQRCodeInputSchema, qrCodeDesignSchema } from "@artenova/shared";
 
 const plate = {
   message: "Si estoy perdido por favor escanear el código o llamar a:",
   contactText: "Fuba Chong\n6612-7721\n\nHuga Gómez\n6820-5059",
+  size: "medium", foregroundColor: "#FFFFFF", backgroundColor: "#40A3BE", transparentBackground: false,
 };
 
 describe("QR plate", () => {
+  it.each([
+    ["small", 19.05051, 5.49792], ["medium", 21.58954, 5.39762], ["large", 25.35171, 5.59656],
+  ] as const)("exports physical %s dimensions with transparent hole and exterior", async (size, holeX, holeY) => {
+    const dimensions = getQrPlateDimensions(size);
+    const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, size });
+    expect(svg).toContain(`width="${dimensions.widthMm}mm"`);
+    expect(svg).toContain(`height="${dimensions.heightMm}mm"`);
+    expect(svg).not.toContain("#ED252B");
+    const png = await renderQrPlatePng("https://artenovapty.com/q/demo", { ...plate, size });
+    const metadata = await sharp(png).metadata();
+    expect(metadata).toMatchObject({ width: 1800, height: dimensions.pngHeight, hasAlpha: true, density: dimensions.density });
+    expect(Math.abs(1800 / metadata.density! * 25.4 - dimensions.widthMm)).toBeLessThan(0.05);
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const pixel = (x: number, y: number) => {
+      const index = (Math.floor(y / dimensions.heightMm * info.height) * info.width + Math.floor(x / dimensions.widthMm * info.width)) * info.channels;
+      return [...data.subarray(index, index + 4)];
+    };
+    expect(pixel(holeX, holeY)[3]).toBe(0);
+    expect(data[3]).toBe(0);
+    expect(pixel(dimensions.widthMm / 2, 2)).toEqual([64, 163, 190, 255]);
+  });
+
+  it("validates size and colors and defaults missing old configuration without writes", () => {
+    expect(qrCodePlateSchema.safeParse({ ...plate, size: "custom" }).success).toBe(false);
+    expect(qrCodePlateSchema.safeParse({ ...plate, foregroundColor: 'red"/>' }).success).toBe(false);
+    expect(qrCodePlateSchema.parse({ message: plate.message, contactText: plate.contactText })).toMatchObject({ size: "medium", foregroundColor: "#FFFFFF", transparentBackground: true });
+  });
   it.each([
     ["Fuba Chong"], ["Fuba\nChong"], ["Ana\nMaría\nGómez"],
     ["Fuba\nChong", "Huga Gómez"], ["Ana\n\nGómez", "Ó".repeat(60)],
@@ -52,7 +80,8 @@ describe("QR plate", () => {
   it("renders vector content, escapes text and preserves accents", () => {
     const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, contactText: 'Gómez & <Ana> "A"\n6000-0000' });
     expect(svg).toContain("Gómez &amp; &lt;Ana&gt; &quot;A&quot;");
-    expect(svg).toContain('viewBox="0 0 39.6566 22.836');
+    expect(svg).toContain('viewBox="0 0 43.17915 32.64293');
+    expect(svg).toContain('width="43.17915mm"');
     expect(svg).not.toContain("<text");
     expect(svg).not.toContain('fill="#000000"');
     expect(svg).not.toContain("<rect");
@@ -80,19 +109,19 @@ describe("QR plate", () => {
     expect(renderQrPlateSvg("https://artenovapty.com/q/demo", legacy)).toBe(renderQrPlateSvg("https://artenovapty.com/q/demo", normalized));
   });
 
-  it("keeps the original message lines and ignores old colors in favor of white and transparency", () => {
+  it("keeps the original message lines and uses selected colors and silhouette", () => {
     const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, foregroundColor: "#FFFFEE", backgroundColor: "#205B70" });
     expect(svg).toContain('aria-label="Si estoy perdido por favor"');
     expect(svg).toContain('aria-label="escanear el código o llamar a:"');
-    expect(svg).toContain('<g fill="#FFFFFF">');
-    expect(svg).not.toContain("#FFFFEE");
-    expect(svg).not.toContain("#205B70");
+    expect(svg).toContain('fill="#FFFFEE"');
+    expect(svg).toContain('fill="#205B70"');
+    expect(svg).toContain('data-part="background"');
     expect(svg).not.toContain("<rect");
-    expect(qrCodePlateSchema.parse({ ...plate, foregroundColor: "#FFFFEE", backgroundColor: "#205B70" })).toEqual(plate);
+    expect(qrCodePlateSchema.parse({ message: plate.message, contactText: plate.contactText })).toMatchObject({ size: "medium", transparentBackground: true, foregroundColor: "#FFFFFF" });
   });
 
   it("exports only white artwork with transparent pixels, including old plate settings", async () => {
-    const png = await renderQrPlatePng("https://artenovapty.com/q/demo", { ...plate, foregroundColor: "#FF0000", backgroundColor: "#0000FF" });
+    const png = await renderQrPlatePng("https://artenovapty.com/q/demo", { message: plate.message, contactText: plate.contactText });
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     let clear = 0;
     let solid = 0;

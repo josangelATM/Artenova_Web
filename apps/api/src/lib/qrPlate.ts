@@ -4,13 +4,19 @@ import { openSync, type Font } from "fontkit";
 import { fileURLToPath } from "node:url";
 import { qrCodePlateSchema } from "@artenova/shared";
 import { originalPlate, originalPawPath } from "./qrPlateTemplate";
+import { qrPlateShapes } from "./qrPlateShapes";
 
 // Real Arial glyph outlines keep previews and both exports identical.
 const font = openSync(fileURLToPath(new URL("../../assets/fonts/Arial.ttf", import.meta.url))) as Font;
 const { x: originX, y: originY, padding } = originalPlate;
 const width = Number((originalPlate.width + padding * 2).toFixed(4));
 const height = Number((originalPlate.height + padding * 2).toFixed(4));
-export const qrPlatePngHeight = Math.round(1800 * height / width);
+export function getQrPlateDimensions(size: keyof typeof qrPlateShapes) {
+  const shape = qrPlateShapes[size];
+  return { widthMm: shape.width, heightMm: shape.height, pngWidth: 1800,
+    pngHeight: Math.round(1800 * shape.height / shape.width), density: Math.round(1800 * 25.4 / shape.width) };
+}
+export const qrPlatePngHeight = getQrPlateDimensions("medium").pngHeight;
 const defaultMessage = "Si estoy perdido por favor escanear el código o llamar a:";
 const normalizedX = (x: number) => x - originX + padding;
 const normalizedY = (y: number) => y - originY + padding;
@@ -92,9 +98,27 @@ export function renderQrPlateSvg(publicUrl: string, input: unknown) {
   const qr = `<g data-part="qr" transform="translate(${normalizedX(136.1873)} ${normalizedY(-179.2895)}) scale(${16.1616 / matrix.size})"><path d="${qrPath}"/></g>`;
   const contacts = contactPaths(plate.contactText);
   const paw = `<g data-part="paw" transform="translate(${padding - originX} ${padding - originY})"><path d="${originalPawPath}" fill-rule="evenodd"/></g>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="${qrPlatePngHeight}" viewBox="0 0 ${width} ${height}" role="img"><title>${escapeXml(plate.message)}</title><g fill="#FFFFFF">${header}${paw}${qr}${contacts}</g></svg>`;
+  const shape = qrPlateShapes[plate.size];
+  const bodyTop = shape.bodyTop - shape.y;
+  const margin = 2;
+  const availableWidth = shape.width - margin * 2;
+  const availableHeight = shape.height - bodyTop - margin * 2;
+  const contentScale = Math.min(availableWidth / width, availableHeight / height);
+  const contentX = (shape.width - width * contentScale) / 2;
+  const contentY = bodyTop + margin + (availableHeight - height * contentScale) / 2;
+  const outline = `transform="translate(${-shape.x} ${-shape.y})" d="${shape.path}"`;
+  const background = plate.transparentBackground ? "" : `<path data-part="background" ${outline} fill="${plate.backgroundColor}" fill-rule="evenodd"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${shape.width}mm" height="${shape.height}mm" viewBox="0 0 ${shape.width} ${shape.height}" role="img"><title>${escapeXml(plate.message)}</title><defs><clipPath id="plate-outline"><path ${outline} clip-rule="evenodd"/></clipPath></defs>${background}<g clip-path="url(#plate-outline)"><g data-part="artwork" transform="translate(${contentX} ${contentY}) scale(${contentScale})" fill="${plate.foregroundColor}">${header}${paw}${qr}${contacts}</g></g></svg>`;
 }
 
 export async function renderQrPlatePng(publicUrl: string, input: unknown) {
-  return sharp(Buffer.from(renderQrPlateSvg(publicUrl, input))).resize(1800, qrPlatePngHeight).png().toBuffer();
+  const plate = qrCodePlateSchema.parse(input);
+  const dimensions = getQrPlateDimensions(plate.size);
+  // Rasterize at explicit pixels first. Physical SVG units and PNG resolution
+  // metadata must not combine into a second, oversized SVG rasterization.
+  const svg = renderQrPlateSvg(publicUrl, plate)
+    .replace(`width="${dimensions.widthMm}mm"`, `width="${dimensions.pngWidth}"`)
+    .replace(`height="${dimensions.heightMm}mm"`, `height="${dimensions.pngHeight}"`);
+  const raster = await sharp(Buffer.from(svg)).png().toBuffer();
+  return sharp(raster).withMetadata({ density: dimensions.density }).png().toBuffer();
 }
