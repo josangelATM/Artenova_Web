@@ -12,6 +12,33 @@ const plate = {
 describe("QR plate", () => {
   it.each([
     ["small", 19.05051, 5.49792], ["medium", 21.58954, 5.39762], ["large", 25.35171, 5.59656],
+  ] as const)("draws the %s transparent border inside the silhouette and outside the hole", async (size, holeX, holeY) => {
+    const input = { ...plate, size, foregroundColor: "#37B7C9", transparentBackground: true };
+    const dimensions = getQrPlateDimensions(size);
+    const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", input);
+    expect(svg).toContain('data-part="border"');
+    expect(svg).toContain('stroke="#37B7C9" stroke-width="0.3"');
+    expect(svg).not.toContain('data-part="background"');
+    expect(renderQrPlateSvg("https://artenovapty.com/q/demo", { ...input, transparentBackground: false })).not.toContain('data-part="border"');
+    const png = await renderQrPlatePng("https://artenovapty.com/q/demo", input);
+    expect(await sharp(png).metadata()).toMatchObject({ width: 1800, height: dimensions.pngHeight, density: dimensions.density, hasAlpha: true });
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const pixel = (x: number, y: number) => {
+      const index = (Math.floor(y / dimensions.heightMm * info.height) * info.width + Math.floor(x / dimensions.widthMm * info.width)) * info.channels;
+      return [...data.subarray(index, index + 4)];
+    };
+    const middle = dimensions.heightMm * 0.6;
+    expect(pixel(0.07, middle)).toEqual([55, 183, 201, 255]);
+    expect(pixel(0.24, middle)[3]).toBe(0);
+    expect(pixel(dimensions.widthMm / 2, dimensions.heightMm - 0.07)).toEqual([55, 183, 201, 255]);
+    expect(pixel(holeX + 1.55, holeY)).toEqual([55, 183, 201, 255]);
+    expect(pixel(holeX + 1.75, holeY)[3]).toBe(0);
+    expect(pixel(holeX, holeY)[3]).toBe(0);
+    expect(data[3]).toBe(0);
+  });
+
+  it.each([
+    ["small", 19.05051, 5.49792], ["medium", 21.58954, 5.39762], ["large", 25.35171, 5.59656],
   ] as const)("exports physical %s dimensions with transparent hole and exterior", async (size, holeX, holeY) => {
     const dimensions = getQrPlateDimensions(size);
     const svg = renderQrPlateSvg("https://artenovapty.com/q/demo", { ...plate, size });

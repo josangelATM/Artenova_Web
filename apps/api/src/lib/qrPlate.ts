@@ -108,7 +108,11 @@ export function renderQrPlateSvg(publicUrl: string, input: unknown) {
   const contentY = bodyTop + margin + (availableHeight - height * contentScale) / 2;
   const outline = `transform="translate(${-shape.x} ${-shape.y})" d="${shape.path}"`;
   const background = plate.transparentBackground ? "" : `<path data-part="background" ${outline} fill="${plate.backgroundColor}" fill-rule="evenodd"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${shape.width}mm" height="${shape.height}mm" viewBox="0 0 ${shape.width} ${shape.height}" role="img"><title>${escapeXml(plate.message)}</title><defs><clipPath id="plate-outline"><path ${outline} clip-rule="evenodd"/></clipPath></defs>${background}<g clip-path="url(#plate-outline)"><g data-part="artwork" transform="translate(${contentX} ${contentY}) scale(${contentScale})" fill="${plate.foregroundColor}">${header}${paw}${qr}${contacts}</g></g></svg>`;
+  // The silhouette clip retains only the inner half of this 0.30 mm stroke:
+  // a visible 0.15 mm border, with no paint outside the plate or in its hole.
+  const border = plate.transparentBackground
+    ? `<path data-part="border" ${outline} fill="none" stroke="${plate.foregroundColor}" stroke-width="0.3" stroke-linejoin="round"/>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${shape.width}mm" height="${shape.height}mm" viewBox="0 0 ${shape.width} ${shape.height}" role="img"><title>${escapeXml(plate.message)}</title><defs><clipPath id="plate-outline"><path ${outline} clip-rule="evenodd"/></clipPath></defs>${background}<g clip-path="url(#plate-outline)">${border}<g data-part="artwork" transform="translate(${contentX} ${contentY}) scale(${contentScale})" fill="${plate.foregroundColor}">${header}${paw}${qr}${contacts}</g></g></svg>`;
 }
 
 export async function renderQrPlatePng(publicUrl: string, input: unknown) {
