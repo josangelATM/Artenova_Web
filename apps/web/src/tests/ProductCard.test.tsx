@@ -41,6 +41,10 @@ describe("ProductCard", () => {
     expect(screen.queryByText("Destacado")).toBeNull();
     expect(screen.queryByText("Consultar")).toBeNull();
     expect(screen.getByRole("link", { name: /Retrato grabado/i }).getAttribute("href")).toBe("/producto/retrato-grabado");
+    expect(screen.getByText("Ver detalles")).toBeTruthy();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(document.querySelector("a a, a button, a [tabindex]")).toBeNull();
   });
 
   it("renders an inline video preview when the product only has video media", () => {

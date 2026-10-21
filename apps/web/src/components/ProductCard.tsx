@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/material";
-import { ImageIcon, Images, PlayCircle } from "lucide-react";
+import { ArrowRight, ImageIcon, Images, PlayCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency, resolvePreviewMode, resolveMediaStillUrl, type CatalogProductCard } from "@artenova/shared";
 
@@ -121,6 +121,11 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
         color: "inherit",
         textDecoration: "none",
         cursor: "pointer",
+        "&:focus-visible": {
+          outline: "3px solid",
+          outlineColor: "primary.main",
+          outlineOffset: 4,
+        },
         "@keyframes productCardPlaceholderPulse": {
           "0%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
@@ -257,6 +262,26 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
             </Typography>
           </Box>
         </Stack>
+        <Box
+          component="span"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+            width: "100%",
+            minHeight: 44,
+            px: 2,
+            py: 1,
+            borderRadius: 999,
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+            typography: "button",
+          }}
+        >
+          Ver detalles
+          <ArrowRight size={18} aria-hidden="true" />
+        </Box>
       </CardContent>
     </Card>
   );
