@@ -111,6 +111,7 @@ model Product {
   sku          String?       @unique
   defaultVariantId String?       @unique
   description  String
+  minimumSaleQuantity Int?
   basePrice    Decimal       @db.Decimal(10, 2)
   discountType DiscountType?
   discountValue Decimal?     @db.Decimal(10, 2)

@@ -65,6 +65,7 @@ type PriceTierInput = {
 };
 
 type DraftProduct = {
+  minimumSaleQuantity: string;
   name: string;
   slug: string;
   sku: string;
@@ -113,6 +114,7 @@ type OptionValueLookup = Map<
 >;
 
 const emptyProduct: DraftProduct = {
+  minimumSaleQuantity: "",
   name: "",
   slug: "",
   sku: "",
@@ -131,6 +133,7 @@ function resolveProductField(issue: ApiValidationIssue) {
 
 function getProductFieldLabel(field: string) {
   const labels: Record<string, string> = {
+    minimumSaleQuantity: "Cantidad mínima de venta",
     name: "Nombre",
     slug: "Enlace corto",
     sku: "Referencia",
@@ -453,6 +456,18 @@ const BaseProductSection = memo(function BaseProductSection({
             onChange={(event) => onDraftFieldChange("sku", event.target.value)}
             error={Boolean(getFieldError(formError, "sku"))}
             helperText={getFieldError(formError, "sku")}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            disabled={loading}
+            fullWidth
+            label="Cantidad mínima de venta"
+            value={draft.minimumSaleQuantity}
+            onChange={(event) => onDraftFieldChange("minimumSaleQuantity", event.target.value)}
+            error={Boolean(getFieldError(formError, "minimumSaleQuantity"))}
+            helperText={getFieldError(formError, "minimumSaleQuantity") || "Opcional. Déjalo vacío para ocultar la etiqueta."}
+            slotProps={{ htmlInput: { inputMode: "numeric", pattern: "[0-9]*" } }}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -1953,6 +1968,7 @@ export function AdminProductFormPage() {
       selected.variants[0] ??
       null;
     setDraft({
+      minimumSaleQuantity: selected.minimumSaleQuantity == null ? "" : String(selected.minimumSaleQuantity),
       name: selected.name,
       slug: selected.slug,
       sku: primaryVariant?.sku ?? selected.sku ?? "",
@@ -2258,6 +2274,13 @@ export function AdminProductFormPage() {
     try {
       setSaving(true);
       setFormError(emptyFormErrorState);
+      const minimumText = draft.minimumSaleQuantity.trim();
+      const minimumSaleQuantity = minimumText === "" ? null : Number(minimumText);
+      if (minimumSaleQuantity !== null && (!/^\d+$/.test(minimumText) || !Number.isInteger(minimumSaleQuantity) || minimumSaleQuantity < 1 || minimumSaleQuantity > 2147483647)) {
+        const message = "Ingresa un número entero positivo (máximo 2147483647).";
+        setFormError({ ...emptyFormErrorState, summaryMessage: "Revisa la cantidad mínima de venta", fieldErrors: { minimumSaleQuantity: message } });
+        return;
+      }
       const sanitizedCustomFields = customFields
         .map((field, position) => ({
           id: field.id,
@@ -2319,6 +2342,7 @@ export function AdminProductFormPage() {
 
       const saved = await api.saveAdminProduct({
         ...draft,
+        minimumSaleQuantity,
         id,
         sku: draft.sku || null,
         basePrice: Number(draft.basePrice) || 0,

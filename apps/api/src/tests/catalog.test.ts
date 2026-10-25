@@ -78,6 +78,17 @@ describe("catalog routes", () => {
     vi.restoreAllMocks();
   });
 
+  it("includes the minimum in list selection and public detail responses", async () => {
+    const product = { ...makeProduct({ id: "p1", createdAt: "2026-08-10T10:00:00.000Z" }), minimumSaleQuantity: 12 };
+    prismaMock.product.findMany.mockResolvedValue([product]);
+    prismaMock.product.findFirst.mockResolvedValue(product);
+    const list = await request("/products");
+    expect(list.body.items[0].minimumSaleQuantity).toBe(12);
+    expect(prismaMock.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ select: expect.objectContaining({ minimumSaleQuantity: true }) }));
+    const detail = await request("/products/producto-p1");
+    expect(detail.body.minimumSaleQuantity).toBe(12);
+  });
+
   it("returns a paginated lightweight card payload with cursor metadata", async () => {
     prismaMock.product.findMany.mockResolvedValue([
       makeProduct({ id: "p1", createdAt: "2026-08-10T10:00:00.000Z", isFeatured: true, ratings: [5, 4] }),

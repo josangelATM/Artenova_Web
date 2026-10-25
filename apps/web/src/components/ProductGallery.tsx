@@ -1,3 +1,4 @@
+import { MinimumSaleQuantityBadge } from "./MinimumSaleQuantityBadge";
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { Box, Dialog, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, ImageIcon, PlayCircle, X } from "lucide-react";
@@ -363,6 +364,7 @@ const thumbnailRailSx = {
 } as const;
 
 export function ProductGallery({
+  minimumSaleQuantity,
   productName,
   items,
   thumbnailItems,
@@ -372,6 +374,7 @@ export function ProductGallery({
   onActiveKeyChange
 }: {
   productName: string;
+  minimumSaleQuantity?: number | null;
   items: ProductGalleryItem[];
   thumbnailItems?: ProductGalleryItem[];
   activeKey: string;
@@ -492,6 +495,7 @@ export function ProductGallery({
         sx={{
           display: "grid",
           placeItems: "center",
+          position: "relative",
           minHeight: { xs: 320, md: 560 },
           borderRadius: 3,
           border: "1px dashed rgba(64,44,37,.22)",
@@ -501,6 +505,7 @@ export function ProductGallery({
           p: 4,
         }}
       >
+        <MinimumSaleQuantityBadge quantity={minimumSaleQuantity} />
         <Stack spacing={1.5} alignItems="center">
           <ImageIcon size={34} />
           <Typography fontWeight={900}>{productName}</Typography>
@@ -588,6 +593,7 @@ export function ProductGallery({
               preload={activeMedia.type === "video" ? "auto" : "metadata"}
             />
           </Box>
+          <MinimumSaleQuantityBadge quantity={minimumSaleQuantity} />
           {canNavigate && (
             <>
               <IconButton

@@ -313,6 +313,7 @@ export function ProductPage() {
       <Grid container spacing={{ xs: 3, md: 4 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <ProductGallery
+            minimumSaleQuantity={product.minimumSaleQuantity}
             productName={selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name}
             items={galleryItems}
             thumbnailItems={galleryThumbnailItems}

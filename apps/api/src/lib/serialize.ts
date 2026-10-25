@@ -135,6 +135,7 @@ export function catalogProductCardPayload(product: any) {
     pricingSummary,
     reviewSummary,
     extraMediaCount,
+    minimumSaleQuantity: product.minimumSaleQuantity ?? null,
   };
 }
 
@@ -177,6 +178,7 @@ export function productPayload(product: any) {
 
   return {
     ...product,
+    minimumSaleQuantity: product.minimumSaleQuantity ?? null,
     defaultVariantId: defaultVariant?.id ?? product.defaultVariantId ?? null,
     currencySymbol: product.category?.currencySymbol ?? defaultCurrencySymbol,
     basePrice: defaultVariant?.basePrice ?? toNumber(product.basePrice) ?? 0,

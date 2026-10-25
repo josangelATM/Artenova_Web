@@ -200,7 +200,10 @@ export const personalizationValueSchema = z.union([
   z.boolean(),
 ]);
 
+export const minimumSaleQuantitySchema = z.number().int().positive().max(2147483647).nullable().optional();
+
 export const productSchema = z.object({
+  minimumSaleQuantity: minimumSaleQuantitySchema,
   id: z.string(),
   name: z.string(),
   slug: z.string(),
@@ -232,6 +235,7 @@ export const productSchema = z.object({
 });
 
 export const catalogProductCardSchema = z.object({
+  minimumSaleQuantity: minimumSaleQuantitySchema,
   id: z.string(),
   name: z.string(),
   slug: z.string(),
@@ -626,6 +630,7 @@ export const adminLoginSchema = z.object({
 });
 
 export const adminProductInputSchema = z.object({
+  minimumSaleQuantity: minimumSaleQuantitySchema,
   name: z.string().min(2),
   slug: z.string().min(2),
   sku: z.string().trim().optional().nullable(),

@@ -26,6 +26,14 @@ afterEach(() => {
 });
 
 describe("ProductCard", () => {
+  it.each([1, 12])("shows the product minimum %i over media and hides it when cleared", (quantity) => {
+    const view = (minimumSaleQuantity: number | null) => <BrowserRouter><ProductCard product={{ ...product, media: [], minimumSaleQuantity }} /></BrowserRouter>;
+    const { rerender } = render(view(quantity));
+    expect(screen.getByText(`A partir de ${quantity} ${quantity === 1 ? "unidad" : "unidades"}`)).toBeTruthy();
+    rerender(view(null));
+    expect(screen.queryByText(/A partir de/)).toBeNull();
+  });
+
   it("shows product name, base price, and review summary", () => {
     render(
       <ThemeProvider theme={theme}>

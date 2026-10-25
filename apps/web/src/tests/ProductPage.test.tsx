@@ -180,6 +180,13 @@ describe("ProductPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("passes the product minimum to the public gallery", async () => {
+    productMock.mockResolvedValue({ ...product, minimumSaleQuantity: 6 });
+    settingsMock.mockResolvedValue(settings);
+    renderProductPage();
+    expect(await screen.findByText("A partir de 6 unidades")).toBeInTheDocument();
+  });
+
   it("starts from the default variant and only changes the variant when the user changes options", async () => {
     productMock.mockResolvedValue(product);
     settingsMock.mockResolvedValue(settings);

@@ -41,6 +41,7 @@ const productInclude = {
 };
 
 const catalogListSelect = {
+  minimumSaleQuantity: true,
   id: true,
   name: true,
   slug: true,

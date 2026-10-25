@@ -1,3 +1,4 @@
+import { MinimumSaleQuantityBadge } from "./MinimumSaleQuantityBadge";
 import { useEffect, useRef, useState } from "react";
 import { Box, Card, CardContent, Chip, Rating, Stack, Typography } from "@mui/material";
 import { ArrowRight, ImageIcon, Images, PlayCircle } from "lucide-react";
@@ -204,6 +205,7 @@ export function ProductCard({ product, index = 0 }: { product: CatalogProductCar
           <ProductCardPlaceholder name={product.name} />
         )}
         <Box className="product-card-sheen" />
+        <MinimumSaleQuantityBadge quantity={product.minimumSaleQuantity} />
         {extraImages > 0 && (
           <Chip
             icon={<Images size={14} />}

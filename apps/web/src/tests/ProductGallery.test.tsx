@@ -14,6 +14,18 @@ const videoItem = (key: string, url: string, alt: string, posterUrl: string | nu
 });
 
 describe("ProductGallery", () => {
+  it("keeps the minimum over images, video and the empty gallery", () => {
+    const props = { productName: "Demo", minimumSaleQuantity: 12, onActiveKeyChange: vi.fn() };
+    const { rerender } = render(<ProductGallery {...props} items={[imageItem("img", "/one.jpg", "Uno")]} activeKey="img" />);
+    expect(screen.getByText("A partir de 12 unidades")).toBeTruthy();
+    rerender(<ProductGallery {...props} items={[videoItem("vid", "/one.mp4", "Video")]} activeKey="vid" />);
+    expect(screen.getByText("A partir de 12 unidades")).toBeTruthy();
+    rerender(<ProductGallery {...props} items={[]} activeKey="" />);
+    expect(screen.getByText("A partir de 12 unidades")).toBeTruthy();
+    rerender(<ProductGallery {...props} minimumSaleQuantity={null} items={[]} activeKey="" />);
+    expect(screen.queryByText(/A partir de/)).toBeNull();
+  });
+
   afterEach(() => {
     cleanup();
   });
