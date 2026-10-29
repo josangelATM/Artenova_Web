@@ -57,12 +57,50 @@ import { AdminBackButton, AdminBreadcrumbs } from "./adminCrudUi";
 import { AdminFormErrorAlert } from "./adminFormErrors";
 
 type ProductImageInput = Omit<ProductMedia, "id">;
-type PriceTierInput = {
+export type PriceTierInput = {
   minQuantity: string;
   unitPrice: string;
   totalPrice?: string;
   label?: string | null;
 };
+
+function parsePriceCents(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^\d+(?:\.\d*)?$/.test(normalized)) return null;
+
+  const [whole = "0", fraction = ""] = normalized.split(".");
+  const cents = BigInt(whole) * 100n + BigInt(fraction.slice(0, 2).padEnd(2, "0") || "0");
+  const roundedCents = cents + (fraction[2] && Number(fraction[2]) >= 5 ? 1n : 0n);
+  return roundedCents <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(roundedCents) : null;
+}
+
+function formatTierTotal(cents: number) {
+  return "B/." + Math.floor(cents / 100) + "." + String(cents % 100).padStart(2, "0");
+}
+
+function buildTierTotal(minQuantity: string, unitPrice: string) {
+  const quantityText = minQuantity.trim();
+  const normalizedUnitPrice = unitPrice.trim().replace(",", ".");
+  const match = /^(\d+)(?:\.(\d*))?$/.exec(normalizedUnitPrice);
+  if (!/^\d+$/.test(quantityText) || !match) return "";
+
+  const quantity = BigInt(quantityText);
+  if (quantity < 1n || quantity > 2147483647n) return "";
+  const fraction = match[2] ?? "";
+  const scale = 10n ** BigInt(fraction.length);
+  const unitAmount = BigInt(match[1] + fraction);
+  const totalNumerator = unitAmount * quantity * 100n;
+  const totalCents = (totalNumerator + scale / 2n) / scale;
+  if (totalCents > BigInt(Number.MAX_SAFE_INTEGER)) return "";
+  return (Number(totalCents) / 100).toFixed(2);
+}
+
+function buildTierLabel(minQuantity: string, totalPrice: string) {
+  const quantityText = minQuantity.trim();
+  const cents = parsePriceCents(totalPrice);
+  if (!/^\d+$/.test(quantityText) || BigInt(quantityText) < 1n || BigInt(quantityText) > 2147483647n || cents === null) return "";
+  return quantityText + " unidades - " + formatTierTotal(cents);
+}
 
 type DraftProduct = {
   minimumSaleQuantity: string;
@@ -636,7 +674,7 @@ type SimpleProductPricingSectionProps = {
   setPriceTiers: Dispatch<SetStateAction<PriceTierInput[]>>;
 };
 
-const SimpleProductPricingSection = memo(function SimpleProductPricingSection({
+export const SimpleProductPricingSection = memo(function SimpleProductPricingSection({
   basePrice,
   priceTiers,
   setPriceTiers,
@@ -656,8 +694,8 @@ const SimpleProductPricingSection = memo(function SimpleProductPricingSection({
               {
                 minQuantity: "2",
                 unitPrice: basePrice || "0",
-                totalPrice: "",
-                label: "",
+                totalPrice: buildTierTotal("2", basePrice || "0"),
+                label: buildTierLabel("2", buildTierTotal("2", basePrice || "0")),
               },
             ])
           }
@@ -1452,8 +1490,11 @@ export const VariantCard = function VariantCard({
                             {
                               minQuantity: "2",
                               unitPrice: item.basePrice || getSuggestedBasePrice() || "0",
-                              totalPrice: "",
-                              label: "",
+                              totalPrice: buildTierTotal("2", item.basePrice || getSuggestedBasePrice() || "0"),
+                              label: buildTierLabel(
+                                "2",
+                                buildTierTotal("2", item.basePrice || getSuggestedBasePrice() || "0"),
+                              ),
                             },
                           ],
                         }
@@ -1805,6 +1846,31 @@ function PriceTierEditor({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const handleChange = (patch: Partial<PriceTierInput>) => {
+    if ("minQuantity" in patch || "unitPrice" in patch) {
+      const minQuantity = patch.minQuantity ?? tier.minQuantity;
+      const unitPrice = patch.unitPrice ?? tier.unitPrice;
+      const totalPrice = buildTierTotal(minQuantity, unitPrice);
+      onChange({
+        ...patch,
+        totalPrice,
+        label: buildTierLabel(minQuantity, totalPrice),
+      });
+      return;
+    }
+
+    if ("totalPrice" in patch) {
+      const totalPrice = patch.totalPrice ?? "";
+      onChange({
+        ...patch,
+        label: buildTierLabel(tier.minQuantity, totalPrice),
+      });
+      return;
+    }
+
+    onChange(patch);
+  };
+
   return (
     <Box sx={{ p: 1.5, border: "1px solid rgba(64,44,37,.10)", borderRadius: 2 }}>
       <Grid container spacing={1.5} alignItems="center">
@@ -1815,7 +1881,7 @@ function PriceTierEditor({
             type="text"
             label="Cantidad minima"
             value={tier.minQuantity}
-            onChange={(event) => onChange({ minQuantity: event.target.value })}
+            onChange={(event) => handleChange({ minQuantity: event.target.value })}
             slotProps={{ htmlInput: { inputMode: "numeric" } }}
           />
         </Grid>
@@ -1826,7 +1892,7 @@ function PriceTierEditor({
             type="text"
             label="Precio unitario"
             value={tier.unitPrice}
-            onChange={(event) => onChange({ unitPrice: event.target.value })}
+            onChange={(event) => handleChange({ unitPrice: event.target.value })}
             slotProps={{ htmlInput: { inputMode: "decimal" } }}
           />
         </Grid>
@@ -1837,7 +1903,7 @@ function PriceTierEditor({
             type="text"
             label="Precio total exacto"
             value={tier.totalPrice ?? ""}
-            onChange={(event) => onChange({ totalPrice: event.target.value })}
+            onChange={(event) => handleChange({ totalPrice: event.target.value })}
             slotProps={{ htmlInput: { inputMode: "decimal" } }}
           />
         </Grid>

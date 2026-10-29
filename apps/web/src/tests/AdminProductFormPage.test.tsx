@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MemoOperationalFieldsEditor,
   MemoVariantCard,
+  SimpleProductPricingSection,
+  type PriceTierInput,
   type VariantInput,
   VariantsSection,
 } from "../pages/admin/AdminProductFormPage";
@@ -57,6 +59,8 @@ vi.mock("../pages/admin/adminUi", () => ({
     </section>
   ),
 }));
+
+vi.mock("@mui/x-data-grid", () => ({ DataGrid: () => null }));
 
 vi.mock("../pages/admin/adminCrudUi", () => ({
   AdminBackButton: ({ to, label = "Volver" }: { to: string; label?: string }) => (
@@ -131,9 +135,75 @@ function renderWithTheme(node: ReactNode) {
 }
 
 describe("AdminProductFormPage render isolation", () => {
+  afterEach(cleanup);
+
+  it("autofills tier totals and labels while allowing manual edits", () => {
+    function Harness() {
+      const [priceTiers, setPriceTiers] = useState<PriceTierInput[]>([
+        { minQuantity: "6", unitPrice: "10", totalPrice: "60.00", label: "6 unidades - B/.60.00" },
+      ]);
+
+      return (
+        <SimpleProductPricingSection
+          basePrice="10"
+          priceTiers={priceTiers}
+          setPriceTiers={setPriceTiers}
+        />
+      );
+    }
+
+    renderWithTheme(<Harness />);
+
+    const total = screen.getByLabelText("Precio total exacto") as HTMLInputElement;
+    const label = screen.getByLabelText("Texto visible") as HTMLInputElement;
+    const unitPrice = screen.getByLabelText("Precio unitario");
+
+    fireEvent.change(total, { target: { value: "61.25" } });
+    expect(total.value).toBe("61.25");
+    expect(label.value).toBe("6 unidades - B/.61.25");
+
+    fireEvent.change(unitPrice, { target: { value: "7.67" } });
+    expect(total.value).toBe("46.02");
+    expect(label.value).toBe("6 unidades - B/.46.02");
+
+    fireEvent.change(label, { target: { value: "Paquete especial" } });
+    expect(label.value).toBe("Paquete especial");
+
+    fireEvent.change(unitPrice, { target: { value: "12.50" } });
+    expect(total.value).toBe("75.00");
+    expect(label.value).toBe("6 unidades - B/.75.00");
+  });
+
+  it("clears derived fields when a source value is incomplete", () => {
+    function Harness() {
+      const [priceTiers, setPriceTiers] = useState<PriceTierInput[]>([
+        { minQuantity: "3", unitPrice: "7.67", totalPrice: "23.01", label: "3 unidades - B/.23.01" },
+      ]);
+
+      return (
+        <SimpleProductPricingSection
+          basePrice="10"
+          priceTiers={priceTiers}
+          setPriceTiers={setPriceTiers}
+        />
+      );
+    }
+
+    renderWithTheme(<Harness />);
+    fireEvent.change(screen.getByLabelText("Cantidad minima"), { target: { value: "" } });
+
+    expect((screen.getByLabelText("Precio total exacto") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Texto visible") as HTMLInputElement).value).toBe("");
+  });
+
   it("updates operational field types between text and boolean", () => {
     function Harness() {
-      const [fields, setFields] = useState([
+      const [fields, setFields] = useState<Array<{
+        id: string;
+        label: string;
+        type: "text" | "boolean";
+        position: number;
+      }>>([
         { id: "cf-1", label: "QR", type: "text" as const, position: 0 },
       ]);
 
