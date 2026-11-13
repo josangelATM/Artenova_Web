@@ -430,6 +430,34 @@ adminRouter.get("/me", requireAdmin, async (req, res) => {
 
 adminRouter.use(requireAdmin);
 
+adminRouter.post("/quote-thumbnail", async (req, res) => {
+  const requestedUrl = typeof req.body?.url === "string" ? req.body.url : "";
+  let imageUrl: URL;
+  try {
+    imageUrl = new URL(requestedUrl);
+  } catch {
+    res.status(400).json({ message: "URL de imagen inválida" });
+    return;
+  }
+  const publicBase = process.env.S3_PUBLIC_BASE_URL;
+  if (!publicBase || imageUrl.origin !== new URL(publicBase).origin || !imageUrl.pathname.startsWith(new URL(publicBase).pathname.replace(/\/$/, "") + "/")) {
+    res.status(400).json({ message: "La imagen no pertenece al almacenamiento público configurado" });
+    return;
+  }
+  const upstream = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+  const contentType = upstream.headers.get("content-type") ?? "";
+  if (!upstream.ok || !contentType.startsWith("image/")) {
+    res.status(404).json({ message: "No se pudo cargar la imagen" });
+    return;
+  }
+  const bytes = new Uint8Array(await upstream.arrayBuffer());
+  if (bytes.byteLength > 8 * 1024 * 1024) {
+    res.status(413).json({ message: "La imagen excede el tamaño permitido" });
+    return;
+  }
+  res.type(contentType).set("Cache-Control", "private, max-age=300").send(Buffer.from(bytes));
+});
+
 adminRouter.get("/dashboard", async (_req, res) => {
   const [orders, products, categories, reviews] = await Promise.all([
     prisma.order.count(),

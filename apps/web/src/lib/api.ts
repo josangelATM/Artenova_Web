@@ -187,6 +187,16 @@ export const api = {
     }),
   deleteAdminExpense: (id: string) => request<void>(`/api/admin/expenses/${id}`, { method: "DELETE" }),
   adminProducts: () => request<Product[]>("/api/admin/products"),
+  adminQuoteThumbnail: async (url: string) => {
+    const response = await fetch(`${baseUrl}/api/admin/quote-thumbnail`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    if (!response.ok) throw new Error("No se pudo cargar la miniatura");
+    return response.blob();
+  },
   adminProduct: (id: string) => request<Product>(`/api/admin/products/${id}`),
   saveAdminProduct: (product: AdminProductPayload) =>
     request<Product>(product.id ? `/api/admin/products/${product.id}` : "/api/admin/products", {

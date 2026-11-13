@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import { api } from "../../lib/api";
 import { quoteLineImage, quoteLogo, quoteMoney, quoteSummary, type Quote, type QuoteAmounts } from "./quote";
 
 const palette = {
@@ -236,9 +237,8 @@ export async function downloadQuote(quote: Quote, amounts: QuoteAmounts) {
     const url = line.includeThumbnail ? quoteLineImage(line) : null;
     if (!url) continue;
     try {
-      const imageResponse = await fetch(url);
-      if (!imageResponse.ok) throw new Error("image unavailable");
-      const bitmap = await createImageBitmap(await imageResponse.blob());
+      const sourceBlob = await api.adminQuoteThumbnail(url);
+      const bitmap = await createImageBitmap(sourceBlob);
       const scale = Math.min(240 / bitmap.width, 240 / bitmap.height, 1);
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(bitmap.width * scale));
