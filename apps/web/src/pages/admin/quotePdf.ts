@@ -141,26 +141,28 @@ export function renderQuotePdf(quote: Quote, amounts: QuoteAmounts, logo: Uint8A
       const price = amounts.lines[index]!;
       const image = line.includeThumbnail ? thumbnails.get(line.id) : undefined;
       return [
-        image ? " " : "",
-        clean(line.description), String(price.quantity),
+        image ? " " + clean(line.description) : clean(line.description), String(price.quantity),
         price.packagePrice ? "Por paquete" : clean(quoteMoney(price.unit)),
         clean(quoteMoney(price.total))
       ];
     }),
     columnStyles: {
-      0: { cellWidth: 22 },
-      2: { halign: "right", cellWidth: 26 },
-      3: { halign: "right", cellWidth: 35 },
-      4: { halign: "right", cellWidth: 39, fontStyle: "bold" }
+      1: { halign: "right", cellWidth: 26 },
+      2: { halign: "right", cellWidth: 35 },
+      3: { halign: "right", cellWidth: 39, fontStyle: "bold" }
     },
     didDrawCell: ({ section, row, column, cell }) => {
       if (section !== "body" || column.index !== 0) return;
       const line = quote.lines[row.index];
       const image = line?.includeThumbnail ? thumbnails.get(line.id) : undefined;
-      if (image) doc.addImage(image, "JPEG", cell.x + 2, cell.y + 1, 18, 18);
+      if (image) doc.addImage(image, "JPEG", cell.x + 2, cell.y + 2, 14, 14);
     },
-    didParseCell: ({ section, column, cell }) => {
-      if (section === "head" && column.index > 0) cell.styles.halign = "right";
+    didParseCell: (data) => {
+      if (data.section === "head" && data.column.index > 0) data.cell.styles.halign = "right";
+      if (data.section === "body" && data.column.index === 0 && thumbnails.has(quote.lines[data.row.index]?.id ?? "")) {
+        data.cell.styles.minCellHeight = 19;
+        data.cell.styles.cellPadding = { top: 3, bottom: 3, left: 19, right: 4 };
+      }
     },
     rowPageBreak: "avoid",
     showHead: "everyPage"

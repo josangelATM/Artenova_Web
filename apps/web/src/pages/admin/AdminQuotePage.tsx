@@ -75,7 +75,7 @@ export function AdminQuotePage() {
     const line: QuoteLine = {
       id: String(++nextLineId.current),
       item,
-      description: item?.label ?? "",
+      description: "",
       quantity: String(item?.product.minimumSaleQuantity ?? 1),
       unitPrice: item ? null : "",
       includeThumbnail: hasImage && includeAllThumbnails
