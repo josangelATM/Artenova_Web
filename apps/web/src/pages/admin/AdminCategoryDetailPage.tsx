@@ -61,6 +61,7 @@ export function AdminCategoryDetailPage() {
             <AdminField label="Nombre" value={category.name} />
             <AdminField label="Enlace corto" value={category.slug} />
             <AdminField label="Estado" value={<StatusChip status={category.isActive ? "active" : "paused"} />} />
+            <AdminField label="Destacada en inicio" value={category.isFeatured ? "Sí" : "No"} />
             <AdminField label="Descripción" value={category.description || "Sin descripción"} />
           </AdminDetailSection>
           {category.isActive && (

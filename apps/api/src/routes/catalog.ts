@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createProductReviewSchema } from "@artenova/shared";
+import { createProductReviewSchema, resolveFirstStillUrl, type FeaturedCategory } from "@artenova/shared";
 import { catalogProductCardPayload, productPayload } from "../lib/serialize";
 import { env } from "../env";
 import { prisma } from "../lib/prisma";
@@ -192,6 +192,44 @@ catalogRouter.get("/categories", async (_req, res) => {
     orderBy: { name: "asc" }
   });
   res.json(categories);
+});
+
+catalogRouter.get("/categories/featured", async (_req, res) => {
+  const mediaSelect = { url: true, type: true, posterUrl: true } as const;
+  const categories = await prisma.category.findMany({
+    where: { isActive: true, isFeatured: true, products: { some: { isPublished: true } } },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: {
+      id: true, name: true, slug: true, description: true,
+      products: {
+        where: { isPublished: true },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        select: {
+          defaultVariantId: true,
+          images: { orderBy: { position: "asc" }, select: mediaSelect },
+          variants: {
+            where: { isActive: true },
+            orderBy: [{ position: "asc" }, { id: "asc" }],
+            select: { id: true, images: { orderBy: { position: "asc" }, select: mediaSelect } },
+          },
+        },
+      },
+    },
+  });
+  const items: FeaturedCategory[] = categories.map(({ products, ...category }) => {
+    let imageUrl: string | null = null;
+    for (const product of products) {
+      const defaultVariant = product.variants.find((variant) => variant.id === product.defaultVariantId);
+      imageUrl = resolveFirstStillUrl([
+        ...(defaultVariant?.images ?? []),
+        ...product.images,
+        ...product.variants.filter((variant) => variant.id !== defaultVariant?.id).flatMap((variant) => variant.images),
+      ]) ?? null;
+      if (imageUrl) break;
+    }
+    return { ...category, href: `/catalogo/${encodeURIComponent(category.slug)}`, imageUrl };
+  });
+  res.json(items);
 });
 
 catalogRouter.get("/products", async (req, res) => {

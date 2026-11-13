@@ -13,6 +13,7 @@ const emptyCategory = {
   slug: "",
   description: "",
   isActive: true,
+  isFeatured: false,
 };
 
 const fieldLabels: Record<string, string> = {
@@ -49,6 +50,7 @@ export function AdminCategoryFormPage() {
           slug: category.slug,
           description: category.description ?? "",
           isActive: category.isActive,
+          isFeatured: category.isFeatured ?? false,
         });
       })
       .catch((err) => {
@@ -74,6 +76,7 @@ export function AdminCategoryFormPage() {
           slug: saved.slug,
           description: saved.description ?? "",
           isActive: saved.isActive,
+          isFeatured: saved.isFeatured ?? false,
         });
         showToast({ message: "Categoría guardada", severity: "success" });
         return;
@@ -119,6 +122,9 @@ export function AdminCategoryFormPage() {
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <FormControlLabel disabled={loading} control={<Checkbox checked={draft.isActive} onChange={(event) => updateField("isActive", event.target.checked)} />} label="Activa en tienda" />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormControlLabel disabled={loading} control={<Checkbox checked={draft.isFeatured} onChange={(event) => updateField("isFeatured", event.target.checked)} />} label="Destacar en el inicio" />
             </Grid>
             <Grid size={12}>
               <TextField fullWidth disabled={loading} label="Descripción" multiline minRows={4} value={draft.description} onChange={(event) => updateField("description", event.target.value)} error={Boolean(getFieldError(formError, "description"))} helperText={getFieldError(formError, "description")} />

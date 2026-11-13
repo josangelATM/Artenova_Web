@@ -66,7 +66,7 @@ const settings: SiteSettings = {
 };
 
 const categories: Category[] = [
-  { id: "c1", name: "Mascotas", slug: "mascotas", description: "Para mascotas", accentColor: null, isActive: true },
+  { id: "c1", name: "Mascotas", slug: "mascotas", description: "Para mascotas", accentColor: null, isActive: true, isFeatured: false },
 ];
 
 function renderCatalog(initialEntry: string) {

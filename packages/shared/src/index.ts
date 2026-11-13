@@ -54,13 +54,21 @@ export const categorySchema = z.object({
   description: z.string().nullable(),
   accentColor: z.string().nullable(),
   isActive: z.boolean(),
+  isFeatured: z.boolean().default(false),
 });
+
+export const featuredCategorySchema = categorySchema.pick({ id: true, name: true, slug: true, description: true }).extend({
+  href: z.string(),
+  imageUrl: z.string().nullable(),
+});
+export type FeaturedCategory = z.infer<typeof featuredCategorySchema>;
 
 export const adminCategoryInputSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2),
   description: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  isFeatured: z.boolean().optional(),
 });
 
 export const productMediaSchema = z.object({

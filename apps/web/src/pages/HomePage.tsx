@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { resolveMediaStillUrl, type CatalogProductCard, type SiteSettings } from "@artenova/shared";
+import { FeaturedCatalogs } from "../components/FeaturedCatalogs";
 import { ProductCard } from "../components/ProductCard";
 import { CatalogGridSkeleton } from "../components/SkeletonStates";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -131,7 +132,7 @@ export function HomePage() {
             <Stack spacing={2.5}>
               <Stack spacing={0.75}>
                 <Typography variant="caption" color="text.secondary" fontWeight={900} letterSpacing={0.8}>
-                  Destacados
+                  Productos destacados
                 </Typography>
               </Stack>
 
@@ -171,6 +172,8 @@ export function HomePage() {
               </Button>
             </Stack>
           </Paper>
+
+          <FeaturedCatalogs />
 
           <Paper className="trust-panel" elevation={0}>
             <Grid container spacing={1.5}>

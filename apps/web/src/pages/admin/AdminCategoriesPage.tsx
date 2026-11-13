@@ -49,6 +49,7 @@ export function AdminCategoriesPage() {
         )
       },
       { field: "name", headerName: "Nombre", flex: 1.1, minWidth: 220 },
+      { field: "isFeatured", headerName: "Destacada en inicio", minWidth: 170, renderCell: ({ row }) => row.isFeatured ? "Sí" : "No" },
       { field: "slug", headerName: "Enlace corto", flex: 0.9, minWidth: 180 },
       {
         field: "description",

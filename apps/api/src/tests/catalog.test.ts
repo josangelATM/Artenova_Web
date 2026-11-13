@@ -78,6 +78,35 @@ describe("catalog routes", () => {
     vi.restoreAllMocks();
   });
 
+  it("returns eligible featured categories with automatic still images and no limit", async () => {
+    const product = makeProduct({ id: "cover", createdAt: "2026-11-13T00:00:00Z" });
+    const noImage = { ...product, images: [], variants: [] };
+    const video = { ...product, variants: [{ ...product.variants[0], images: [{ ...product.images[0], type: "video", posterUrl: "/poster.jpg" }] }] };
+    const withoutPoster = { ...product, variants: [{ ...product.variants[0], images: [{ ...product.images[0], type: "video", posterUrl: null }] }] };
+    prismaMock.category.findMany.mockResolvedValue([
+      { id: "1", name: "Bodas", slug: "bodas", description: "Regalos", products: [noImage, product] },
+      { id: "2", name: "Familia", slug: "familia", description: null, products: [video] },
+      { id: "3", name: "Fiestas", slug: "fiestas", description: null, products: [withoutPoster] },
+      { id: "4", name: "Mascotas", slug: "mascotas", description: null, products: [noImage] },
+      { id: "5", name: "Recuerdos", slug: "recuerdos", description: null, products: [product] },
+    ]);
+    const response = await request("/categories/featured");
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toHaveLength(5);
+    expect(response.body.map((item: any) => item.imageUrl)).toEqual([
+      "/seed/cover-v.jpg", "/poster.jpg", "/seed/cover.jpg", null, "/seed/cover-v.jpg",
+    ]);
+    expect(response.body[0]).toMatchObject({ href: "/catalogo/bodas", name: "Bodas" });
+    expect(response.body[0].products).toBeUndefined();
+    const query = prismaMock.category.findMany.mock.calls[0]?.[0];
+    expect(query.where).toEqual({ isActive: true, isFeatured: true, products: { some: { isPublished: true } } });
+    expect(query.orderBy).toEqual([{ name: "asc" }, { id: "asc" }]);
+    expect(query.take).toBeUndefined();
+    expect(query.select.products.where).toEqual({ isPublished: true });
+    expect(query.select.products.orderBy).toEqual([{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "desc" }]);
+    expect(query.select.products.select.variants.where).toEqual({ isActive: true });
+  });
+
   it("includes the minimum in list selection and public detail responses", async () => {
     const product = { ...makeProduct({ id: "p1", createdAt: "2026-08-10T10:00:00.000Z" }), minimumSaleQuantity: 12 };
     prismaMock.product.findMany.mockResolvedValue([product]);
