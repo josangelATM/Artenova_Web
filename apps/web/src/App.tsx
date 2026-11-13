@@ -20,6 +20,7 @@ import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
 import { AdminQRCodeDetailPage } from "./pages/admin/AdminQRCodeDetailPage";
 import { AdminQRCodeFormPage } from "./pages/admin/AdminQRCodeFormPage";
 import { AdminQRCodesPage } from "./pages/admin/AdminQRCodesPage";
+import { AdminQuotePage } from "./pages/admin/AdminQuotePage";
 import { AdminReviewDetailPage } from "./pages/admin/AdminReviewDetailPage";
 import { AdminReviewFormPage } from "./pages/admin/AdminReviewFormPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
@@ -81,6 +82,7 @@ const router = createBrowserRouter([
           { path: "qrs/:id", element: <AdminQRCodeDetailPage /> },
           { path: "qrs/:id/editar", element: <AdminQRCodeFormPage /> },
           { path: "pedidos", element: <AdminOrdersPage /> },
+          { path: "cotizaciones", element: <AdminQuotePage /> },
           { path: "pedidos/nuevo", element: <AdminOrderFormPage /> },
           { path: "pedidos/:id", element: <AdminOrderDetailPage /> },
           { path: "pedidos/:id/editar", element: <AdminOrderDetailPage /> }

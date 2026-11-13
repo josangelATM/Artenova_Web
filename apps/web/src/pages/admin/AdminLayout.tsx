@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Container, Paper, Stack } from "@mui/material";
-import { Boxes, ChartColumnIncreasing, Eye, FolderTree, Home, MessageSquareText, QrCode, ReceiptText, Wallet } from "lucide-react";
+import { Boxes, ChartColumnIncreasing, Eye, FileText, FolderTree, Home, MessageSquareText, QrCode, ReceiptText, Wallet } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { applySeo } from "../../lib/seo";
@@ -11,6 +11,7 @@ const tabs = [
   { label: "Finanzas", to: "/admin/finanzas", icon: ChartColumnIncreasing },
   { label: "Gastos", to: "/admin/gastos", icon: Wallet },
   { label: "Pedidos", to: "/admin/pedidos", icon: ReceiptText },
+  { label: "Cotizaciones", to: "/admin/cotizaciones", icon: FileText },
   { label: "Productos", to: "/admin/productos", icon: Boxes },
   { label: "QR", to: "/admin/qrs", icon: QrCode },
   { label: "Reseñas", to: "/admin/resenas", icon: MessageSquareText },

@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: "./src/tests/e2e",
   timeout: 30_000,
   use: {
-    baseURL: "http://localhost:5174",
+    baseURL: process.env.ARTENOVA_E2E_URL ?? "http://localhost:5174",
     trace: "on-first-retry"
   },
   projects: [
