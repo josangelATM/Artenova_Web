@@ -8,7 +8,9 @@ test("featured catalogs wrap responsively and open their category", async ({ pag
   })) }));
   await page.goto("/");
   const section = page.getByRole("region", { name: "Catálogos destacados" });
-  const cards = section.getByRole("link");
+  const cards = section.getByRole("link", { name: /^Ver catálogo:/ });
+  const more = section.getByRole("link", { name: "Quiero ver más" });
+  await expect(more).toHaveAttribute("href", "/catalogo");
   await expect(cards).toHaveCount(5);
   await section.scrollIntoViewIfNeeded();
   for (const [width, columns] of [[390, 1], [768, 2], [1280, 4]] as const) {
@@ -18,10 +20,22 @@ test("featured catalogs wrap responsively and open their category", async ({ pag
       return boxes.filter((top) => Math.abs(top - (boxes[0] ?? 0)) < 2).length;
     }).toBe(columns);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect(more).toBeVisible();
+    const sectionBox = await section.boundingBox();
+    const buttonBox = await more.boundingBox();
+    const lastCardBox = await cards.last().boundingBox();
+    expect(sectionBox && buttonBox && lastCardBox).toBeTruthy();
+    if (sectionBox && buttonBox && lastCardBox) {
+      expect(Math.abs(buttonBox.x + buttonBox.width / 2 - (sectionBox.x + sectionBox.width / 2))).toBeLessThan(2);
+      expect(buttonBox.y).toBeGreaterThanOrEqual(lastCardBox.y + lastCardBox.height);
+    }
   }
   await section.screenshot({ path: testInfo.outputPath("featured-catalogs.png") });
   await cards.first().click();
   await expect(page).toHaveURL(/\/catalogo\/coleccion-0$/);
+  await page.goto("/");
+  await more.click();
+  await expect(page).toHaveURL(/\/catalogo$/);
 });
 
 test("category editor saves and reloads the featured choice", async ({ page }) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Card, CardActionArea, CardContent, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardActionArea, CardContent, Grid, Paper, Stack, Typography } from "@mui/material";
 import { ArrowRight, ImageIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { FeaturedCategory } from "@artenova/shared";
@@ -62,6 +62,17 @@ export function FeaturedCatalogs() {
             <Grid key={category.id} size={{ xs: 12, sm: 6, md: 3 }}><CatalogCard category={category} /></Grid>
           ))}
         </Grid>
+        <Button
+          component={Link}
+          to="/catalogo"
+          variant="contained"
+          size="large"
+          endIcon={<ArrowRight size={18} />}
+          className="home-catalog-banner-button"
+          sx={{ alignSelf: "center" }}
+        >
+          Quiero ver más
+        </Button>
       </Stack>
     </Paper>
   );
